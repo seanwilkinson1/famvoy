@@ -213,23 +213,28 @@ export default function Onboarding() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {INTEREST_OPTIONS.map((interest) => (
-                  <button
-                    key={interest}
-                    onClick={() => toggleInterest(interest)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all border-2 ${
-                      formData.interests.includes(interest)
-                        ? 'bg-warm-teal text-white border-warm-teal shadow-md'
-                        : 'bg-white text-charcoal border-charcoal/20 hover:border-warm-teal hover:bg-warm-teal/5'
-                    }`}
-                    data-testid={`interest-${interest.toLowerCase()}`}
-                  >
-                    {formData.interests.includes(interest) && (
-                      <Check className="w-3 h-3 inline mr-1" />
-                    )}
-                    {interest}
-                  </button>
-                ))}
+                {INTEREST_OPTIONS.map((interest) => {
+                  const isSelected = formData.interests.includes(interest);
+                  return (
+                    <button
+                      key={interest}
+                      onClick={() => toggleInterest(interest)}
+                      className="px-4 py-2 rounded-full text-sm font-medium transition-all border-2"
+                      style={{
+                        backgroundColor: isSelected ? '#2A9D8F' : '#ffffff',
+                        color: isSelected ? '#ffffff' : '#333333',
+                        borderColor: isSelected ? '#2A9D8F' : 'rgba(51,51,51,0.2)',
+                        boxShadow: isSelected ? '0 4px 6px -1px rgba(42, 157, 143, 0.3)' : 'none',
+                      }}
+                      data-testid={`interest-${interest.toLowerCase()}`}
+                    >
+                      {isSelected && (
+                        <Check className="w-3 h-3 inline mr-1" />
+                      )}
+                      {interest}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -240,7 +245,12 @@ export default function Onboarding() {
             <Button
               variant="outline"
               onClick={() => setStep(step - 1)}
-              className="flex-1 rounded-full border-2 border-charcoal/30 text-charcoal hover:bg-charcoal/5"
+              className="flex-1 rounded-full"
+              style={{
+                border: '2px solid #333',
+                color: '#333',
+                backgroundColor: 'transparent',
+              }}
               data-testid="button-back"
             >
               Back
@@ -249,11 +259,13 @@ export default function Onboarding() {
           <Button
             onClick={handleNext}
             disabled={!canProceed() || onboardingMutation.isPending}
-            className={`flex-1 rounded-full transition-all ${
-              !canProceed() || onboardingMutation.isPending
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-warm-teal hover:bg-warm-teal/90 text-white shadow-lg shadow-warm-teal/30'
-            }`}
+            className="flex-1 rounded-full transition-all"
+            style={{
+              backgroundColor: (!canProceed() || onboardingMutation.isPending) ? '#d1d5db' : '#2A9D8F',
+              color: (!canProceed() || onboardingMutation.isPending) ? '#6b7280' : '#ffffff',
+              cursor: (!canProceed() || onboardingMutation.isPending) ? 'not-allowed' : 'pointer',
+              boxShadow: (!canProceed() || onboardingMutation.isPending) ? 'none' : '0 10px 15px -3px rgba(42, 157, 143, 0.3)',
+            }}
             data-testid="button-next"
           >
             {onboardingMutation.isPending ? (
