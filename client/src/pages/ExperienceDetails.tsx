@@ -1,0 +1,156 @@
+import { useRoute, useLocation } from "wouter";
+import { experiences, mapBg } from "@/lib/data";
+import { ExperienceCard } from "@/components/shared/ExperienceCard";
+import { ChevronLeft, Heart, Clock, DollarSign, Users, MapPin, Share2 } from "lucide-react";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
+
+export default function ExperienceDetails() {
+  const [match, params] = useRoute("/experience/:id");
+  const [, setLocation] = useLocation();
+  const [isSaved, setIsSaved] = useState(false);
+
+  if (!match) return null;
+
+  const experience = experiences.find((e) => e.id === params.id) || experiences[0];
+  const similar = experiences.filter((e) => e.id !== experience.id);
+
+  return (
+    <div className="min-h-screen bg-background pb-24 relative z-50">
+      {/* Hero Image */}
+      <div className="relative h-72 w-full">
+        <img
+          src={experience.image}
+          alt={experience.title}
+          className="h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        
+        {/* Top Nav */}
+        <div className="absolute top-0 left-0 right-0 p-6 pt-14 flex justify-between items-center">
+          <button 
+            onClick={() => setLocation("/")}
+            className="rounded-full bg-white/20 backdrop-blur-md p-2 text-white hover:bg-white/30 transition-colors"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <div className="flex gap-3">
+            <button className="rounded-full bg-white/20 backdrop-blur-md p-2 text-white hover:bg-white/30 transition-colors">
+              <Share2 className="h-5 w-5" />
+            </button>
+            <button 
+              onClick={() => setIsSaved(!isSaved)}
+              className="rounded-full bg-white/20 backdrop-blur-md p-2 text-white hover:bg-white/30 transition-colors"
+            >
+              <Heart className={cn("h-5 w-5", isSaved ? "fill-red-500 text-red-500" : "text-white")} />
+            </button>
+          </div>
+        </div>
+
+        {/* Title Overlay */}
+        <div className="absolute bottom-0 left-0 p-6">
+          <span className="inline-block rounded-md bg-primary/90 px-2 py-1 text-xs font-bold text-white backdrop-blur-sm mb-2">
+            {experience.category}
+          </span>
+          <h1 className="font-heading text-3xl font-bold text-white leading-tight">
+            {experience.title}
+          </h1>
+        </div>
+      </div>
+
+      {/* Content Container */}
+      <div className="relative -mt-6 rounded-t-[32px] bg-background px-6 pt-8">
+        
+        {/* Family Row */}
+        <div className="mb-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img
+              src={experience.familyAvatar}
+              alt={experience.family}
+              className="h-10 w-10 rounded-full object-cover ring-2 ring-white shadow-sm"
+            />
+            <div>
+              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Shared by</p>
+              <p className="text-sm font-bold text-gray-900">{experience.family}</p>
+            </div>
+          </div>
+          <button className="rounded-full bg-primary/10 px-4 py-1.5 text-xs font-bold text-primary">
+            Follow
+          </button>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="mb-8 grid grid-cols-4 gap-2 rounded-2xl bg-gray-50 p-4">
+          {[
+            { icon: Clock, label: "Duration", val: experience.duration },
+            { icon: DollarSign, label: "Cost", val: experience.cost },
+            { icon: Users, label: "Ages", val: experience.ages },
+            { icon: MapPin, label: "Dist", val: "2.4mi" },
+          ].map((stat, i) => (
+            <div key={i} className="flex flex-col items-center text-center">
+              <stat.icon className="mb-1 h-5 w-5 text-primary" />
+              <span className="text-[10px] font-medium text-gray-400 uppercase">{stat.label}</span>
+              <span className="text-xs font-bold text-gray-900">{stat.val}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Map Preview */}
+        <div className="mb-8 overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
+          <div className="relative h-32 w-full">
+            <img src={mapBg} alt="Location" className="h-full w-full object-cover opacity-80" />
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+              <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/20 animate-pulse">
+                <div className="h-4 w-4 rounded-full bg-primary ring-2 ring-white" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-3 flex justify-between items-center">
+             <div className="text-sm font-medium text-gray-900">{experience.location.name}</div>
+             <button className="text-xs font-bold text-primary">Get Directions</button>
+          </div>
+        </div>
+
+        {/* What We Loved */}
+        <section className="mb-8">
+          <h2 className="mb-3 font-heading text-xl font-bold text-gray-900">What We Loved</h2>
+          <p className="text-base leading-relaxed text-gray-600">
+            "This was honestly such a hidden gem! The kids loved the interactive exhibits, and we spent way more time here than expected. Highly recommend bringing a packed lunch as the cafe was a bit crowded."
+          </p>
+        </section>
+
+        {/* Good to Know */}
+        <section className="mb-8">
+          <h2 className="mb-3 font-heading text-xl font-bold text-gray-900">Good to Know</h2>
+          <ul className="space-y-2">
+            {[
+              "Stroller friendly paths throughout",
+              "Restrooms located near the entrance",
+              "Best time to visit is early morning",
+              "Parking is free on weekends"
+            ].map((tip, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-secondary-foreground/50 flex-shrink-0" />
+                {tip}
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* Similar Experiences */}
+        <section>
+          <h2 className="mb-4 font-heading text-xl font-bold text-gray-900">Similar Experiences</h2>
+          <ScrollArea className="-mx-6 w-[calc(100%+48px)] px-6 pb-4">
+             <div className="flex gap-4 w-max">
+               {similar.map(exp => (
+                 <ExperienceCard key={exp.id} experience={exp} horizontal className="w-[240px]" />
+               ))}
+             </div>
+             <ScrollBar orientation="horizontal" className="hidden" />
+          </ScrollArea>
+        </section>
+      </div>
+    </div>
+  );
+}
