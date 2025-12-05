@@ -291,13 +291,13 @@ export default function Explore() {
                 if (info.offset.y > 100) setIsExpanded(false);
               }}
               animate={{ height: isExpanded ? "75%" : "180px" }}
-              className="absolute bottom-0 left-0 right-0 z-30 rounded-t-[32px] bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.12)]"
+              className="absolute bottom-0 left-0 right-0 z-30 rounded-t-[32px] bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.12)] overflow-hidden"
             >
-              <div className="flex justify-center pt-3 pb-2" onClick={() => setIsExpanded(!isExpanded)}>
+              <div className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing" onClick={() => setIsExpanded(!isExpanded)}>
                 <div className="h-1.5 w-12 rounded-full bg-gray-200" />
               </div>
 
-              <div className="px-6 pt-2 h-full overflow-hidden flex flex-col">
+              <div className="px-6 pt-2 h-[calc(100%-32px)] overflow-hidden flex flex-col">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="font-heading text-lg font-bold text-gray-900">
                     {searchQuery ? `Results for "${searchQuery}"` : `${filteredExperiences.length} experiences nearby`}
@@ -437,11 +437,14 @@ export default function Explore() {
                   )}
                 </AnimatePresence>
 
-                <div className="flex-1 overflow-y-auto pb-32 space-y-4 no-scrollbar">
+                <div className={cn(
+                  "flex-1 space-y-4 no-scrollbar",
+                  isExpanded ? "overflow-y-auto pb-32" : "overflow-hidden"
+                )}>
                   {loadingExperiences ? (
-                    <div className="text-center py-8 text-gray-400">Loading...</div>
+                    <div className="text-center py-4 text-gray-400">Loading...</div>
                   ) : formattedExperiences.length === 0 ? (
-                    <div className="text-center py-8">
+                    <div className="text-center py-4">
                       <div className="text-gray-400 mb-2">No experiences match your filters</div>
                       <button
                         onClick={() => {
@@ -455,6 +458,34 @@ export default function Explore() {
                       >
                         Reset filters
                       </button>
+                    </div>
+                  ) : !isExpanded ? (
+                    <div 
+                      className="flex gap-3 overflow-x-auto no-scrollbar cursor-pointer"
+                      onClick={() => setIsExpanded(true)}
+                    >
+                      {formattedExperiences.slice(0, 5).map((exp) => (
+                        <div 
+                          key={exp.id} 
+                          className="flex-shrink-0 w-24"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLocation(`/experience/${exp.id}`);
+                          }}
+                        >
+                          <img 
+                            src={exp.image} 
+                            alt={exp.title}
+                            className="w-24 h-16 object-cover rounded-xl"
+                          />
+                          <p className="text-xs font-medium text-gray-700 mt-1 truncate">{exp.title}</p>
+                        </div>
+                      ))}
+                      {formattedExperiences.length > 5 && (
+                        <div className="flex-shrink-0 w-24 h-16 bg-gray-100 rounded-xl flex items-center justify-center">
+                          <span className="text-xs font-medium text-gray-500">+{formattedExperiences.length - 5} more</span>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     formattedExperiences.map((exp) => (
