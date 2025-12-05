@@ -1,17 +1,40 @@
 import { Heart, Clock, DollarSign, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-import type { Experience } from "@/lib/data";
 import { Link } from "wouter";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import type { ExperienceWithFamily } from "@/lib/types";
 
 interface ExperienceCardProps {
-  experience: Experience;
+  experience: ExperienceWithFamily;
   className?: string;
   horizontal?: boolean;
 }
 
 export function ExperienceCard({ experience, className, horizontal = false }: ExperienceCardProps) {
   const [isSaved, setIsSaved] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: currentUser } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: api.users.getMe,
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentUser) return;
+      if (isSaved) {
+        await api.experiences.unsave(experience.id, currentUser.id);
+      } else {
+        await api.experiences.save(experience.id, currentUser.id);
+      }
+    },
+    onSuccess: () => {
+      setIsSaved(!isSaved);
+      queryClient.invalidateQueries({ queryKey: ["savedExperiences"] });
+    },
+  });
 
   return (
     <Link href={`/experience/${experience.id}`}>
@@ -21,6 +44,7 @@ export function ExperienceCard({ experience, className, horizontal = false }: Ex
           horizontal ? "w-[280px] flex-shrink-0" : "w-full",
           className
         )}
+        data-testid={`card-experience-${experience.id}`}
       >
         {/* Image */}
         <div className="aspect-video w-full overflow-hidden">
@@ -36,9 +60,10 @@ export function ExperienceCard({ experience, className, horizontal = false }: Ex
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            setIsSaved(!isSaved);
+            saveMutation.mutate();
           }}
           className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-primary backdrop-blur-sm transition-colors hover:bg-white active:scale-90 z-10"
+          data-testid={`button-save-${experience.id}`}
         >
           <Heart
             className={cn("h-5 w-5 transition-colors", isSaved ? "fill-primary text-primary" : "text-gray-600")}
@@ -47,7 +72,7 @@ export function ExperienceCard({ experience, className, horizontal = false }: Ex
 
         {/* Content */}
         <div className="p-4">
-          <h3 className="mb-2 font-heading text-lg font-bold leading-tight text-gray-900">
+          <h3 className="mb-2 font-heading text-lg font-bold leading-tight text-gray-900" data-testid={`text-title-${experience.id}`}>
             {experience.title}
           </h3>
 
@@ -70,11 +95,11 @@ export function ExperienceCard({ experience, className, horizontal = false }: Ex
           {/* Family Row */}
           <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
             <img
-              src={experience.familyAvatar}
-              alt={experience.family}
+              src={experience.familyAvatar || experience.image}
+              alt={experience.family || "Family"}
               className="h-6 w-6 rounded-full object-cover ring-1 ring-gray-100"
             />
-            <span className="text-xs font-medium text-gray-600">Shared by {experience.family}</span>
+            <span className="text-xs font-medium text-gray-600">Shared by {experience.family || "Family"}</span>
           </div>
         </div>
       </div>

@@ -1,18 +1,90 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, real, timestamp, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  name: text("name").notNull(),
+  avatar: text("avatar").notNull(),
+  location: text("location").notNull(),
+  kids: text("kids").notNull(),
+  interests: text("interests").array().notNull(),
+});
+
+export const experiences = pgTable("experiences", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  image: text("image").notNull(),
+  duration: text("duration").notNull(),
+  cost: text("cost").notNull(),
+  ages: text("ages").notNull(),
+  category: text("category").notNull(),
+  locationName: text("location_name").notNull(),
+  locationLat: real("location_lat").notNull(),
+  locationLng: real("location_lng").notNull(),
+  description: text("description"),
+  tips: text("tips").array(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const pods = pgTable("pods", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const podMembers = pgTable("pod_members", {
+  id: serial("id").primaryKey(),
+  podId: integer("pod_id").notNull().references(() => pods.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+});
+
+export const savedExperiences = pgTable("saved_experiences", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  experienceId: integer("experience_id").notNull().references(() => experiences.id),
+  savedAt: timestamp("saved_at").defaultNow().notNull(),
+});
+
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  podId: integer("pod_id").notNull().references(() => pods.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+  name: true,
+  avatar: true,
+  location: true,
+  kids: true,
+  interests: true,
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export const insertExperienceSchema = createInsertSchema(experiences).omit({ id: true, createdAt: true });
+export const insertPodSchema = createInsertSchema(pods).omit({ id: true, createdAt: true });
+export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
+export const insertSavedExperienceSchema = createInsertSchema(savedExperiences).omit({ id: true, savedAt: true });
+
 export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export type Experience = typeof experiences.$inferSelect;
+export type InsertExperience = z.infer<typeof insertExperienceSchema>;
+
+export type Pod = typeof pods.$inferSelect;
+export type InsertPod = z.infer<typeof insertPodSchema>;
+
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+
+export type SavedExperience = typeof savedExperiences.$inferSelect;
+export type InsertSavedExperience = z.infer<typeof insertSavedExperienceSchema>;

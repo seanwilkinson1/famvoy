@@ -1,20 +1,36 @@
 import { useRoute, useLocation } from "wouter";
-import { experiences, mapBg } from "@/lib/data";
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { ChevronLeft, Heart, Clock, DollarSign, Users, MapPin, Share2 } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { formatExperience } from "@/lib/types";
+import mapBg from "@assets/generated_images/stylized_map_background_for_explore_screen.png";
 
 export default function ExperienceDetails() {
   const [match, params] = useRoute("/experience/:id");
   const [, setLocation] = useLocation();
   const [isSaved, setIsSaved] = useState(false);
 
-  if (!match) return null;
+  const { data: experience } = useQuery({
+    queryKey: ["experience", params?.id],
+    queryFn: () => params?.id ? api.experiences.getById(parseInt(params.id)) : null,
+    enabled: !!match && !!params?.id,
+  });
 
-  const experience = experiences.find((e) => e.id === params.id) || experiences[0];
-  const similar = experiences.filter((e) => e.id !== experience.id);
+  const { data: allExperiences = [] } = useQuery({
+    queryKey: ["experiences"],
+    queryFn: api.experiences.getAll,
+  });
+
+  if (!match || !experience) return null;
+
+  const similar = allExperiences.filter((e) => e.id !== experience.id);
+  const formattedSimilar = similar.map(exp => 
+    formatExperience(exp, "Family", "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400")
+  );
 
   return (
     <div className="min-h-screen bg-background pb-24 relative z-50">
@@ -32,16 +48,18 @@ export default function ExperienceDetails() {
           <button 
             onClick={() => setLocation("/")}
             className="rounded-full bg-white/20 backdrop-blur-md p-2 text-white hover:bg-white/30 transition-colors"
+            data-testid="button-back"
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
           <div className="flex gap-3">
-            <button className="rounded-full bg-white/20 backdrop-blur-md p-2 text-white hover:bg-white/30 transition-colors">
+            <button className="rounded-full bg-white/20 backdrop-blur-md p-2 text-white hover:bg-white/30 transition-colors" data-testid="button-share">
               <Share2 className="h-5 w-5" />
             </button>
             <button 
               onClick={() => setIsSaved(!isSaved)}
               className="rounded-full bg-white/20 backdrop-blur-md p-2 text-white hover:bg-white/30 transition-colors"
+              data-testid="button-save"
             >
               <Heart className={cn("h-5 w-5", isSaved ? "fill-red-500 text-red-500" : "text-white")} />
             </button>
@@ -53,7 +71,7 @@ export default function ExperienceDetails() {
           <span className="inline-block rounded-md bg-primary/90 px-2 py-1 text-xs font-bold text-white backdrop-blur-sm mb-2">
             {experience.category}
           </span>
-          <h1 className="font-heading text-3xl font-bold text-white leading-tight">
+          <h1 className="font-heading text-3xl font-bold text-white leading-tight" data-testid="text-title">
             {experience.title}
           </h1>
         </div>
@@ -66,16 +84,16 @@ export default function ExperienceDetails() {
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
-              src={experience.familyAvatar}
-              alt={experience.family}
+              src="https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400"
+              alt="Family"
               className="h-10 w-10 rounded-full object-cover ring-2 ring-white shadow-sm"
             />
             <div>
               <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Shared by</p>
-              <p className="text-sm font-bold text-gray-900">{experience.family}</p>
+              <p className="text-sm font-bold text-gray-900">The Family</p>
             </div>
           </div>
-          <button className="rounded-full bg-primary/10 px-4 py-1.5 text-xs font-bold text-primary">
+          <button className="rounded-full bg-primary/10 px-4 py-1.5 text-xs font-bold text-primary" data-testid="button-follow">
             Follow
           </button>
         </div>
@@ -107,8 +125,8 @@ export default function ExperienceDetails() {
             </div>
           </div>
           <div className="bg-white p-3 flex justify-between items-center">
-             <div className="text-sm font-medium text-gray-900">{experience.location.name}</div>
-             <button className="text-xs font-bold text-primary">Get Directions</button>
+             <div className="text-sm font-medium text-gray-900">{experience.locationName}</div>
+             <button className="text-xs font-bold text-primary" data-testid="button-directions">Get Directions</button>
           </div>
         </div>
 
@@ -116,7 +134,7 @@ export default function ExperienceDetails() {
         <section className="mb-8">
           <h2 className="mb-3 font-heading text-xl font-bold text-gray-900">What We Loved</h2>
           <p className="text-base leading-relaxed text-gray-600">
-            "This was honestly such a hidden gem! The kids loved the interactive exhibits, and we spent way more time here than expected. Highly recommend bringing a packed lunch as the cafe was a bit crowded."
+            {experience.description || "This was honestly such a hidden gem! The kids loved the interactive exhibits, and we spent way more time here than expected. Highly recommend bringing a packed lunch as the cafe was a bit crowded."}
           </p>
         </section>
 
@@ -124,12 +142,12 @@ export default function ExperienceDetails() {
         <section className="mb-8">
           <h2 className="mb-3 font-heading text-xl font-bold text-gray-900">Good to Know</h2>
           <ul className="space-y-2">
-            {[
+            {(experience.tips || [
               "Stroller friendly paths throughout",
               "Restrooms located near the entrance",
               "Best time to visit is early morning",
               "Parking is free on weekends"
-            ].map((tip, i) => (
+            ]).map((tip, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
                 <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-secondary-foreground/50 flex-shrink-0" />
                 {tip}
@@ -139,17 +157,19 @@ export default function ExperienceDetails() {
         </section>
 
         {/* Similar Experiences */}
-        <section>
-          <h2 className="mb-4 font-heading text-xl font-bold text-gray-900">Similar Experiences</h2>
-          <ScrollArea className="-mx-6 w-[calc(100%+48px)] px-6 pb-4">
-             <div className="flex gap-4 w-max">
-               {similar.map(exp => (
-                 <ExperienceCard key={exp.id} experience={exp} horizontal className="w-[240px]" />
-               ))}
-             </div>
-             <ScrollBar orientation="horizontal" className="hidden" />
-          </ScrollArea>
-        </section>
+        {formattedSimilar.length > 0 && (
+          <section>
+            <h2 className="mb-4 font-heading text-xl font-bold text-gray-900">Similar Experiences</h2>
+            <ScrollArea className="-mx-6 w-[calc(100%+48px)] px-6 pb-4">
+               <div className="flex gap-4 w-max">
+                 {formattedSimilar.map(exp => (
+                   <ExperienceCard key={exp.id} experience={exp} horizontal className="w-[240px]" />
+                 ))}
+               </div>
+               <ScrollBar orientation="horizontal" className="hidden" />
+            </ScrollArea>
+          </section>
+        )}
       </div>
     </div>
   );

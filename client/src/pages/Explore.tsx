@@ -1,12 +1,23 @@
-import { mapBg, experiences } from "@/lib/data";
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { Search, Navigation } from "lucide-react";
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { formatExperience } from "@/lib/types";
+import mapBg from "@assets/generated_images/stylized_map_background_for_explore_screen.png";
 
 export default function Explore() {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const { data: experiences = [], isLoading } = useQuery({
+    queryKey: ["experiences"],
+    queryFn: api.experiences.getAll,
+  });
+
+  const formattedExperiences = experiences.map(exp => 
+    formatExperience(exp, "Family", "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400")
+  );
 
   return (
     <div className="relative h-screen w-full overflow-hidden bg-gray-100">
@@ -21,10 +32,10 @@ export default function Explore() {
 
       {/* Map Overlays */}
       <div className="absolute right-4 top-14 flex flex-col gap-3">
-        <button className="rounded-full bg-white p-3 shadow-lg shadow-black/5 active:scale-90 transition-transform">
+        <button className="rounded-full bg-white p-3 shadow-lg shadow-black/5 active:scale-90 transition-transform" data-testid="button-search">
           <Search className="h-6 w-6 text-gray-700" />
         </button>
-        <button className="rounded-full bg-white p-3 shadow-lg shadow-black/5 active:scale-90 transition-transform">
+        <button className="rounded-full bg-white p-3 shadow-lg shadow-black/5 active:scale-90 transition-transform" data-testid="button-locate">
           <Navigation className="h-6 w-6 text-primary fill-primary" />
         </button>
       </div>
@@ -52,7 +63,7 @@ export default function Explore() {
             <h3 className="font-heading text-lg font-bold text-gray-900">
               {experiences.length} experiences nearby
             </h3>
-            <button className="text-xs font-medium text-primary uppercase tracking-wide">Filter</button>
+            <button className="text-xs font-medium text-primary uppercase tracking-wide" data-testid="button-filter">Filter</button>
           </div>
 
           {/* Filter Chips */}
@@ -64,9 +75,13 @@ export default function Explore() {
 
           {/* List */}
           <div className="flex-1 overflow-y-auto pb-32 space-y-4 no-scrollbar">
-            {experiences.map((exp) => (
-              <ExperienceCard key={exp.id} experience={exp} className="shadow-none border border-gray-100" />
-            ))}
+            {isLoading ? (
+              <div className="text-center py-8 text-gray-400">Loading...</div>
+            ) : (
+              formattedExperiences.map((exp) => (
+                <ExperienceCard key={exp.id} experience={exp} className="shadow-none border border-gray-100" />
+              ))
+            )}
           </div>
         </div>
       </motion.div>

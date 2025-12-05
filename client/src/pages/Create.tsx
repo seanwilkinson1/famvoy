@@ -1,34 +1,83 @@
 import { useState } from "react";
-import { ChevronLeft, Camera, MapPin, Clock, DollarSign, Info } from "lucide-react";
+import { ChevronLeft, Camera, MapPin, Clock, Info } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 
 export default function Create() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [step, setStep] = useState(1);
+  const queryClient = useQueryClient();
+
+  const { data: currentUser } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: api.users.getMe,
+  });
+
   const [formData, setFormData] = useState({
     title: "",
-    cost: "Free",
+    cost: "Free" as "Free" | "$" | "$$",
     duration: "",
-    tags: [] as string[],
+    ages: "",
+    locationName: "",
+    category: "Outdoor",
+    description: "",
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentUser) throw new Error("No user logged in");
+      
+      return api.experiences.create({
+        ...formData,
+        image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=800",
+        locationLat: 37.7749,
+        locationLng: -122.4194,
+        userId: currentUser.id,
+        tips: [],
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["experiences"] });
+      toast({
+        title: "Experience Saved!",
+        description: "Your experience has been created successfully.",
+        duration: 3000,
+      });
+      setTimeout(() => setLocation("/"), 1000);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create experience",
+        variant: "destructive",
+      });
+    },
   });
 
   const handleSave = () => {
-    toast({
-      title: "Experience Saved!",
-      description: "Your experience has been saved locally.",
-      duration: 3000,
-    });
-    setTimeout(() => setLocation("/"), 1000);
+    if (!formData.title || !formData.duration) {
+      toast({
+        title: "Missing Fields",
+        description: "Please fill in at least the title and duration",
+        variant: "destructive",
+      });
+      return;
+    }
+    createMutation.mutate();
   };
 
   return (
     <div className="min-h-screen bg-background pt-14 pb-32 px-6">
       {/* Header */}
       <div className="mb-8 flex items-center gap-4">
-        <button onClick={() => setLocation("/")} className="rounded-full bg-gray-100 p-2 active:scale-90">
+        <button 
+          onClick={() => setLocation("/")} 
+          className="rounded-full bg-gray-100 p-2 active:scale-90"
+          data-testid="button-back"
+        >
           <ChevronLeft className="h-6 w-6 text-gray-700" />
         </button>
         <h1 className="font-heading text-2xl font-bold text-gray-900">New Experience</h1>
@@ -42,7 +91,7 @@ export default function Create() {
             <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center shadow-sm mb-3 group-active:scale-90 transition-transform">
               <Camera className="h-8 w-8 text-primary" />
             </div>
-            <p className="text-sm font-medium text-gray-500">Add a photo</p>
+            <p className="text-sm font-medium text-gray-500">Add a photo (placeholder)</p>
           </div>
         </section>
 
@@ -56,6 +105,7 @@ export default function Create() {
               className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              data-testid="input-title"
             />
           </div>
 
@@ -68,6 +118,9 @@ export default function Create() {
                   type="text"
                   placeholder="1.5 hrs"
                   className="w-full rounded-xl border border-gray-200 bg-white py-4 pl-12 pr-4 text-base font-medium placeholder:text-gray-400 focus:border-primary focus:outline-none"
+                  value={formData.duration}
+                  onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                  data-testid="input-duration"
                 />
               </div>
              </div>
@@ -79,6 +132,9 @@ export default function Create() {
                   type="text"
                   placeholder="3-7"
                   className="w-full rounded-xl border border-gray-200 bg-white py-4 pl-12 pr-4 text-base font-medium placeholder:text-gray-400 focus:border-primary focus:outline-none"
+                  value={formData.ages}
+                  onChange={(e) => setFormData({ ...formData, ages: e.target.value })}
+                  data-testid="input-ages"
                 />
               </div>
              </div>
@@ -87,7 +143,7 @@ export default function Create() {
           <div>
             <label className="mb-2 block text-sm font-bold text-gray-700">Cost</label>
             <div className="flex rounded-xl bg-gray-100 p-1">
-              {["Free", "$", "$$"].map((c) => (
+              {(["Free", "$", "$$"] as const).map((c) => (
                 <button
                   key={c}
                   onClick={() => setFormData({ ...formData, cost: c })}
@@ -97,6 +153,7 @@ export default function Create() {
                       ? "bg-white text-primary shadow-sm"
                       : "text-gray-500 hover:text-gray-700"
                   )}
+                  data-testid={`button-cost-${c.toLowerCase()}`}
                 >
                   {c}
                 </button>
@@ -112,6 +169,9 @@ export default function Create() {
                   type="text"
                   placeholder="Add location"
                   className="w-full rounded-xl border border-gray-200 bg-white py-4 pl-12 pr-4 text-base font-medium placeholder:text-gray-400 focus:border-primary focus:outline-none"
+                  value={formData.locationName}
+                  onChange={(e) => setFormData({ ...formData, locationName: e.target.value })}
+                  data-testid="input-location"
                 />
               </div>
           </div>
@@ -122,6 +182,9 @@ export default function Create() {
               rows={3}
               placeholder="Share your experience..."
               className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              data-testid="input-description"
             />
           </div>
         </section>
@@ -129,9 +192,11 @@ export default function Create() {
         {/* Sticky Save */}
         <button
           onClick={handleSave}
-          className="w-full rounded-2xl bg-primary py-4 text-lg font-bold text-white shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform"
+          disabled={createMutation.isPending}
+          className="w-full rounded-2xl bg-primary py-4 text-lg font-bold text-white shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform disabled:opacity-50"
+          data-testid="button-save-experience"
         >
-          Save Experience
+          {createMutation.isPending ? "Saving..." : "Save Experience"}
         </button>
       </div>
     </div>
