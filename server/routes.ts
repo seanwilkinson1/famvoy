@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 
@@ -9,7 +10,37 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
-  // Experiences
+  await setupAuth(app);
+
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const replitId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(replitId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  app.patch('/api/auth/user/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const replitId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(replitId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const updatedUser = await storage.updateUserProfile(user.id, req.body);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
   app.get("/api/experiences", async (req, res) => {
     try {
       const allExperiences = await storage.getExperiences();
@@ -42,9 +73,14 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/experiences", async (req, res) => {
+  app.post("/api/experiences", isAuthenticated, async (req: any, res) => {
     try {
-      const parsed = insertExperienceSchema.safeParse(req.body);
+      const replitId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(replitId);
+      if (!user) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const parsed = insertExperienceSchema.safeParse({ ...req.body, userId: user.id });
       if (!parsed.success) {
         return res.status(400).json({ error: fromError(parsed.error).toString() });
       }
@@ -75,11 +111,16 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/experiences/:id/save", async (req, res) => {
+  app.post("/api/experiences/:id/save", isAuthenticated, async (req: any, res) => {
     try {
       const experienceId = parseInt(req.params.id);
+      const replitId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(replitId);
+      if (!user) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
       const parsed = insertSavedExperienceSchema.safeParse({ 
-        userId: req.body.userId,
+        userId: user.id,
         experienceId 
       });
       if (!parsed.success) {
@@ -92,18 +133,21 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/experiences/:id/save", async (req, res) => {
+  app.delete("/api/experiences/:id/save", isAuthenticated, async (req: any, res) => {
     try {
       const experienceId = parseInt(req.params.id);
-      const userId = parseInt(req.body.userId);
-      await storage.unsaveExperience(userId, experienceId);
+      const replitId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(replitId);
+      if (!user) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      await storage.unsaveExperience(user.id, experienceId);
       res.status(200).json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Pods
   app.get("/api/pods", async (req, res) => {
     try {
       const allPods = await storage.getPods();
@@ -126,7 +170,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/pods", async (req, res) => {
+  app.post("/api/pods", isAuthenticated, async (req: any, res) => {
     try {
       const parsed = insertPodSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -149,18 +193,21 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/pods/:id/members", async (req, res) => {
+  app.post("/api/pods/:id/members", isAuthenticated, async (req: any, res) => {
     try {
       const podId = parseInt(req.params.id);
-      const userId = req.body.userId;
-      await storage.addPodMember(podId, userId);
+      const replitId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(replitId);
+      if (!user) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      await storage.addPodMember(podId, user.id);
       res.status(200).json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Messages
   app.get("/api/pods/:id/messages", async (req, res) => {
     try {
       const podId = parseInt(req.params.id);
@@ -171,10 +218,15 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/pods/:id/messages", async (req, res) => {
+  app.post("/api/pods/:id/messages", isAuthenticated, async (req: any, res) => {
     try {
       const podId = parseInt(req.params.id);
-      const parsed = insertMessageSchema.safeParse({ ...req.body, podId });
+      const replitId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(replitId);
+      if (!user) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const parsed = insertMessageSchema.safeParse({ ...req.body, podId, userId: user.id });
       if (!parsed.success) {
         return res.status(400).json({ error: fromError(parsed.error).toString() });
       }
@@ -185,20 +237,6 @@ export async function registerRoutes(
     }
   });
 
-  // Current User
-  app.get("/api/users/me", async (req, res) => {
-    try {
-      const user = await storage.getUser(1);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-      res.json(user);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Family Connections
   app.get("/api/users/:userId/connections", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
@@ -219,7 +257,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/connections/:id/accept", async (req, res) => {
+  app.post("/api/connections/:id/accept", isAuthenticated, async (req, res) => {
     try {
       const connectionId = parseInt(req.params.id);
       await storage.acceptConnection(connectionId);
@@ -229,7 +267,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/connections/:id/decline", async (req, res) => {
+  app.post("/api/connections/:id/decline", isAuthenticated, async (req, res) => {
     try {
       const connectionId = parseInt(req.params.id);
       await storage.declineConnection(connectionId);
@@ -239,20 +277,28 @@ export async function registerRoutes(
     }
   });
 
-  // Discover & Match Families
-  app.get("/api/families/discover", async (req, res) => {
+  app.get("/api/families/discover", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = parseInt(req.query.userId as string) || 1;
-      const families = await storage.getDiscoverableFamilies(userId);
+      const replitId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(replitId);
+      if (!user) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const families = await storage.getDiscoverableFamilies(user.id);
       res.json(families);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  app.post("/api/families/swipe", async (req, res) => {
+  app.post("/api/families/swipe", isAuthenticated, async (req: any, res) => {
     try {
-      const parsed = insertFamilySwipeSchema.safeParse(req.body);
+      const replitId = req.user.claims.sub;
+      const user = await storage.getUserByReplitId(replitId);
+      if (!user) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const parsed = insertFamilySwipeSchema.safeParse({ ...req.body, userId: user.id });
       if (!parsed.success) {
         return res.status(400).json({ error: fromError(parsed.error).toString() });
       }

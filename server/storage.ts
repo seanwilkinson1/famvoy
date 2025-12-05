@@ -1,6 +1,7 @@
 import { 
   type User, 
   type InsertUser,
+  type UpsertUser,
   type Experience,
   type InsertExperience,
   type Pod,
@@ -26,8 +27,9 @@ import { eq, desc, and, or, ne, notInArray, ilike } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getUserByReplitId(replitId: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+  updateUserProfile(id: number, data: Partial<User>): Promise<User>;
   getAllUsers(): Promise<User[]>;
   searchUsers(query: string): Promise<User[]>;
   
@@ -66,15 +68,54 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+  async getUserByReplitId(replitId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.replitId, replitId));
     return user || undefined;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const existingUser = await this.getUserByReplitId(userData.replitId);
+    
+    if (existingUser) {
+      const [user] = await db
+        .update(users)
+        .set({
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profileImageUrl: userData.profileImageUrl,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.replitId, userData.replitId))
+        .returning();
+      return user;
+    }
+
     const [user] = await db
       .insert(users)
-      .values(insertUser)
+      .values({
+        replitId: userData.replitId,
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        profileImageUrl: userData.profileImageUrl,
+        name: userData.firstName && userData.lastName 
+          ? `${userData.firstName} ${userData.lastName}` 
+          : userData.email?.split('@')[0] || 'New Family',
+        avatar: userData.profileImageUrl || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400',
+        location: 'Not set',
+        kids: 'Not specified',
+        interests: [],
+      })
+      .returning();
+    return user;
+  }
+
+  async updateUserProfile(id: number, data: Partial<User>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(users.id, id))
       .returning();
     return user;
   }
