@@ -1,7 +1,8 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { FamilySwipeCard, SwipeButtons } from "@/components/shared/FamilySwipeCard";
 import { MatchModal } from "@/components/shared/MatchModal";
-import { Search, Navigation, Map, Users, Compass, X, ChevronDown, MessageCircle, MapPin, Filter, SlidersHorizontal } from "lucide-react";
+import { ExploreMap } from "@/components/shared/ExploreMap";
+import { Search, Navigation, Map, Users, Compass, X, ChevronDown, MessageCircle, MapPin, Filter, SlidersHorizontal, Locate } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,7 +10,6 @@ import { useLocation } from "wouter";
 import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import mapBg from "@assets/generated_images/stylized_map_background_for_explore_screen.png";
 import type { User, Experience } from "@shared/schema";
 
 type ExploreTab = "map" | "discover" | "connections";
@@ -225,11 +225,12 @@ export default function Explore() {
             exit={{ opacity: 0 }}
             className="absolute inset-0"
           >
-            {/* Map Background */}
+            {/* Interactive Map */}
             <div className="absolute inset-0 h-full w-full">
-              <img src={mapBg} alt="Map" className="h-full w-full object-cover opacity-80" />
-              <div className="absolute left-1/4 top-1/3 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary ring-4 ring-white/50 animate-pulse" />
-              <div className="absolute right-1/3 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-secondary ring-4 ring-white/50" />
+              <ExploreMap
+                experiences={filteredExperiences}
+                userLocation={userLocation}
+              />
             </div>
 
             {/* Search Overlay */}
