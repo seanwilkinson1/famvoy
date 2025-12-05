@@ -22,6 +22,20 @@ async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Re
 }
 
 export const api = {
+  upload: {
+    image: async (file: File): Promise<{ url: string; filename: string }> => {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const res = await fetchWithAuth(`${API_BASE}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) throw new Error('Failed to upload image');
+      return res.json();
+    },
+  },
+  
   experiences: {
     getAll: async (): Promise<Experience[]> => {
       const res = await fetch(`${API_BASE}/experiences`);
@@ -123,6 +137,18 @@ export const api = {
       return res.json();
     },
     
+    discover: async (): Promise<Pod[]> => {
+      const res = await fetch(`${API_BASE}/pods/discover`);
+      if (!res.ok) throw new Error("Failed to discover pods");
+      return res.json();
+    },
+    
+    search: async (query: string): Promise<Pod[]> => {
+      const res = await fetch(`${API_BASE}/pods/search?q=${encodeURIComponent(query)}`);
+      if (!res.ok) throw new Error("Failed to search pods");
+      return res.json();
+    },
+    
     create: async (data: { name: string; description: string }): Promise<Pod> => {
       const res = await fetchWithAuth(`${API_BASE}/pods`, {
         method: "POST",
@@ -130,6 +156,16 @@ export const api = {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to create pod");
+      return res.json();
+    },
+    
+    createGroup: async (data: { name: string; description: string; category?: string; image?: string }): Promise<Pod> => {
+      const res = await fetchWithAuth(`${API_BASE}/pods/group`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create group pod");
       return res.json();
     },
     
@@ -144,10 +180,17 @@ export const api = {
     },
     
     join: async (podId: number): Promise<void> => {
-      const res = await fetchWithAuth(`${API_BASE}/pods/${podId}/members`, {
+      const res = await fetchWithAuth(`${API_BASE}/pods/${podId}/join`, {
         method: "POST",
       });
       if (!res.ok) throw new Error("Failed to join pod");
+    },
+    
+    leave: async (podId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/pods/${podId}/leave`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to leave pod");
     },
     
     getMessages: async (podId: number): Promise<Array<Message & { user: User }>> => {
@@ -203,6 +246,22 @@ export const api = {
     search: async (query: string): Promise<User[]> => {
       const res = await fetch(`${API_BASE}/families/search?q=${encodeURIComponent(query)}`);
       if (!res.ok) throw new Error("Failed to search families");
+      return res.json();
+    },
+  },
+  
+  activities: {
+    getFeed: async (limit?: number): Promise<any[]> => {
+      const params = limit ? `?limit=${limit}` : "";
+      const res = await fetchWithAuth(`${API_BASE}/activities/feed${params}`);
+      if (!res.ok) throw new Error("Failed to fetch activity feed");
+      return res.json();
+    },
+    
+    getByUser: async (userId: number, limit?: number): Promise<any[]> => {
+      const params = limit ? `?limit=${limit}` : "";
+      const res = await fetch(`${API_BASE}/activities/user/${userId}${params}`);
+      if (!res.ok) throw new Error("Failed to fetch user activities");
       return res.json();
     },
   },

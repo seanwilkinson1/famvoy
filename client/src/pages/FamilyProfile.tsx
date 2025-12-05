@@ -1,0 +1,215 @@
+import { ExperienceCard } from "@/components/shared/ExperienceCard";
+import { ArrowLeft, MapPin, Users, Heart, MessageCircle, Sparkles } from "lucide-react";
+import { useParams, useLocation } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { formatExperience } from "@/lib/types";
+
+export default function FamilyProfile() {
+  const { id } = useParams<{ id: string }>();
+  const userId = parseInt(id || "0");
+  const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+
+  const { data: currentUser } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: api.users.getMe,
+  });
+
+  const { data: family, isLoading } = useQuery({
+    queryKey: ["family", userId],
+    queryFn: async () => {
+      const res = await fetch(`/api/users/${userId}`);
+      if (!res.ok) throw new Error("Failed to fetch family");
+      return res.json();
+    },
+    enabled: userId > 0,
+  });
+
+  const { data: familyExperiences = [] } = useQuery({
+    queryKey: ["familyExperiences", userId],
+    queryFn: () => api.users.getExperiences(userId),
+    enabled: userId > 0,
+  });
+
+  const { data: matches = [] } = useQuery({
+    queryKey: ["matches", currentUser?.id],
+    queryFn: () => currentUser ? api.users.getMatches(currentUser.id) : [],
+    enabled: !!currentUser,
+  });
+
+  const messageMutation = useMutation({
+    mutationFn: async () => {
+      return api.pods.createDirect(userId);
+    },
+    onSuccess: (pod) => {
+      setLocation(`/pod/${pod.id}`);
+    },
+  });
+
+  const isConnected = matches.some(m => m.id === userId);
+  const isOwnProfile = currentUser?.id === userId;
+
+  const formattedExperiences = familyExperiences.map(exp => 
+    formatExperience(exp, family?.name, family?.avatar)
+  );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-10 h-10 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!family) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+        <p className="text-gray-500 mb-4">Family not found</p>
+        <button 
+          onClick={() => setLocation("/explore")}
+          className="text-primary font-bold"
+        >
+          Go back
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background pb-32">
+      {/* Header */}
+      <div className="relative">
+        <div className="h-48 bg-gradient-to-br from-primary/20 to-secondary/20">
+          {family.avatar && (
+            <img 
+              src={family.avatar} 
+              alt={family.name} 
+              className="w-full h-full object-cover opacity-30"
+            />
+          )}
+        </div>
+        
+        <button 
+          onClick={() => window.history.back()}
+          className="absolute top-4 left-4 rounded-full bg-white/80 backdrop-blur-sm p-2 shadow-sm"
+          data-testid="button-back"
+        >
+          <ArrowLeft className="h-5 w-5 text-gray-700" />
+        </button>
+
+        {/* Profile Image */}
+        <div className="absolute -bottom-16 left-1/2 -translate-x-1/2">
+          <img
+            src={family.avatar || "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400"}
+            alt={family.name}
+            className="h-32 w-32 rounded-full border-4 border-white object-cover shadow-lg"
+            data-testid="img-family-avatar"
+          />
+        </div>
+      </div>
+
+      {/* Profile Info */}
+      <div className="mt-20 px-6 text-center">
+        <h1 className="font-heading text-2xl font-bold text-gray-900" data-testid="text-family-name">
+          {family.name}
+        </h1>
+        
+        <div className="mt-2 flex items-center justify-center gap-4 text-sm text-gray-500">
+          {family.location && (
+            <div className="flex items-center gap-1">
+              <MapPin className="h-4 w-4" />
+              {family.location}
+            </div>
+          )}
+          {family.kids && (
+            <div className="flex items-center gap-1">
+              <Users className="h-4 w-4" />
+              {family.kids}
+            </div>
+          )}
+        </div>
+
+        {family.bio && (
+          <p className="mt-4 text-gray-600" data-testid="text-family-bio">
+            {family.bio}
+          </p>
+        )}
+
+        {/* Interests */}
+        {family.interests && family.interests.length > 0 && (
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {family.interests.map((interest: string) => (
+              <span
+                key={interest}
+                className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+              >
+                {interest}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        {!isOwnProfile && (
+          <div className="mt-6 flex justify-center gap-3">
+            {isConnected ? (
+              <button
+                onClick={() => messageMutation.mutate()}
+                disabled={messageMutation.isPending}
+                className="flex items-center gap-2 rounded-full px-6 py-3 font-bold text-white"
+                style={{ backgroundColor: '#14b8a6' }}
+                data-testid="button-message-family"
+              >
+                <MessageCircle className="h-5 w-5" />
+                {messageMutation.isPending ? "Opening..." : "Message"}
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 rounded-full bg-gray-100 px-6 py-3 text-gray-500">
+                <Sparkles className="h-5 w-5" />
+                <span className="text-sm font-medium">Match to connect</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Experiences Section */}
+      <div className="mt-8 px-6">
+        <h2 className="font-heading text-lg font-bold text-gray-900 mb-4">
+          Shared Experiences
+        </h2>
+        
+        {formattedExperiences.length === 0 ? (
+          <div className="text-center py-8 text-gray-400">
+            No experiences shared yet
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {formattedExperiences.map((exp) => (
+              <ExperienceCard key={exp.id} experience={exp} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Stats */}
+      <div className="mt-8 mx-6 rounded-2xl bg-gray-50 p-6">
+        <div className="grid grid-cols-2 gap-4 text-center">
+          <div>
+            <div className="text-2xl font-bold text-gray-900">{formattedExperiences.length}</div>
+            <div className="text-sm text-gray-500">Experiences</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-gray-900">
+              <Heart className="h-6 w-6 mx-auto text-red-400" />
+            </div>
+            <div className="text-sm text-gray-500">
+              {isConnected ? "Connected" : "Not connected"}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ImageUpload } from "@/components/shared/ImageUpload";
 
 const INTEREST_OPTIONS = [
   "Hiking", "Food", "Nature", "Art", "Sports", "Music", 
@@ -24,6 +25,7 @@ export default function Onboarding() {
     kids: "",
     interests: [] as string[],
     bio: "",
+    avatar: clerkUser?.imageUrl || "",
   });
 
   const onboardingMutation = useMutation({
@@ -37,7 +39,7 @@ export default function Onboarding() {
         },
         body: JSON.stringify({
           ...data,
-          avatar: clerkUser?.imageUrl || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400',
+          avatar: data.avatar || clerkUser?.imageUrl || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400',
         }),
       });
       if (!res.ok) throw new Error('Failed to complete onboarding');
@@ -126,6 +128,17 @@ export default function Onboarding() {
                   <p className="text-sm text-charcoal/60">Tell us about yourselves</p>
                 </div>
               </div>
+
+              <div className="flex justify-center mb-4">
+                <ImageUpload
+                  currentImage={formData.avatar}
+                  onImageChange={(url) => setFormData(prev => ({ ...prev, avatar: url }))}
+                  size="lg"
+                />
+              </div>
+              <p className="text-xs text-center text-charcoal/50 -mt-2 mb-4">
+                Add a family photo (optional)
+              </p>
 
               <div className="space-y-4">
                 <div>

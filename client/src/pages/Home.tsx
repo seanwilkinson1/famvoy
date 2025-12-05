@@ -1,4 +1,5 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
+import { ActivityFeed } from "@/components/shared/ActivityFeed";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";

@@ -1,12 +1,14 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { PodCard } from "@/components/shared/PodCard";
-import { Settings, MapPin, Edit2, X, Check } from "lucide-react";
+import { ImageUpload } from "@/components/shared/ImageUpload";
+import { Settings as SettingsIcon, MapPin, Edit2, X, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
 import { useClerk } from "@clerk/clerk-react";
+import { useLocation } from "wouter";
 
 const INTEREST_OPTIONS = [
   "Hiking", "Beach", "Parks", "Museums", "Playgrounds", "Sports", 
@@ -23,7 +25,9 @@ export default function Profile() {
     kids: "",
     bio: "",
     interests: [] as string[],
+    avatar: "",
   });
+  const [, setLocation] = useLocation();
 
   const queryClient = useQueryClient();
   const { signOut } = useClerk();
@@ -41,6 +45,7 @@ export default function Profile() {
         kids: currentUser.kids || "",
         bio: currentUser.bio || "",
         interests: currentUser.interests || [],
+        avatar: currentUser.avatar || "",
       });
     }
   }, [currentUser, isEditing]);
@@ -107,11 +112,12 @@ export default function Profile() {
     <div className="min-h-screen bg-background pt-14 pb-32 px-6">
       <div className="mb-6 flex justify-between">
         <button
-          onClick={() => signOut()}
-          className="text-sm text-gray-400 hover:text-gray-600"
-          data-testid="button-logout"
+          onClick={() => setLocation("/settings")}
+          className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+          data-testid="button-settings"
         >
-          Sign Out
+          <SettingsIcon className="h-4 w-4" />
+          Settings
         </button>
         {isEditing ? (
           <div className="flex gap-2">
@@ -146,11 +152,12 @@ export default function Profile() {
       {isEditing ? (
         <div className="space-y-6 mb-8">
           <div className="flex flex-col items-center">
-            <img
-              src={currentUser?.avatar || "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400"}
-              alt="Profile"
-              className="h-24 w-24 rounded-full object-cover ring-4 ring-white shadow-lg mb-4"
+            <ImageUpload
+              currentImage={editForm.avatar}
+              onImageChange={(url) => setEditForm({ ...editForm, avatar: url })}
+              size="lg"
             />
+            <p className="text-xs text-gray-500 mt-2">Tap to change photo</p>
           </div>
           
           <div>

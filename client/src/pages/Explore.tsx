@@ -1,8 +1,8 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { FamilySwipeCard, SwipeButtons } from "@/components/shared/FamilySwipeCard";
 import { MatchModal } from "@/components/shared/MatchModal";
-import { Search, Navigation, Map, Users, Compass, X, ChevronDown, MessageCircle, MapPin } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Search, Navigation, Map, Users, Compass, X, ChevronDown, MessageCircle, MapPin, Filter, SlidersHorizontal } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -10,9 +10,13 @@ import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import mapBg from "@assets/generated_images/stylized_map_background_for_explore_screen.png";
-import type { User } from "@shared/schema";
+import type { User, Experience } from "@shared/schema";
 
 type ExploreTab = "map" | "discover" | "connections";
+
+const CATEGORIES = ["All", "Outdoor", "Indoor", "Food", "Sports", "Arts", "Education", "Entertainment"];
+const AGE_RANGES = ["All Ages", "0-2", "3-5", "5-8", "8-12", "12+"];
+const COST_OPTIONS = ["Any Cost", "Free", "$", "$$", "$$$"];
 
 function useUserLocation() {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -50,6 +54,12 @@ export default function Explore() {
   const [showMatch, setShowMatch] = useState(false);
   const [matchedFamily, setMatchedFamily] = useState<User | null>(null);
   const [matchedPodId, setMatchedPodId] = useState<number | undefined>(undefined);
+  
+  const [showFilters, setShowFilters] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [ageFilter, setAgeFilter] = useState("All Ages");
+  const [costFilter, setCostFilter] = useState("Any Cost");
+  const [maxDistance, setMaxDistance] = useState(50);
   
   const { location: userLocation } = useUserLocation();
   const queryClient = useQueryClient();
@@ -127,10 +137,52 @@ export default function Explore() {
     ? searchResults 
     : (nearbyExperiences.length > 0 ? nearbyExperiences : experiences);
 
-  const formattedExperiences = displayExperiences.map(exp => ({
+  const filteredExperiences = useMemo(() => {
+    return displayExperiences.filter((exp) => {
+      if (categoryFilter !== "All" && exp.category !== categoryFilter) {
+        return false;
+      }
+      
+      if (ageFilter !== "All Ages" && exp.ages) {
+        const expAgeRanges = exp.ages.toLowerCase();
+        const filterAge = ageFilter.toLowerCase();
+        if (!expAgeRanges.includes("all") && !expAgeRanges.includes(filterAge.replace("-", " to "))) {
+          if (ageFilter === "0-2" && !expAgeRanges.includes("0") && !expAgeRanges.includes("toddler") && !expAgeRanges.includes("baby")) {
+            return false;
+          }
+        }
+      }
+      
+      if (costFilter !== "Any Cost") {
+        if (costFilter === "Free" && exp.cost?.toLowerCase() !== "free") {
+          return false;
+        } else if (costFilter !== "Free" && exp.cost !== costFilter) {
+          return false;
+        }
+      }
+      
+      if ('distance' in exp && typeof (exp as any).distance === 'number') {
+        const distanceKm = (exp as any).distance / 1000;
+        if (distanceKm > maxDistance) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [displayExperiences, categoryFilter, ageFilter, costFilter, maxDistance]);
+
+  const formattedExperiences = filteredExperiences.map(exp => ({
     ...formatExperience(exp, "Family", "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400"),
     distance: 'distance' in exp ? (exp as any).distance : undefined,
   }));
+  
+  const activeFiltersCount = [
+    categoryFilter !== "All",
+    ageFilter !== "All Ages",
+    costFilter !== "Any Cost",
+    maxDistance < 50
+  ].filter(Boolean).length;
 
   const currentFamily = discoverFamilies[currentFamilyIndex];
   const nextFamily = discoverFamilies[currentFamilyIndex + 1];
@@ -247,14 +299,162 @@ export default function Explore() {
               <div className="px-6 pt-2 h-full overflow-hidden flex flex-col">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="font-heading text-lg font-bold text-gray-900">
-                    {searchQuery ? `Results for "${searchQuery}"` : `${experiences.length} experiences nearby`}
+                    {searchQuery ? `Results for "${searchQuery}"` : `${filteredExperiences.length} experiences nearby`}
                   </h3>
-                  <button className="text-xs font-medium text-primary uppercase tracking-wide" data-testid="button-filter">Filter</button>
+                  <button 
+                    onClick={() => setShowFilters(!showFilters)}
+                    className={cn(
+                      "flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide transition-colors",
+                      showFilters || activeFiltersCount > 0 ? "text-primary" : "text-gray-500"
+                    )}
+                    data-testid="button-filter"
+                  >
+                    <SlidersHorizontal className="h-4 w-4" />
+                    Filter
+                    {activeFiltersCount > 0 && (
+                      <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+                        {activeFiltersCount}
+                      </span>
+                    )}
+                  </button>
                 </div>
+
+                {/* Filter Panel */}
+                <AnimatePresence>
+                  {showFilters && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden mb-4"
+                    >
+                      <div className="space-y-4 pb-4 border-b border-gray-100">
+                        {/* Category Filter */}
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 block">Category</label>
+                          <div className="flex flex-wrap gap-2">
+                            {CATEGORIES.map((cat) => (
+                              <button
+                                key={cat}
+                                onClick={() => setCategoryFilter(cat)}
+                                className={cn(
+                                  "rounded-full px-3 py-1.5 text-xs font-medium transition-all",
+                                  categoryFilter === cat
+                                    ? "bg-primary text-white"
+                                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                )}
+                                data-testid={`filter-category-${cat.toLowerCase()}`}
+                              >
+                                {cat}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Age Range Filter */}
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 block">Age Range</label>
+                          <div className="flex flex-wrap gap-2">
+                            {AGE_RANGES.map((age) => (
+                              <button
+                                key={age}
+                                onClick={() => setAgeFilter(age)}
+                                className={cn(
+                                  "rounded-full px-3 py-1.5 text-xs font-medium transition-all",
+                                  ageFilter === age
+                                    ? "bg-primary text-white"
+                                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                )}
+                                data-testid={`filter-age-${age.toLowerCase().replace(/\s+/g, "-")}`}
+                              >
+                                {age}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Cost Filter */}
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 block">Cost</label>
+                          <div className="flex flex-wrap gap-2">
+                            {COST_OPTIONS.map((cost) => (
+                              <button
+                                key={cost}
+                                onClick={() => setCostFilter(cost)}
+                                className={cn(
+                                  "rounded-full px-3 py-1.5 text-xs font-medium transition-all",
+                                  costFilter === cost
+                                    ? "bg-primary text-white"
+                                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                )}
+                                data-testid={`filter-cost-${cost.toLowerCase().replace(/\s+/g, "-")}`}
+                              >
+                                {cost}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Distance Slider */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Max Distance</label>
+                            <span className="text-xs font-bold text-primary">{maxDistance} km</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="1"
+                            max="100"
+                            value={maxDistance}
+                            onChange={(e) => setMaxDistance(parseInt(e.target.value))}
+                            className="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer accent-primary"
+                            data-testid="filter-distance-slider"
+                          />
+                          <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                            <span>1 km</span>
+                            <span>100 km</span>
+                          </div>
+                        </div>
+
+                        {/* Clear Filters */}
+                        {activeFiltersCount > 0 && (
+                          <button
+                            onClick={() => {
+                              setCategoryFilter("All");
+                              setAgeFilter("All Ages");
+                              setCostFilter("Any Cost");
+                              setMaxDistance(50);
+                            }}
+                            className="text-xs font-medium text-gray-500 underline hover:text-gray-700"
+                            data-testid="button-clear-filters"
+                          >
+                            Clear all filters
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <div className="flex-1 overflow-y-auto pb-32 space-y-4 no-scrollbar">
                   {loadingExperiences ? (
                     <div className="text-center py-8 text-gray-400">Loading...</div>
+                  ) : formattedExperiences.length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="text-gray-400 mb-2">No experiences match your filters</div>
+                      <button
+                        onClick={() => {
+                          setCategoryFilter("All");
+                          setAgeFilter("All Ages");
+                          setCostFilter("Any Cost");
+                          setMaxDistance(50);
+                        }}
+                        className="text-sm text-primary font-medium"
+                        data-testid="button-reset-filters"
+                      >
+                        Reset filters
+                      </button>
+                    </div>
                   ) : (
                     formattedExperiences.map((exp) => (
                       <ExperienceCard key={exp.id} experience={exp} className="shadow-none border border-gray-100" />
@@ -349,18 +549,23 @@ export default function Explore() {
                     className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm"
                     data-testid={`card-connection-${family.id}`}
                   >
-                    <img
-                      src={family.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400'}
-                      alt={family.name || 'Family'}
-                      className="h-16 w-16 rounded-full object-cover ring-2 ring-primary/20"
-                    />
-                    <div className="flex-1">
-                      <h3 className="font-heading font-bold text-gray-900">{family.name || 'Family'}</h3>
-                      <p className="text-sm text-gray-500">{family.location || 'Location not set'}</p>
-                      <div className="mt-1 flex gap-1">
-                        {(family.interests || []).slice(0, 2).map((i) => (
-                          <span key={i} className="text-xs text-primary font-medium">{i}</span>
-                        ))}
+                    <div 
+                      className="flex items-center gap-4 flex-1 cursor-pointer"
+                      onClick={() => setLocation(`/family/${family.id}`)}
+                    >
+                      <img
+                        src={family.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400'}
+                        alt={family.name || 'Family'}
+                        className="h-16 w-16 rounded-full object-cover ring-2 ring-primary/20"
+                      />
+                      <div className="flex-1">
+                        <h3 className="font-heading font-bold text-gray-900">{family.name || 'Family'}</h3>
+                        <p className="text-sm text-gray-500">{family.location || 'Location not set'}</p>
+                        <div className="mt-1 flex gap-1">
+                          {(family.interests || []).slice(0, 2).map((i) => (
+                            <span key={i} className="text-xs text-primary font-medium">{i}</span>
+                          ))}
+                        </div>
                       </div>
                     </div>
                     <button 

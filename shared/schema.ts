@@ -54,8 +54,12 @@ export const pods = pgTable("pods", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description").notNull(),
+  image: text("image"),
+  category: text("category"),
   isDirect: boolean("is_direct").default(false),
+  isPublic: boolean("is_public").default(true),
   creatorId: integer("creator_id").references(() => users.id),
+  memberCount: integer("member_count").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -96,6 +100,17 @@ export const familySwipes = pgTable("family_swipes", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const activities = pgTable("activities", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  targetId: integer("target_id"),
+  targetType: text("target_type"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertExperienceSchema = createInsertSchema(experiences).omit({ id: true, createdAt: true });
 export const insertPodSchema = createInsertSchema(pods).omit({ id: true, createdAt: true });
@@ -103,6 +118,7 @@ export const insertMessageSchema = createInsertSchema(messages).omit({ id: true,
 export const insertSavedExperienceSchema = createInsertSchema(savedExperiences).omit({ id: true, savedAt: true });
 export const insertFamilyConnectionSchema = createInsertSchema(familyConnections).omit({ id: true, createdAt: true, status: true });
 export const insertFamilySwipeSchema = createInsertSchema(familySwipes).omit({ id: true, createdAt: true });
+export const insertActivitySchema = createInsertSchema(activities).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -133,3 +149,6 @@ export type InsertFamilyConnection = z.infer<typeof insertFamilyConnectionSchema
 
 export type FamilySwipe = typeof familySwipes.$inferSelect;
 export type InsertFamilySwipe = z.infer<typeof insertFamilySwipeSchema>;
+
+export type Activity = typeof activities.$inferSelect;
+export type InsertActivity = z.infer<typeof insertActivitySchema>;

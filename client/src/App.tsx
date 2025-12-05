@@ -14,6 +14,8 @@ import Explore from "@/pages/Explore";
 import Pods from "@/pages/Pods";
 import Create from "@/pages/Create";
 import Profile from "@/pages/Profile";
+import Settings from "@/pages/Settings";
+import FamilyProfile from "@/pages/FamilyProfile";
 import ExperienceDetails from "@/pages/ExperienceDetails";
 import PodDetails from "@/pages/PodDetails";
 import { useClerkAuth } from "@/hooks/useAuth";
@@ -47,8 +49,10 @@ function AuthenticatedRouter() {
         <Route path="/pods" component={Pods} />
         <Route path="/create" component={Create} />
         <Route path="/profile" component={Profile} />
+        <Route path="/settings" component={Settings} />
         <Route path="/experience/:id" component={ExperienceDetails} />
         <Route path="/pod/:id" component={PodDetails} />
+        <Route path="/family/:id" component={FamilyProfile} />
         <Route component={NotFound} />
       </Switch>
       <BottomNav />

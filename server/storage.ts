@@ -13,6 +13,8 @@ import {
   type InsertFamilyConnection,
   type FamilySwipe,
   type InsertFamilySwipe,
+  type Activity,
+  type InsertActivity,
   users,
   experiences,
   pods,
@@ -21,6 +23,7 @@ import {
   messages,
   familyConnections,
   familySwipes,
+  activities,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ne, notInArray, ilike } from "drizzle-orm";
@@ -57,11 +60,17 @@ export interface IStorage {
   getPodById(id: number): Promise<Pod | undefined>;
   getPodsByUser(userId: number): Promise<Pod[]>;
   getPodWithMembers(podId: number): Promise<{ pod: Pod; members: User[] } | undefined>;
+  getPublicPods(userId?: number): Promise<Pod[]>;
+  searchPods(query: string): Promise<Pod[]>;
   createPod(pod: InsertPod): Promise<Pod>;
+  createGroupPod(creatorId: number, data: { name: string; description: string; category?: string; image?: string }): Promise<Pod>;
   createDirectPod(userId1: number, userId2: number): Promise<Pod>;
   findDirectPod(userId1: number, userId2: number): Promise<Pod | undefined>;
   getOrCreateDirectPod(userId1: number, userId2: number): Promise<Pod>;
   addPodMember(podId: number, userId: number): Promise<void>;
+  removePodMember(podId: number, userId: number): Promise<void>;
+  isPodMember(podId: number, userId: number): Promise<boolean>;
+  updatePodMemberCount(podId: number): Promise<void>;
   
   getMessages(podId: number): Promise<Array<Message & { user: User }>>;
   createMessage(message: InsertMessage): Promise<Message>;
@@ -76,6 +85,10 @@ export interface IStorage {
   getExperiencesNearby(lat: number, lng: number, radiusMiles?: number): Promise<(Experience & { distance: number })[]>;
   recordSwipe(data: InsertFamilySwipe): Promise<{ matched: boolean; podId?: number }>;
   getMatches(userId: number): Promise<User[]>;
+  
+  createActivity(data: InsertActivity): Promise<Activity>;
+  getActivitiesForUser(userId: number, limit?: number): Promise<(Activity & { user: User })[]>;
+  getActivityFeed(userId: number, limit?: number): Promise<(Activity & { user: User })[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -289,6 +302,65 @@ export class DatabaseStorage implements IStorage {
 
   async addPodMember(podId: number, userId: number): Promise<void> {
     await db.insert(podMembers).values({ podId, userId }).onConflictDoNothing();
+    await this.updatePodMemberCount(podId);
+  }
+
+  async removePodMember(podId: number, userId: number): Promise<void> {
+    await db.delete(podMembers).where(
+      and(eq(podMembers.podId, podId), eq(podMembers.userId, userId))
+    );
+    await this.updatePodMemberCount(podId);
+  }
+
+  async isPodMember(podId: number, userId: number): Promise<boolean> {
+    const [member] = await db.select().from(podMembers).where(
+      and(eq(podMembers.podId, podId), eq(podMembers.userId, userId))
+    );
+    return !!member;
+  }
+
+  async updatePodMemberCount(podId: number): Promise<void> {
+    const members = await db.select().from(podMembers).where(eq(podMembers.podId, podId));
+    await db.update(pods).set({ memberCount: members.length }).where(eq(pods.id, podId));
+  }
+
+  async getPublicPods(userId?: number): Promise<Pod[]> {
+    const publicPods = await db.select().from(pods).where(
+      and(eq(pods.isPublic, true), eq(pods.isDirect, false))
+    ).orderBy(desc(pods.memberCount), desc(pods.createdAt));
+    
+    return publicPods;
+  }
+
+  async searchPods(query: string): Promise<Pod[]> {
+    return db.select().from(pods).where(
+      and(
+        eq(pods.isPublic, true),
+        eq(pods.isDirect, false),
+        or(
+          ilike(pods.name, `%${query}%`),
+          ilike(pods.description, `%${query}%`),
+          ilike(pods.category, `%${query}%`)
+        )
+      )
+    );
+  }
+
+  async createGroupPod(creatorId: number, data: { name: string; description: string; category?: string; image?: string }): Promise<Pod> {
+    const [newPod] = await db.insert(pods).values({
+      name: data.name,
+      description: data.description,
+      category: data.category || null,
+      image: data.image || null,
+      isDirect: false,
+      isPublic: true,
+      creatorId,
+      memberCount: 1,
+    }).returning();
+    
+    await db.insert(podMembers).values({ podId: newPod.id, userId: creatorId });
+    
+    return newPod;
   }
 
   async getMessages(podId: number): Promise<Array<Message & { user: User }>> {
@@ -457,6 +529,49 @@ export class DatabaseStorage implements IStorage {
       );
     
     return connections.map(c => c.user);
+  }
+
+  async createActivity(data: InsertActivity): Promise<Activity> {
+    const [activity] = await db.insert(activities).values(data).returning();
+    return activity;
+  }
+
+  async getActivitiesForUser(userId: number, limit: number = 50): Promise<(Activity & { user: User })[]> {
+    const result = await db
+      .select({
+        activity: activities,
+        user: users,
+      })
+      .from(activities)
+      .innerJoin(users, eq(activities.userId, users.id))
+      .where(eq(activities.userId, userId))
+      .orderBy(desc(activities.createdAt))
+      .limit(limit);
+    
+    return result.map(r => ({ ...r.activity, user: r.user }));
+  }
+
+  async getActivityFeed(userId: number, limit: number = 50): Promise<(Activity & { user: User })[]> {
+    const connections = await this.getMatches(userId);
+    const connectionIds = connections.map(c => c.id);
+    
+    if (connectionIds.length === 0) {
+      return [];
+    }
+    
+    const result = await db
+      .select({
+        activity: activities,
+        user: users,
+      })
+      .from(activities)
+      .innerJoin(users, eq(activities.userId, users.id))
+      .orderBy(desc(activities.createdAt))
+      .limit(limit);
+    
+    return result
+      .filter(r => connectionIds.includes(r.activity.userId))
+      .map(r => ({ ...r.activity, user: r.user }));
   }
 }
 

@@ -1,9 +1,38 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import path from "path";
+import multer from "multer";
+import express from "express";
 import { clerkMiddleware, getAuth, requireAuth } from "@clerk/express";
 import { storage } from "./storage";
 import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema } from "@shared/schema";
 import { fromError } from "zod-validation-error";
+
+const uploadStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, 'public/uploads');
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+  }
+});
+
+const upload = multer({
+  storage: uploadStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed.'));
+    }
+  }
+});
 
 export async function registerRoutes(
   httpServer: Server,
@@ -14,6 +43,20 @@ export async function registerRoutes(
     res.json({
       clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY,
     });
+  });
+
+  app.use('/uploads', express.static('public/uploads'));
+
+  app.post('/api/upload', requireAuth(), upload.single('image'), (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      const imageUrl = `/uploads/${req.file.filename}`;
+      res.json({ url: imageUrl, filename: req.file.filename });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
   });
 
   app.use(clerkMiddleware());
@@ -149,6 +192,19 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/users/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/users/:userId/experiences", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
@@ -221,6 +277,28 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/pods/discover", async (req, res) => {
+    try {
+      const publicPods = await storage.getPublicPods();
+      res.json(publicPods);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/pods/search", async (req, res) => {
+    try {
+      const query = req.query.q as string;
+      if (!query) {
+        return res.status(400).json({ error: "Search query is required" });
+      }
+      const results = await storage.searchPods(query);
+      res.json(results);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/pods/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -276,6 +354,67 @@ export async function registerRoutes(
       }
       const pod = await storage.createPod(parsed.data);
       res.status(201).json(pod);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/pods/group", requireAuth(), async (req, res) => {
+    try {
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      const { name, description, category, image } = req.body;
+      if (!name || !description) {
+        return res.status(400).json({ error: "Name and description are required" });
+      }
+      const pod = await storage.createGroupPod(user.id, { name, description, category, image });
+      res.status(201).json(pod);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/pods/:id/join", requireAuth(), async (req, res) => {
+    try {
+      const podId = parseInt(req.params.id);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      const isMember = await storage.isPodMember(podId, user.id);
+      if (isMember) {
+        return res.status(400).json({ error: "Already a member" });
+      }
+      await storage.addPodMember(podId, user.id);
+      res.status(200).json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/pods/:id/leave", requireAuth(), async (req, res) => {
+    try {
+      const podId = parseInt(req.params.id);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      await storage.removePodMember(podId, user.id);
+      res.status(200).json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -453,6 +592,35 @@ export async function registerRoutes(
       const query = req.query.q as string || "";
       const results = await storage.searchUsers(query);
       res.json(results);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/activities/feed", requireAuth(), async (req, res) => {
+    try {
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const activities = await storage.getActivityFeed(user.id, limit);
+      res.json(activities);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/activities/user/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const activities = await storage.getActivitiesForUser(userId, limit);
+      res.json(activities);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
