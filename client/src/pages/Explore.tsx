@@ -290,7 +290,7 @@ export default function Explore() {
                 if (info.offset.y < -100) setIsExpanded(true);
                 if (info.offset.y > 100) setIsExpanded(false);
               }}
-              animate={{ height: isExpanded ? "75%" : "180px" }}
+              animate={{ height: isExpanded ? "50%" : "140px" }}
               className="absolute bottom-0 left-0 right-0 z-30 rounded-t-[32px] bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.12)] overflow-hidden"
             >
               <div className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing" onClick={() => setIsExpanded(!isExpanded)}>
