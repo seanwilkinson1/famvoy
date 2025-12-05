@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, serial, real, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, real, timestamp, integer, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -10,8 +10,11 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   avatar: text("avatar").notNull(),
   location: text("location").notNull(),
+  locationLat: real("location_lat"),
+  locationLng: real("location_lng"),
   kids: text("kids").notNull(),
   interests: text("interests").array().notNull(),
+  bio: text("bio"),
 });
 
 export const experiences = pgTable("experiences", {
@@ -59,6 +62,22 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const familyConnections = pgTable("family_connections", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  connectedUserId: integer("connected_user_id").notNull().references(() => users.id),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const familySwipes = pgTable("family_swipes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  swipedUserId: integer("swiped_user_id").notNull().references(() => users.id),
+  liked: boolean("liked").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -73,6 +92,8 @@ export const insertExperienceSchema = createInsertSchema(experiences).omit({ id:
 export const insertPodSchema = createInsertSchema(pods).omit({ id: true, createdAt: true });
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
 export const insertSavedExperienceSchema = createInsertSchema(savedExperiences).omit({ id: true, savedAt: true });
+export const insertFamilyConnectionSchema = createInsertSchema(familyConnections).omit({ id: true, createdAt: true, status: true });
+export const insertFamilySwipeSchema = createInsertSchema(familySwipes).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -88,3 +109,9 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 
 export type SavedExperience = typeof savedExperiences.$inferSelect;
 export type InsertSavedExperience = z.infer<typeof insertSavedExperienceSchema>;
+
+export type FamilyConnection = typeof familyConnections.$inferSelect;
+export type InsertFamilyConnection = z.infer<typeof insertFamilyConnectionSchema>;
+
+export type FamilySwipe = typeof familySwipes.$inferSelect;
+export type InsertFamilySwipe = z.infer<typeof insertFamilySwipeSchema>;

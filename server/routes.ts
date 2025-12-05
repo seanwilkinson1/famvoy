@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema } from "@shared/schema";
+import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 
 export async function registerRoutes(
@@ -14,6 +14,16 @@ export async function registerRoutes(
     try {
       const allExperiences = await storage.getExperiences();
       res.json(allExperiences);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/experiences/search", async (req, res) => {
+    try {
+      const query = req.query.q as string || "";
+      const results = await storage.searchExperiences(query);
+      res.json(results);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -175,7 +185,7 @@ export async function registerRoutes(
     }
   });
 
-  // Current User (simplified - just return a fixed user for now)
+  // Current User
   app.get("/api/users/me", async (req, res) => {
     try {
       const user = await storage.getUser(1);
@@ -183,6 +193,91 @@ export async function registerRoutes(
         return res.status(404).json({ error: "User not found" });
       }
       res.json(user);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Family Connections
+  app.get("/api/users/:userId/connections", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const connections = await storage.getFamilyConnections(userId);
+      res.json(connections);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/users/:userId/connection-requests", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const requests = await storage.getPendingConnectionRequests(userId);
+      res.json(requests);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/connections/:id/accept", async (req, res) => {
+    try {
+      const connectionId = parseInt(req.params.id);
+      await storage.acceptConnection(connectionId);
+      res.status(200).json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/connections/:id/decline", async (req, res) => {
+    try {
+      const connectionId = parseInt(req.params.id);
+      await storage.declineConnection(connectionId);
+      res.status(200).json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Discover & Match Families
+  app.get("/api/families/discover", async (req, res) => {
+    try {
+      const userId = parseInt(req.query.userId as string) || 1;
+      const families = await storage.getDiscoverableFamilies(userId);
+      res.json(families);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/families/swipe", async (req, res) => {
+    try {
+      const parsed = insertFamilySwipeSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: fromError(parsed.error).toString() });
+      }
+      const result = await storage.recordSwipe(parsed.data);
+      res.status(200).json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/users/:userId/matches", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const matches = await storage.getMatches(userId);
+      res.json(matches);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/families/search", async (req, res) => {
+    try {
+      const query = req.query.q as string || "";
+      const results = await storage.searchUsers(query);
+      res.json(results);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

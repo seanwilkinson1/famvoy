@@ -8,20 +8,28 @@ import {
   type Message,
   type InsertMessage,
   type InsertSavedExperience,
+  type FamilyConnection,
+  type InsertFamilyConnection,
+  type FamilySwipe,
+  type InsertFamilySwipe,
   users,
   experiences,
   pods,
   podMembers,
   savedExperiences,
   messages,
+  familyConnections,
+  familySwipes,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, inArray } from "drizzle-orm";
+import { eq, desc, and, or, ne, notInArray, ilike } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  getAllUsers(): Promise<User[]>;
+  searchUsers(query: string): Promise<User[]>;
   
   getExperiences(): Promise<Experience[]>;
   getExperienceById(id: number): Promise<Experience | undefined>;
@@ -30,6 +38,7 @@ export interface IStorage {
   createExperience(experience: InsertExperience): Promise<Experience>;
   saveExperience(data: InsertSavedExperience): Promise<void>;
   unsaveExperience(userId: number, experienceId: number): Promise<void>;
+  searchExperiences(query: string): Promise<Experience[]>;
   
   getPods(): Promise<Pod[]>;
   getPodById(id: number): Promise<Pod | undefined>;
@@ -39,6 +48,16 @@ export interface IStorage {
   
   getMessages(podId: number): Promise<Array<Message & { user: User }>>;
   createMessage(message: InsertMessage): Promise<Message>;
+  
+  getFamilyConnections(userId: number): Promise<Array<FamilyConnection & { connectedUser: User }>>;
+  getPendingConnectionRequests(userId: number): Promise<Array<FamilyConnection & { user: User }>>;
+  sendConnectionRequest(data: InsertFamilyConnection): Promise<FamilyConnection>;
+  acceptConnection(connectionId: number): Promise<void>;
+  declineConnection(connectionId: number): Promise<void>;
+  
+  getDiscoverableFamilies(userId: number): Promise<User[]>;
+  recordSwipe(data: InsertFamilySwipe): Promise<{ matched: boolean }>;
+  getMatches(userId: number): Promise<User[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -58,6 +77,19 @@ export class DatabaseStorage implements IStorage {
       .values(insertUser)
       .returning();
     return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users);
+  }
+
+  async searchUsers(query: string): Promise<User[]> {
+    return db.select().from(users).where(
+      or(
+        ilike(users.name, `%${query}%`),
+        ilike(users.location, `%${query}%`)
+      )
+    );
   }
 
   async getExperiences(): Promise<Experience[]> {
@@ -106,6 +138,16 @@ export class DatabaseStorage implements IStorage {
       );
   }
 
+  async searchExperiences(query: string): Promise<Experience[]> {
+    return db.select().from(experiences).where(
+      or(
+        ilike(experiences.title, `%${query}%`),
+        ilike(experiences.locationName, `%${query}%`),
+        ilike(experiences.category, `%${query}%`)
+      )
+    );
+  }
+
   async getPods(): Promise<Pod[]> {
     return db.select().from(pods).orderBy(desc(pods.createdAt));
   }
@@ -148,6 +190,126 @@ export class DatabaseStorage implements IStorage {
   async createMessage(message: InsertMessage): Promise<Message> {
     const [newMessage] = await db.insert(messages).values(message).returning();
     return newMessage;
+  }
+
+  async getFamilyConnections(userId: number): Promise<Array<FamilyConnection & { connectedUser: User }>> {
+    const connections = await db
+      .select()
+      .from(familyConnections)
+      .innerJoin(users, eq(familyConnections.connectedUserId, users.id))
+      .where(
+        and(
+          eq(familyConnections.userId, userId),
+          eq(familyConnections.status, "accepted")
+        )
+      );
+    
+    return connections.map(c => ({ ...c.family_connections, connectedUser: c.users }));
+  }
+
+  async getPendingConnectionRequests(userId: number): Promise<Array<FamilyConnection & { user: User }>> {
+    const requests = await db
+      .select()
+      .from(familyConnections)
+      .innerJoin(users, eq(familyConnections.userId, users.id))
+      .where(
+        and(
+          eq(familyConnections.connectedUserId, userId),
+          eq(familyConnections.status, "pending")
+        )
+      );
+    
+    return requests.map(r => ({ ...r.family_connections, user: r.users }));
+  }
+
+  async sendConnectionRequest(data: InsertFamilyConnection): Promise<FamilyConnection> {
+    const [connection] = await db
+      .insert(familyConnections)
+      .values({ ...data, status: "pending" })
+      .returning();
+    return connection;
+  }
+
+  async acceptConnection(connectionId: number): Promise<void> {
+    const [conn] = await db.select().from(familyConnections).where(eq(familyConnections.id, connectionId));
+    if (conn) {
+      await db.update(familyConnections)
+        .set({ status: "accepted" })
+        .where(eq(familyConnections.id, connectionId));
+      
+      await db.insert(familyConnections)
+        .values({ userId: conn.connectedUserId, connectedUserId: conn.userId, status: "accepted" })
+        .onConflictDoNothing();
+    }
+  }
+
+  async declineConnection(connectionId: number): Promise<void> {
+    await db.delete(familyConnections).where(eq(familyConnections.id, connectionId));
+  }
+
+  async getDiscoverableFamilies(userId: number): Promise<User[]> {
+    const swipedIds = await db
+      .select({ id: familySwipes.swipedUserId })
+      .from(familySwipes)
+      .where(eq(familySwipes.userId, userId));
+    
+    const connectedIds = await db
+      .select({ id: familyConnections.connectedUserId })
+      .from(familyConnections)
+      .where(eq(familyConnections.userId, userId));
+    
+    const excludeIds = [
+      userId,
+      ...swipedIds.map(s => s.id),
+      ...connectedIds.map(c => c.id)
+    ];
+    
+    return db.select().from(users).where(notInArray(users.id, excludeIds));
+  }
+
+  async recordSwipe(data: InsertFamilySwipe): Promise<{ matched: boolean }> {
+    await db.insert(familySwipes).values(data);
+    
+    if (data.liked) {
+      const [mutualLike] = await db
+        .select()
+        .from(familySwipes)
+        .where(
+          and(
+            eq(familySwipes.userId, data.swipedUserId),
+            eq(familySwipes.swipedUserId, data.userId),
+            eq(familySwipes.liked, true)
+          )
+        );
+      
+      if (mutualLike) {
+        await db.insert(familyConnections)
+          .values({ userId: data.userId, connectedUserId: data.swipedUserId, status: "accepted" })
+          .onConflictDoNothing();
+        await db.insert(familyConnections)
+          .values({ userId: data.swipedUserId, connectedUserId: data.userId, status: "accepted" })
+          .onConflictDoNothing();
+        
+        return { matched: true };
+      }
+    }
+    
+    return { matched: false };
+  }
+
+  async getMatches(userId: number): Promise<User[]> {
+    const connections = await db
+      .select({ user: users })
+      .from(familyConnections)
+      .innerJoin(users, eq(familyConnections.connectedUserId, users.id))
+      .where(
+        and(
+          eq(familyConnections.userId, userId),
+          eq(familyConnections.status, "accepted")
+        )
+      );
+    
+    return connections.map(c => c.user);
   }
 }
 
