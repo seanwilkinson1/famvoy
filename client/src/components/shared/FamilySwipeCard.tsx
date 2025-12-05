@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import type { User } from "@shared/schema";
 
 interface FamilySwipeCardProps {
-  family: User;
+  family: User & { distance?: number };
   onSwipe: (liked: boolean) => void;
   isTop?: boolean;
 }
@@ -72,7 +72,9 @@ export function FamilySwipeCard({ family, onSwipe, isTop = false }: FamilySwipeC
           <div className="flex items-center gap-4 mb-3">
             <div className="flex items-center gap-1 text-sm text-white/80">
               <MapPin className="h-4 w-4" />
-              {family.location || 'Location not set'}
+              {family.distance !== undefined 
+                ? `${family.distance.toFixed(1)} mi away`
+                : (family.location || 'Location not set')}
             </div>
             <div className="flex items-center gap-1 text-sm text-white/80">
               <Users className="h-4 w-4" />

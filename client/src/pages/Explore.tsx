@@ -1,7 +1,7 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { FamilySwipeCard, SwipeButtons } from "@/components/shared/FamilySwipeCard";
 import { MatchModal } from "@/components/shared/MatchModal";
-import { Search, Navigation, Map, Users, Compass, X, ChevronDown, MessageCircle } from "lucide-react";
+import { Search, Navigation, Map, Users, Compass, X, ChevronDown, MessageCircle, MapPin } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +14,33 @@ import type { User } from "@shared/schema";
 
 type ExploreTab = "map" | "discover" | "connections";
 
+function useUserLocation() {
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setError("Geolocation not supported");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+      },
+      (err) => {
+        setError(err.message);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, []);
+
+  return { location, error };
+}
+
 export default function Explore() {
   const [activeTab, setActiveTab] = useState<ExploreTab>("map");
   const [isExpanded, setIsExpanded] = useState(false);
@@ -24,6 +51,7 @@ export default function Explore() {
   const [matchedFamily, setMatchedFamily] = useState<User | null>(null);
   const [matchedPodId, setMatchedPodId] = useState<number | undefined>(undefined);
   
+  const { location: userLocation } = useUserLocation();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
@@ -53,9 +81,15 @@ export default function Explore() {
   });
 
   const { data: discoverFamilies = [], isLoading: loadingFamilies } = useQuery({
-    queryKey: ["discoverFamilies"],
-    queryFn: api.families.discover,
+    queryKey: ["discoverFamilies", userLocation?.lat, userLocation?.lng],
+    queryFn: () => api.families.discover(userLocation?.lat, userLocation?.lng),
     enabled: activeTab === "discover",
+  });
+
+  const { data: nearbyExperiences = [] } = useQuery({
+    queryKey: ["nearbyExperiences", userLocation?.lat, userLocation?.lng],
+    queryFn: () => userLocation ? api.families.getNearby(userLocation.lat, userLocation.lng, 100) : [],
+    enabled: !!userLocation,
   });
 
   const { data: connections = [] } = useQuery({
@@ -89,9 +123,14 @@ export default function Explore() {
     }
   };
 
-  const formattedExperiences = (searchQuery.length > 1 ? searchResults : experiences).map(exp => 
-    formatExperience(exp, "Family", "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400")
-  );
+  const displayExperiences = searchQuery.length > 1 
+    ? searchResults 
+    : (nearbyExperiences.length > 0 ? nearbyExperiences : experiences);
+
+  const formattedExperiences = displayExperiences.map(exp => ({
+    ...formatExperience(exp, "Family", "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400"),
+    distance: 'distance' in exp ? (exp as any).distance : undefined,
+  }));
 
   const currentFamily = discoverFamilies[currentFamilyIndex];
   const nextFamily = discoverFamilies[currentFamilyIndex + 1];

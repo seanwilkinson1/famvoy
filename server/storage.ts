@@ -25,6 +25,17 @@ import {
 import { db } from "./db";
 import { eq, desc, and, or, ne, notInArray, ilike } from "drizzle-orm";
 
+function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 3959;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByClerkId(clerkId: string): Promise<User | undefined>;
@@ -61,7 +72,8 @@ export interface IStorage {
   acceptConnection(connectionId: number): Promise<void>;
   declineConnection(connectionId: number): Promise<void>;
   
-  getDiscoverableFamilies(userId: number): Promise<User[]>;
+  getDiscoverableFamilies(userId: number, userLat?: number, userLng?: number): Promise<(User & { distance?: number })[]>;
+  getExperiencesNearby(lat: number, lng: number, radiusMiles?: number): Promise<(Experience & { distance: number })[]>;
   recordSwipe(data: InsertFamilySwipe): Promise<{ matched: boolean; podId?: number }>;
   getMatches(userId: number): Promise<User[]>;
 }
@@ -350,7 +362,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(familyConnections).where(eq(familyConnections.id, connectionId));
   }
 
-  async getDiscoverableFamilies(userId: number): Promise<User[]> {
+  async getDiscoverableFamilies(userId: number, userLat?: number, userLng?: number): Promise<(User & { distance?: number })[]> {
     const swipedIds = await db
       .select({ id: familySwipes.swipedUserId })
       .from(familySwipes)
@@ -367,7 +379,37 @@ export class DatabaseStorage implements IStorage {
       ...connectedIds.map(c => c.id)
     ];
     
-    return db.select().from(users).where(notInArray(users.id, excludeIds));
+    const families = await db.select().from(users).where(notInArray(users.id, excludeIds));
+    
+    if (userLat !== undefined && userLng !== undefined) {
+      return families
+        .map(family => ({
+          ...family,
+          distance: family.locationLat !== null && family.locationLng !== null
+            ? calculateDistance(userLat, userLng, family.locationLat, family.locationLng)
+            : undefined
+        }))
+        .sort((a, b) => {
+          if (a.distance === undefined && b.distance === undefined) return 0;
+          if (a.distance === undefined) return 1;
+          if (b.distance === undefined) return -1;
+          return a.distance - b.distance;
+        });
+    }
+    
+    return families;
+  }
+
+  async getExperiencesNearby(lat: number, lng: number, radiusMiles: number = 50): Promise<(Experience & { distance: number })[]> {
+    const allExperiences = await db.select().from(experiences);
+    
+    return allExperiences
+      .map(exp => ({
+        ...exp,
+        distance: calculateDistance(lat, lng, exp.locationLat, exp.locationLng)
+      }))
+      .filter(exp => exp.distance <= radiusMiles)
+      .sort((a, b) => a.distance - b.distance);
   }
 
   async recordSwipe(data: InsertFamilySwipe): Promise<{ matched: boolean; podId?: number }> {

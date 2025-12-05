@@ -1,4 +1,4 @@
-import { Heart, Clock, DollarSign, Users } from "lucide-react";
+import { Heart, Clock, DollarSign, Users, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Link } from "wouter";
@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 import type { ExperienceWithFamily } from "@/lib/types";
 
 interface ExperienceCardProps {
-  experience: ExperienceWithFamily;
+  experience: ExperienceWithFamily & { distance?: number };
   className?: string;
   horizontal?: boolean;
 }
@@ -25,9 +25,9 @@ export function ExperienceCard({ experience, className, horizontal = false }: Ex
     mutationFn: async () => {
       if (!currentUser) return;
       if (isSaved) {
-        await api.experiences.unsave(experience.id, currentUser.id);
+        await api.experiences.unsave(experience.id);
       } else {
-        await api.experiences.save(experience.id, currentUser.id);
+        await api.experiences.save(experience.id);
       }
     },
     onSuccess: () => {
@@ -77,7 +77,13 @@ export function ExperienceCard({ experience, className, horizontal = false }: Ex
           </h3>
 
           {/* Meta Row */}
-          <div className="mb-3 flex items-center gap-3 text-xs font-medium text-gray-500">
+          <div className="mb-3 flex flex-wrap items-center gap-3 text-xs font-medium text-gray-500">
+            {experience.distance !== undefined && (
+              <div className="flex items-center gap-1 text-primary font-semibold">
+                <MapPin className="h-3.5 w-3.5" />
+                {experience.distance.toFixed(1)} mi
+              </div>
+            )}
             <div className="flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" />
               {experience.duration}

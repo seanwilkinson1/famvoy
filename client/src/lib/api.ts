@@ -168,9 +168,25 @@ export const api = {
   },
   
   families: {
-    discover: async (): Promise<User[]> => {
-      const res = await fetchWithAuth(`${API_BASE}/families/discover`);
+    discover: async (lat?: number, lng?: number): Promise<(User & { distance?: number })[]> => {
+      const params = new URLSearchParams();
+      if (lat !== undefined && lng !== undefined) {
+        params.set('lat', lat.toString());
+        params.set('lng', lng.toString());
+      }
+      const url = params.toString() 
+        ? `${API_BASE}/families/discover?${params}` 
+        : `${API_BASE}/families/discover`;
+      const res = await fetchWithAuth(url);
       if (!res.ok) throw new Error("Failed to discover families");
+      return res.json();
+    },
+    
+    getNearby: async (lat: number, lng: number, radius?: number): Promise<(Experience & { distance: number })[]> => {
+      const params = new URLSearchParams({ lat: lat.toString(), lng: lng.toString() });
+      if (radius) params.set('radius', radius.toString());
+      const res = await fetch(`${API_BASE}/experiences/nearby?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch nearby experiences");
       return res.json();
     },
     

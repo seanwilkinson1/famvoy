@@ -391,8 +391,27 @@ export async function registerRoutes(
       if (!user) {
         return res.status(401).json({ error: "User not found" });
       }
-      const families = await storage.getDiscoverableFamilies(user.id);
+      const lat = req.query.lat ? parseFloat(req.query.lat as string) : undefined;
+      const lng = req.query.lng ? parseFloat(req.query.lng as string) : undefined;
+      const families = await storage.getDiscoverableFamilies(user.id, lat, lng);
       res.json(families);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/experiences/nearby", async (req, res) => {
+    try {
+      const lat = parseFloat(req.query.lat as string);
+      const lng = parseFloat(req.query.lng as string);
+      const radius = req.query.radius ? parseFloat(req.query.radius as string) : 50;
+      
+      if (isNaN(lat) || isNaN(lng)) {
+        return res.status(400).json({ error: "lat and lng query parameters are required" });
+      }
+      
+      const experiences = await storage.getExperiencesNearby(lat, lng, radius);
+      res.json(experiences);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
