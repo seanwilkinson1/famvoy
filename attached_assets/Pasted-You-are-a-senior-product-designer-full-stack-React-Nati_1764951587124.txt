@@ -1,0 +1,170 @@
+You are a senior product designer + full-stack React Native (Expo) engineer.
+
+Build the first version of a mobile app called **FamVoy** – a family experience and travel app that:
+- Helps families discover nearby experiences and trips
+- Lets them connect with other families (pods)
+- Lets them post and save “experience cards” (title, photos, ages, duration, cost, map location)
+- Uses a warm, clean, modern UI (Airbnb + Apple Health + Pinterest vibes)
+
+General requirements:
+- Use **React Native with Expo** and **TypeScript**
+- Organize screens using **@react-navigation/bottom-tabs** and **@react-navigation/native-stack**
+- Componentize repeated UI (ExperienceCard, FamilyAvatarRow, PodCard, etc.)
+- Use a light theme, generous white space, rounded corners, subtle shadows
+- Do NOT use childish/cartoon styles; this is family-friendly but modern
+- Use placeholder data and images for now (static JSON arrays and remote image URLs)
+
+Primary navigation (bottom tabs):
+1. Home
+2. Explore (Map)
+3. Pods
+4. Create (New Experience)
+5. Profile
+
+Follow this wireframe spec:
+
+[HOME SCREEN]
+Purpose: Daily “What should we do?” engine.
+
+Layout:
+- Safe-area top with small greeting (“Good morning, Wilkinson family 👋”)
+- Horizontal scroll row of “Quick Filters” (chips): 
+  - Nearby
+  - Free
+  - 1–2 hrs
+  - Indoor
+  - Outdoor
+  - Toddler-friendly
+- Section: “Suggestions for Today”
+  - Horizontal scroll of ExperienceCard components
+- Section: “Popular with Families Like Yours”
+  - Vertical list of ExperienceCard
+- ExperienceCard component:
+  - Large image (top, 16:9)
+  - Title
+  - Row of small meta icons: 
+    - duration (e.g., “1.5 hrs”)
+    - cost ($ / Free)
+    - ages (e.g., “3–7”)
+  - Family avatar + family name
+  - Save (heart) icon
+
+Interactions:
+- Tapping a card → ExperienceDetails screen (stack above Home)
+- Tapping Save toggles local state and visually updates
+
+[EXPLORE MAP SCREEN]
+Purpose: Map-based discovery of experiences.
+
+Layout:
+- Full-screen MapView (e.g., react-native-maps)
+- Circular buttons overlaid on top right: filter, locate-me
+- Bottom sheet:
+  - By default: collapsed to 80px height, showing “N experiences near you”
+  - Drag up to 60% screen height to show a scrollable list of ExperienceCards
+- Tapping a map pin:
+  - Highlights the pin
+  - Expands the bottom sheet to show that experience at the top of the list
+
+Filters (simple for now):
+- Chips across the top of the bottom sheet:
+  - Age range dropdown
+  - Cost (Free / $ / $$)
+  - Duration (Short <2h, Half day, Full day)
+
+[EXPERIENCE DETAILS SCREEN]
+Purpose: Deep view of a single experience.
+
+Layout:
+- Large header image
+- Title + Save button
+- Family row: avatar + “Shared by The Johnsons”
+- Quick stats row (icons + labels): Duration, Cost, Ages, Location
+- Map preview card (mini map)
+- Section: “What We Loved”
+  - Short paragraph text
+- Section: “Good to Know”
+  - Bullet points
+- Section: “Similar Experiences”
+  - Horizontal ExperienceCard carousel
+
+[ PODS SCREEN ]
+Purpose: Group coordination between families.
+
+Layout:
+- Top: “Your Pods” heading
+- Button: “+ Create Pod”
+- List of PodCards:
+  - Pod name (“Seattle Adventurers”)
+  - Mini avatars of member families (3–5)
+  - Short description
+- Tapping PodCard → PodDetails screen
+
+PodDetails layout:
+- Header: Pod name + member avatars
+- Tabs (rendered as segmented control):
+  - Chat
+  - Experiences
+  - Trips
+- For MVP, implement just:
+  - Chat: simple vertical list of messages with sender name + time + input box at bottom (local-only messages)
+  - Experiences: list of ExperienceCards tagged with this pod (use filtered placeholder data)
+
+[ CREATE EXPERIENCE SCREEN ]
+Purpose: Fast, friendly creation flow.
+
+Use a `create-experience` stack with 2–3 steps inside a single screen, vertically:
+
+- Step 1: Photos
+  - For now, use a placeholder button “Add Photo (not wired yet)” and show a static sample image
+
+- Step 2: Basic Info (inputs with labels)
+  - Title (TextInput)
+  - Duration (TextInput or picker)
+  - Cost (Free / $ / $$ segmented control)
+  - Suitable Ages (TextInput, placeholder “3–7”)
+  - Location (TextInput)
+
+- Step 3: Details
+  - “What did you love?” (multiline TextInput)
+  - “Any tips or gotchas?” (multiline TextInput)
+  - Primary tag chips (Nature, Rainy Day, Food, Park, Museum, Hiking, etc.)
+
+- Sticky button at the bottom: “Save Experience”
+  - For now, just logs the payload and shows an alert: “Experience saved (locally)!”
+
+[ PROFILE SCREEN ]
+Purpose: Family identity + saved content.
+
+Layout:
+- Family avatar (circle) + Family name (“The Wilkinsons”)
+- Location + kid ages text (“2 kids • ages 2 & 4 • Costa Rica”)
+- Interest tags row (chips)
+- Segmented control:
+  - Experiences
+  - Saved
+  - Pods
+- Experiences tab: grid or list of the family’s ExperienceCards
+- Saved tab: grid or list of saved ExperienceCards
+- Pods tab: list of PodCards the family belongs to
+
+Design/style instructions:
+- Typography:
+  - Use 2–3 font weights only; clear hierarchy (e.g., H1, H2, body)
+- Colors:
+  - Light background (#F6F5F2 or similar)
+  - Primary accent (e.g., a warm teal or blue)
+  - Secondary accent for call-to-action buttons
+- Components should feel like cards with subtle shadow (e.g., `elevation` on Android, `shadow*` on iOS)
+- Use generous padding, 12–16px border radius
+
+Implementation steps:
+1. Scaffold Expo + navigation, create the 5 main tab screens.
+2. Implement shared components (ExperienceCard, PodCard, BottomSheet, FamilyHeader).
+3. Use static JSON data for experiences, pods, and family profile.
+4. Polish spacing, margins, and typography for a modern feel.
+5. Ensure the app runs in Expo Go with no TypeScript errors.
+
+After writing the code, also include:
+- A brief explanation of project structure
+- Instructions on how to run it (`npm install`, `npx expo start`)
