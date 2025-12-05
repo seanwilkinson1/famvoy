@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Heart, MapPin, Users, Sparkles, ArrowRight, Star, Shield, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SignInButton, SignUpButton } from "@clerk/clerk-react";
 
 export default function Landing() {
   return (
@@ -13,11 +14,11 @@ export default function Landing() {
             </div>
             <span className="text-xl font-outfit font-bold text-charcoal">FamVoy</span>
           </div>
-          <a href="/api/login" data-testid="link-login">
-            <Button variant="outline" className="rounded-full border-warm-teal text-warm-teal hover:bg-warm-teal hover:text-white">
+          <SignInButton mode="modal">
+            <Button variant="outline" className="rounded-full border-warm-teal text-warm-teal hover:bg-warm-teal hover:text-white" data-testid="link-login">
               Sign In
             </Button>
-          </a>
+          </SignInButton>
         </div>
       </header>
 
@@ -54,12 +55,12 @@ export default function Landing() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a href="/api/login" data-testid="button-get-started">
-                <Button size="lg" className="w-full sm:w-auto bg-warm-teal hover:bg-warm-teal/90 text-white rounded-full px-8 py-6 text-lg shadow-lg shadow-warm-teal/20">
+              <SignUpButton mode="modal">
+                <Button size="lg" className="w-full sm:w-auto bg-warm-teal hover:bg-warm-teal/90 text-white rounded-full px-8 py-6 text-lg shadow-lg shadow-warm-teal/20" data-testid="button-get-started">
                   Get Started Free
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
-              </a>
+              </SignUpButton>
               <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full px-8 py-6 text-lg border-charcoal/20 text-charcoal hover:bg-charcoal/5">
                 Learn More
               </Button>
@@ -211,12 +212,12 @@ export default function Landing() {
               <p className="text-white/80 mb-8 max-w-lg mx-auto">
                 Join thousands of families already discovering amazing experiences together.
               </p>
-              <a href="/api/login" data-testid="button-cta-signup">
-                <Button size="lg" className="bg-white text-warm-teal hover:bg-white/90 rounded-full px-8 py-6 text-lg shadow-lg">
+              <SignUpButton mode="modal">
+                <Button size="lg" className="bg-white text-warm-teal hover:bg-white/90 rounded-full px-8 py-6 text-lg shadow-lg" data-testid="button-cta-signup">
                   Create Free Account
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
-              </a>
+              </SignUpButton>
             </div>
           </motion.div>
         </section>

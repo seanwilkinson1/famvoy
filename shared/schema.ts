@@ -15,6 +15,7 @@ export const sessions = pgTable(
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
+  clerkId: varchar("clerk_id").unique(),
   replitId: varchar("replit_id").unique(),
   email: varchar("email"),
   firstName: varchar("first_name"),
@@ -104,11 +105,13 @@ export const insertFamilySwipeSchema = createInsertSchema(familySwipes).omit({ i
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = {
-  replitId: string;
-  email?: string | null;
-  firstName?: string | null;
-  lastName?: string | null;
-  profileImageUrl?: string | null;
+  clerkId: string;
+  name?: string | null;
+  avatar?: string | null;
+  location?: string | null;
+  kids?: string | null;
+  interests?: string[] | null;
+  bio?: string | null;
 };
 
 export type Experience = typeof experiences.$inferSelect;

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { clerkMiddleware, getAuth, requireAuth } from "@clerk/express";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 
@@ -10,14 +10,23 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
-  await setupAuth(app);
+  app.get('/api/config', (req, res) => {
+    res.json({
+      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+    });
+  });
 
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.use(clerkMiddleware());
+
+  app.get('/api/auth/user', requireAuth(), async (req, res) => {
     try {
-      const replitId = req.user.claims.sub;
-      const user = await storage.getUserByReplitId(replitId);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(userId);
       if (!user) {
-        return res.status(404).json({ message: "User not found" });
+        return res.status(404).json({ message: "User not found", needsOnboarding: true });
       }
       res.json(user);
     } catch (error) {
@@ -26,10 +35,39 @@ export async function registerRoutes(
     }
   });
 
-  app.patch('/api/auth/user/profile', isAuthenticated, async (req: any, res) => {
+  app.post('/api/auth/onboarding', requireAuth(), async (req, res) => {
     try {
-      const replitId = req.user.claims.sub;
-      const user = await storage.getUserByReplitId(replitId);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const { name, location, kids, interests, bio, avatar } = req.body;
+      
+      const user = await storage.upsertUser({
+        clerkId: userId,
+        name: name || 'New Family',
+        location: location || 'Not set',
+        kids: kids || 'Not specified',
+        interests: interests || [],
+        bio: bio || null,
+        avatar: avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400',
+      });
+      
+      res.json(user);
+    } catch (error) {
+      console.error("Error during onboarding:", error);
+      res.status(500).json({ message: "Failed to complete onboarding" });
+    }
+  });
+
+  app.patch('/api/auth/user/profile', requireAuth(), async (req, res) => {
+    try {
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -73,12 +111,15 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/experiences", isAuthenticated, async (req: any, res) => {
+  app.post("/api/experiences", requireAuth(), async (req, res) => {
     try {
-      const replitId = req.user.claims.sub;
-      const user = await storage.getUserByReplitId(replitId);
-      if (!user) {
+      const { userId } = getAuth(req);
+      if (!userId) {
         return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
       }
       const parsed = insertExperienceSchema.safeParse({ ...req.body, userId: user.id });
       if (!parsed.success) {
@@ -111,13 +152,16 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/experiences/:id/save", isAuthenticated, async (req: any, res) => {
+  app.post("/api/experiences/:id/save", requireAuth(), async (req, res) => {
     try {
       const experienceId = parseInt(req.params.id);
-      const replitId = req.user.claims.sub;
-      const user = await storage.getUserByReplitId(replitId);
-      if (!user) {
+      const { userId } = getAuth(req);
+      if (!userId) {
         return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
       }
       const parsed = insertSavedExperienceSchema.safeParse({ 
         userId: user.id,
@@ -133,13 +177,16 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/experiences/:id/save", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/experiences/:id/save", requireAuth(), async (req, res) => {
     try {
       const experienceId = parseInt(req.params.id);
-      const replitId = req.user.claims.sub;
-      const user = await storage.getUserByReplitId(replitId);
-      if (!user) {
+      const { userId } = getAuth(req);
+      if (!userId) {
         return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
       }
       await storage.unsaveExperience(user.id, experienceId);
       res.status(200).json({ success: true });
@@ -170,7 +217,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/pods", isAuthenticated, async (req: any, res) => {
+  app.post("/api/pods", requireAuth(), async (req, res) => {
     try {
       const parsed = insertPodSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -193,13 +240,16 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/pods/:id/members", isAuthenticated, async (req: any, res) => {
+  app.post("/api/pods/:id/members", requireAuth(), async (req, res) => {
     try {
       const podId = parseInt(req.params.id);
-      const replitId = req.user.claims.sub;
-      const user = await storage.getUserByReplitId(replitId);
-      if (!user) {
+      const { userId } = getAuth(req);
+      if (!userId) {
         return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
       }
       await storage.addPodMember(podId, user.id);
       res.status(200).json({ success: true });
@@ -218,13 +268,16 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/pods/:id/messages", isAuthenticated, async (req: any, res) => {
+  app.post("/api/pods/:id/messages", requireAuth(), async (req, res) => {
     try {
       const podId = parseInt(req.params.id);
-      const replitId = req.user.claims.sub;
-      const user = await storage.getUserByReplitId(replitId);
-      if (!user) {
+      const { userId } = getAuth(req);
+      if (!userId) {
         return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
       }
       const parsed = insertMessageSchema.safeParse({ ...req.body, podId, userId: user.id });
       if (!parsed.success) {
@@ -257,7 +310,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/connections/:id/accept", isAuthenticated, async (req, res) => {
+  app.post("/api/connections/:id/accept", requireAuth(), async (req, res) => {
     try {
       const connectionId = parseInt(req.params.id);
       await storage.acceptConnection(connectionId);
@@ -267,7 +320,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/connections/:id/decline", isAuthenticated, async (req, res) => {
+  app.post("/api/connections/:id/decline", requireAuth(), async (req, res) => {
     try {
       const connectionId = parseInt(req.params.id);
       await storage.declineConnection(connectionId);
@@ -277,12 +330,15 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/families/discover", isAuthenticated, async (req: any, res) => {
+  app.get("/api/families/discover", requireAuth(), async (req, res) => {
     try {
-      const replitId = req.user.claims.sub;
-      const user = await storage.getUserByReplitId(replitId);
-      if (!user) {
+      const { userId } = getAuth(req);
+      if (!userId) {
         return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
       }
       const families = await storage.getDiscoverableFamilies(user.id);
       res.json(families);
@@ -291,12 +347,15 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/families/swipe", isAuthenticated, async (req: any, res) => {
+  app.post("/api/families/swipe", requireAuth(), async (req, res) => {
     try {
-      const replitId = req.user.claims.sub;
-      const user = await storage.getUserByReplitId(replitId);
-      if (!user) {
+      const { userId } = getAuth(req);
+      if (!userId) {
         return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
       }
       const parsed = insertFamilySwipeSchema.safeParse({ ...req.body, userId: user.id });
       if (!parsed.success) {

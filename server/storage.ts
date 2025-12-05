@@ -27,7 +27,7 @@ import { eq, desc, and, or, ne, notInArray, ilike } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
-  getUserByReplitId(replitId: string): Promise<User | undefined>;
+  getUserByClerkId(clerkId: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserProfile(id: number, data: Partial<User>): Promise<User>;
   getAllUsers(): Promise<User[]>;
@@ -68,25 +68,27 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async getUserByReplitId(replitId: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.replitId, replitId));
+  async getUserByClerkId(clerkId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.clerkId, clerkId));
     return user || undefined;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const existingUser = await this.getUserByReplitId(userData.replitId);
+    const existingUser = await this.getUserByClerkId(userData.clerkId);
     
     if (existingUser) {
       const [user] = await db
         .update(users)
         .set({
-          email: userData.email,
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          profileImageUrl: userData.profileImageUrl,
+          name: userData.name || existingUser.name,
+          avatar: userData.avatar || existingUser.avatar,
+          location: userData.location || existingUser.location,
+          kids: userData.kids || existingUser.kids,
+          interests: userData.interests || existingUser.interests,
+          bio: userData.bio || existingUser.bio,
           updatedAt: new Date(),
         })
-        .where(eq(users.replitId, userData.replitId))
+        .where(eq(users.clerkId, userData.clerkId))
         .returning();
       return user;
     }
@@ -94,18 +96,13 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .insert(users)
       .values({
-        replitId: userData.replitId,
-        email: userData.email,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        profileImageUrl: userData.profileImageUrl,
-        name: userData.firstName && userData.lastName 
-          ? `${userData.firstName} ${userData.lastName}` 
-          : userData.email?.split('@')[0] || 'New Family',
-        avatar: userData.profileImageUrl || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400',
-        location: 'Not set',
-        kids: 'Not specified',
-        interests: [],
+        clerkId: userData.clerkId,
+        name: userData.name || 'New Family',
+        avatar: userData.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400',
+        location: userData.location || 'Not set',
+        kids: userData.kids || 'Not specified',
+        interests: userData.interests || [],
+        bio: userData.bio,
       })
       .returning();
     return user;
