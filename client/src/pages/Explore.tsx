@@ -283,10 +283,15 @@ export default function Explore() {
 
             {/* Bottom Sheet */}
             <motion.div
-              initial={false}
-              animate={{ y: isExpanded ? 0 : 0 }}
-              style={{ height: isExpanded ? "55%" : "140px" }}
-              className="fixed bottom-[72px] left-0 right-0 z-30 rounded-t-[32px] bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.12)] overflow-hidden transition-[height] duration-300 ease-out"
+              drag="y"
+              dragConstraints={{ top: -500, bottom: 0 }}
+              dragElastic={0.2}
+              onDragEnd={(_, info) => {
+                if (info.offset.y < -100) setIsExpanded(true);
+                if (info.offset.y > 100) setIsExpanded(false);
+              }}
+              animate={{ height: isExpanded ? "50%" : "140px" }}
+              className="absolute bottom-0 left-0 right-0 z-30 rounded-t-[32px] bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.12)] overflow-hidden"
             >
               <div className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing" onClick={() => setIsExpanded(!isExpanded)}>
                 <div className="h-1.5 w-12 rounded-full bg-gray-200" />
