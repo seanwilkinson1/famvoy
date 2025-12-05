@@ -12,8 +12,23 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### December 5, 2025 - Social Features & Messaging Upgrades
+- **Comments System**: Users can add comments with 1-5 star ratings on experiences
+  - `comments` table with userId, experienceId, content, rating fields
+  - CommentsSection component (`/components/shared/CommentsSection.tsx`)
+- **Social Sharing**: Share button on experiences uses Web Share API with clipboard fallback
+- **Follow System**: Users can follow/unfollow other families
+  - `follows` table for follower/following relationships
+  - API routes: `POST/DELETE /api/users/:id/follow`, `GET /api/users/:id/is-following`
+  - Follow counts displayed on family profiles
+- **Rich Messages in Pods**: 
+  - Messages now support `messageType` (text, image, experience)
+  - Share experiences as rich cards in pod chat
+  - Photo uploads in chat via `/api/upload` endpoint with Clerk auth
+  - Experience picker modal for sharing experiences
+
 ### December 5, 2025 - Authentication & Landing Page
-- Added Replit Auth (OpenID Connect) for user authentication
+- Added Clerk Auth for user authentication (social login via Google)
 - Created marketing landing page (`/pages/Landing.tsx`) with:
   - Hero section with "Get Started Free" CTA
   - Features section (Discover, Connect, Build Pods)
@@ -21,8 +36,8 @@ Preferred communication style: Simple, everyday language.
   - Call-to-action footer
 - Updated database schema to support auth:
   - Added `sessions` table for session storage
-  - Added `replitId`, `email`, `firstName`, `lastName`, `profileImageUrl` to users
-- Protected routes use `isAuthenticated` middleware
+  - Added `clerkId`, `email`, `firstName`, `lastName`, `profileImageUrl` to users
+- Protected routes use `requireAuth()` middleware from Clerk
 - Frontend uses `useAuth` hook for conditional routing (landing vs app)
 
 ## System Architecture

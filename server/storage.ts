@@ -15,6 +15,10 @@ import {
   type InsertFamilySwipe,
   type Activity,
   type InsertActivity,
+  type Comment,
+  type InsertComment,
+  type Follow,
+  type InsertFollow,
   users,
   experiences,
   pods,
@@ -24,9 +28,11 @@ import {
   familyConnections,
   familySwipes,
   activities,
+  comments,
+  follows,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or, ne, notInArray, ilike } from "drizzle-orm";
+import { eq, desc, and, or, ne, notInArray, ilike, isNotNull } from "drizzle-orm";
 
 function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 3959;
@@ -89,6 +95,18 @@ export interface IStorage {
   createActivity(data: InsertActivity): Promise<Activity>;
   getActivitiesForUser(userId: number, limit?: number): Promise<(Activity & { user: User })[]>;
   getActivityFeed(userId: number, limit?: number): Promise<(Activity & { user: User })[]>;
+  
+  getCommentsByExperience(experienceId: number): Promise<(Comment & { user: User })[]>;
+  createComment(data: InsertComment): Promise<Comment>;
+  deleteComment(commentId: number, userId: number): Promise<void>;
+  getExperienceRating(experienceId: number): Promise<{ average: number; count: number }>;
+  
+  followUser(followerId: number, followingId: number): Promise<Follow>;
+  unfollowUser(followerId: number, followingId: number): Promise<void>;
+  isFollowing(followerId: number, followingId: number): Promise<boolean>;
+  getFollowers(userId: number): Promise<User[]>;
+  getFollowing(userId: number): Promise<User[]>;
+  getFollowCounts(userId: number): Promise<{ followers: number; following: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -572,6 +590,87 @@ export class DatabaseStorage implements IStorage {
     return result
       .filter(r => connectionIds.includes(r.activity.userId))
       .map(r => ({ ...r.activity, user: r.user }));
+  }
+
+  async getCommentsByExperience(experienceId: number): Promise<(Comment & { user: User })[]> {
+    const result = await db
+      .select()
+      .from(comments)
+      .innerJoin(users, eq(comments.userId, users.id))
+      .where(eq(comments.experienceId, experienceId))
+      .orderBy(desc(comments.createdAt));
+    
+    return result.map(r => ({ ...r.comments, user: r.users }));
+  }
+
+  async createComment(data: InsertComment): Promise<Comment> {
+    const [comment] = await db.insert(comments).values(data).returning();
+    return comment;
+  }
+
+  async deleteComment(commentId: number, userId: number): Promise<void> {
+    await db.delete(comments).where(
+      and(eq(comments.id, commentId), eq(comments.userId, userId))
+    );
+  }
+
+  async getExperienceRating(experienceId: number): Promise<{ average: number; count: number }> {
+    const expComments = await db
+      .select({ rating: comments.rating })
+      .from(comments)
+      .where(and(eq(comments.experienceId, experienceId), isNotNull(comments.rating)));
+    
+    const ratings = expComments.filter(c => c.rating !== null).map(c => c.rating as number);
+    if (ratings.length === 0) {
+      return { average: 0, count: 0 };
+    }
+    
+    const sum = ratings.reduce((a, b) => a + b, 0);
+    return { average: sum / ratings.length, count: ratings.length };
+  }
+
+  async followUser(followerId: number, followingId: number): Promise<Follow> {
+    const [follow] = await db.insert(follows).values({ followerId, followingId }).returning();
+    return follow;
+  }
+
+  async unfollowUser(followerId: number, followingId: number): Promise<void> {
+    await db.delete(follows).where(
+      and(eq(follows.followerId, followerId), eq(follows.followingId, followingId))
+    );
+  }
+
+  async isFollowing(followerId: number, followingId: number): Promise<boolean> {
+    const [follow] = await db.select().from(follows).where(
+      and(eq(follows.followerId, followerId), eq(follows.followingId, followingId))
+    );
+    return !!follow;
+  }
+
+  async getFollowers(userId: number): Promise<User[]> {
+    const result = await db
+      .select({ user: users })
+      .from(follows)
+      .innerJoin(users, eq(follows.followerId, users.id))
+      .where(eq(follows.followingId, userId));
+    
+    return result.map(r => r.user);
+  }
+
+  async getFollowing(userId: number): Promise<User[]> {
+    const result = await db
+      .select({ user: users })
+      .from(follows)
+      .innerJoin(users, eq(follows.followingId, users.id))
+      .where(eq(follows.followerId, userId));
+    
+    return result.map(r => r.user);
+  }
+
+  async getFollowCounts(userId: number): Promise<{ followers: number; following: number }> {
+    const followers = await db.select().from(follows).where(eq(follows.followingId, userId));
+    const following = await db.select().from(follows).where(eq(follows.followerId, userId));
+    return { followers: followers.length, following: following.length };
   }
 }
 

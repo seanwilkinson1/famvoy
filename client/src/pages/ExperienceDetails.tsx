@@ -1,5 +1,6 @@
 import { useRoute, useLocation } from "wouter";
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
+import { CommentsSection } from "@/components/shared/CommentsSection";
 import { ChevronLeft, Heart, Clock, DollarSign, Users, MapPin, Share2 } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -7,12 +8,14 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
+import { useClerkAuth } from "@/hooks/useAuth";
 import mapBg from "@assets/generated_images/stylized_map_background_for_explore_screen.png";
 
 export default function ExperienceDetails() {
   const [match, params] = useRoute("/experience/:id");
   const [, setLocation] = useLocation();
   const [isSaved, setIsSaved] = useState(false);
+  const { user } = useClerkAuth();
 
   const { data: experience } = useQuery({
     queryKey: ["experience", params?.id],
@@ -53,7 +56,26 @@ export default function ExperienceDetails() {
             <ChevronLeft className="h-6 w-6" />
           </button>
           <div className="flex gap-3">
-            <button className="rounded-full bg-white/20 backdrop-blur-md p-2 text-white hover:bg-white/30 transition-colors" data-testid="button-share">
+            <button 
+              onClick={async () => {
+                if (navigator.share) {
+                  try {
+                    await navigator.share({
+                      title: experience.title,
+                      text: `Check out this family experience: ${experience.title}`,
+                      url: window.location.href,
+                    });
+                  } catch (err) {
+                    console.log('Share cancelled');
+                  }
+                } else {
+                  navigator.clipboard.writeText(window.location.href);
+                  alert('Link copied to clipboard!');
+                }
+              }}
+              className="rounded-full bg-white/20 backdrop-blur-md p-2 text-white hover:bg-white/30 transition-colors" 
+              data-testid="button-share"
+            >
               <Share2 className="h-5 w-5" />
             </button>
             <button 
@@ -155,6 +177,12 @@ export default function ExperienceDetails() {
             ))}
           </ul>
         </section>
+
+        {/* Reviews & Comments */}
+        <CommentsSection 
+          experienceId={experience.id} 
+          currentUserId={user?.id}
+        />
 
         {/* Similar Experiences */}
         {formattedSimilar.length > 0 && (

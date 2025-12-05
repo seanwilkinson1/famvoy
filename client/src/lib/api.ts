@@ -1,4 +1,4 @@
-import type { Experience, Pod, Message, User, FamilyConnection } from "@shared/schema";
+import type { Experience, Pod, Message, User, FamilyConnection, Comment } from "@shared/schema";
 
 const API_BASE = "/api";
 
@@ -23,7 +23,7 @@ async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Re
 
 export const api = {
   upload: {
-    image: async (file: File): Promise<{ url: string; filename: string }> => {
+    image: async (file: File): Promise<string> => {
       const formData = new FormData();
       formData.append('image', file);
       
@@ -32,7 +32,8 @@ export const api = {
         body: formData,
       });
       if (!res.ok) throw new Error('Failed to upload image');
-      return res.json();
+      const data = await res.json();
+      return data.url;
     },
   },
   
@@ -199,11 +200,11 @@ export const api = {
       return res.json();
     },
     
-    sendMessage: async (podId: number, content: string): Promise<Message> => {
+    sendMessage: async (podId: number, data: { content: string; messageType?: string; imageUrl?: string; sharedExperienceId?: number }): Promise<Message> => {
       const res = await fetchWithAuth(`${API_BASE}/pods/${podId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to send message");
       return res.json();
@@ -262,6 +263,78 @@ export const api = {
       const params = limit ? `?limit=${limit}` : "";
       const res = await fetch(`${API_BASE}/activities/user/${userId}${params}`);
       if (!res.ok) throw new Error("Failed to fetch user activities");
+      return res.json();
+    },
+  },
+  
+  comments: {
+    getByExperience: async (experienceId: number): Promise<(Comment & { user: User })[]> => {
+      const res = await fetch(`${API_BASE}/experiences/${experienceId}/comments`);
+      if (!res.ok) throw new Error("Failed to fetch comments");
+      return res.json();
+    },
+    
+    create: async (experienceId: number, data: { content: string; rating?: number }): Promise<Comment> => {
+      const res = await fetchWithAuth(`${API_BASE}/experiences/${experienceId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create comment");
+      return res.json();
+    },
+    
+    delete: async (commentId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/comments/${commentId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete comment");
+    },
+    
+    getRating: async (experienceId: number): Promise<{ average: number; count: number }> => {
+      const res = await fetch(`${API_BASE}/experiences/${experienceId}/rating`);
+      if (!res.ok) throw new Error("Failed to fetch rating");
+      return res.json();
+    },
+  },
+  
+  follows: {
+    follow: async (userId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/users/${userId}/follow`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to follow user");
+    },
+    
+    unfollow: async (userId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/users/${userId}/follow`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to unfollow user");
+    },
+    
+    isFollowing: async (userId: number): Promise<boolean> => {
+      const res = await fetchWithAuth(`${API_BASE}/users/${userId}/is-following`);
+      if (!res.ok) throw new Error("Failed to check follow status");
+      const data = await res.json();
+      return data.isFollowing;
+    },
+    
+    getFollowers: async (userId: number): Promise<User[]> => {
+      const res = await fetch(`${API_BASE}/users/${userId}/followers`);
+      if (!res.ok) throw new Error("Failed to fetch followers");
+      return res.json();
+    },
+    
+    getFollowing: async (userId: number): Promise<User[]> => {
+      const res = await fetch(`${API_BASE}/users/${userId}/following`);
+      if (!res.ok) throw new Error("Failed to fetch following");
+      return res.json();
+    },
+    
+    getCounts: async (userId: number): Promise<{ followers: number; following: number }> => {
+      const res = await fetch(`${API_BASE}/users/${userId}/follow-counts`);
+      if (!res.ok) throw new Error("Failed to fetch follow counts");
       return res.json();
     },
   },

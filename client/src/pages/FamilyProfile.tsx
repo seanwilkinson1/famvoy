@@ -1,5 +1,5 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
-import { ArrowLeft, MapPin, Users, Heart, MessageCircle, Sparkles } from "lucide-react";
+import { ArrowLeft, MapPin, Users, Heart, MessageCircle, Sparkles, UserPlus, UserCheck } from "lucide-react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -14,6 +14,32 @@ export default function FamilyProfile() {
   const { data: currentUser } = useQuery({
     queryKey: ["currentUser"],
     queryFn: api.users.getMe,
+  });
+
+  const { data: isFollowing = false } = useQuery({
+    queryKey: ["isFollowing", userId],
+    queryFn: () => api.follows.isFollowing(userId),
+    enabled: !!currentUser && userId > 0,
+  });
+
+  const { data: followCounts } = useQuery({
+    queryKey: ["followCounts", userId],
+    queryFn: () => api.follows.getCounts(userId),
+    enabled: userId > 0,
+  });
+
+  const followMutation = useMutation({
+    mutationFn: async () => {
+      if (isFollowing) {
+        await api.follows.unfollow(userId);
+      } else {
+        await api.follows.follow(userId);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["isFollowing", userId] });
+      queryClient.invalidateQueries({ queryKey: ["followCounts", userId] });
+    },
   });
 
   const { data: family, isLoading } = useQuery({
@@ -153,22 +179,39 @@ export default function FamilyProfile() {
         {/* Action Buttons */}
         {!isOwnProfile && (
           <div className="mt-6 flex justify-center gap-3">
-            {isConnected ? (
+            <button
+              onClick={() => followMutation.mutate()}
+              disabled={followMutation.isPending}
+              className={`flex items-center gap-2 rounded-full px-5 py-2.5 font-bold transition-colors ${
+                isFollowing 
+                  ? "bg-gray-100 text-gray-700 hover:bg-gray-200" 
+                  : "bg-primary text-white hover:bg-primary/90"
+              }`}
+              data-testid="button-follow"
+            >
+              {isFollowing ? (
+                <>
+                  <UserCheck className="h-4 w-4" />
+                  Following
+                </>
+              ) : (
+                <>
+                  <UserPlus className="h-4 w-4" />
+                  Follow
+                </>
+              )}
+            </button>
+            {isConnected && (
               <button
                 onClick={() => messageMutation.mutate()}
                 disabled={messageMutation.isPending}
-                className="flex items-center gap-2 rounded-full px-6 py-3 font-bold text-white"
+                className="flex items-center gap-2 rounded-full px-5 py-2.5 font-bold text-white"
                 style={{ backgroundColor: '#14b8a6' }}
                 data-testid="button-message-family"
               >
-                <MessageCircle className="h-5 w-5" />
+                <MessageCircle className="h-4 w-4" />
                 {messageMutation.isPending ? "Opening..." : "Message"}
               </button>
-            ) : (
-              <div className="flex items-center gap-2 rounded-full bg-gray-100 px-6 py-3 text-gray-500">
-                <Sparkles className="h-5 w-5" />
-                <span className="text-sm font-medium">Match to connect</span>
-              </div>
             )}
           </div>
         )}
@@ -195,18 +238,18 @@ export default function FamilyProfile() {
 
       {/* Stats */}
       <div className="mt-8 mx-6 rounded-2xl bg-gray-50 p-6">
-        <div className="grid grid-cols-2 gap-4 text-center">
+        <div className="grid grid-cols-3 gap-4 text-center">
           <div>
             <div className="text-2xl font-bold text-gray-900">{formattedExperiences.length}</div>
             <div className="text-sm text-gray-500">Experiences</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-900">
-              <Heart className="h-6 w-6 mx-auto text-red-400" />
-            </div>
-            <div className="text-sm text-gray-500">
-              {isConnected ? "Connected" : "Not connected"}
-            </div>
+            <div className="text-2xl font-bold text-gray-900">{followCounts?.followers || 0}</div>
+            <div className="text-sm text-gray-500">Followers</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-gray-900">{followCounts?.following || 0}</div>
+            <div className="text-sm text-gray-500">Following</div>
           </div>
         </div>
       </div>

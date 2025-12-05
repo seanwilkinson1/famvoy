@@ -5,7 +5,7 @@ import multer from "multer";
 import express from "express";
 import { clerkMiddleware, getAuth, requireAuth } from "@clerk/express";
 import { storage } from "./storage";
-import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema } from "@shared/schema";
+import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 
 const uploadStorage = multer.diskStorage({
@@ -621,6 +621,157 @@ export async function registerRoutes(
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
       const activities = await storage.getActivitiesForUser(userId, limit);
       res.json(activities);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/experiences/:id/comments", async (req, res) => {
+    try {
+      const experienceId = parseInt(req.params.id);
+      const expComments = await storage.getCommentsByExperience(experienceId);
+      res.json(expComments);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/experiences/:id/rating", async (req, res) => {
+    try {
+      const experienceId = parseInt(req.params.id);
+      const rating = await storage.getExperienceRating(experienceId);
+      res.json(rating);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/experiences/:id/comments", requireAuth(), async (req, res) => {
+    try {
+      const experienceId = parseInt(req.params.id);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      const parsed = insertCommentSchema.safeParse({ 
+        ...req.body, 
+        experienceId, 
+        userId: user.id 
+      });
+      if (!parsed.success) {
+        return res.status(400).json({ error: fromError(parsed.error).toString() });
+      }
+      const comment = await storage.createComment(parsed.data);
+      res.status(201).json(comment);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/comments/:id", requireAuth(), async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.id);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      await storage.deleteComment(commentId, user.id);
+      res.status(200).json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/users/:id/follow", requireAuth(), async (req, res) => {
+    try {
+      const followingId = parseInt(req.params.id);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      if (user.id === followingId) {
+        return res.status(400).json({ error: "Cannot follow yourself" });
+      }
+      const follow = await storage.followUser(user.id, followingId);
+      res.status(201).json(follow);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/users/:id/follow", requireAuth(), async (req, res) => {
+    try {
+      const followingId = parseInt(req.params.id);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      await storage.unfollowUser(user.id, followingId);
+      res.status(200).json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/users/:id/is-following", requireAuth(), async (req, res) => {
+    try {
+      const followingId = parseInt(req.params.id);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      const isFollowing = await storage.isFollowing(user.id, followingId);
+      res.json({ isFollowing });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/users/:id/followers", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const followers = await storage.getFollowers(userId);
+      res.json(followers);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/users/:id/following", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const following = await storage.getFollowing(userId);
+      res.json(following);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/users/:id/follow-counts", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const counts = await storage.getFollowCounts(userId);
+      res.json(counts);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

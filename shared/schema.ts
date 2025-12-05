@@ -81,6 +81,9 @@ export const messages = pgTable("messages", {
   podId: integer("pod_id").notNull().references(() => pods.id),
   userId: integer("user_id").notNull().references(() => users.id),
   content: text("content").notNull(),
+  messageType: text("message_type").default("text"),
+  imageUrl: text("image_url"),
+  sharedExperienceId: integer("shared_experience_id").references(() => experiences.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -111,6 +114,22 @@ export const activities = pgTable("activities", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const comments = pgTable("comments", {
+  id: serial("id").primaryKey(),
+  experienceId: integer("experience_id").notNull().references(() => experiences.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  content: text("content").notNull(),
+  rating: integer("rating"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const follows = pgTable("follows", {
+  id: serial("id").primaryKey(),
+  followerId: integer("follower_id").notNull().references(() => users.id),
+  followingId: integer("following_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertExperienceSchema = createInsertSchema(experiences).omit({ id: true, createdAt: true });
 export const insertPodSchema = createInsertSchema(pods).omit({ id: true, createdAt: true });
@@ -119,6 +138,8 @@ export const insertSavedExperienceSchema = createInsertSchema(savedExperiences).
 export const insertFamilyConnectionSchema = createInsertSchema(familyConnections).omit({ id: true, createdAt: true, status: true });
 export const insertFamilySwipeSchema = createInsertSchema(familySwipes).omit({ id: true, createdAt: true });
 export const insertActivitySchema = createInsertSchema(activities).omit({ id: true, createdAt: true });
+export const insertCommentSchema = createInsertSchema(comments).omit({ id: true, createdAt: true });
+export const insertFollowSchema = createInsertSchema(follows).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -152,3 +173,9 @@ export type InsertFamilySwipe = z.infer<typeof insertFamilySwipeSchema>;
 
 export type Activity = typeof activities.$inferSelect;
 export type InsertActivity = z.infer<typeof insertActivitySchema>;
+
+export type Comment = typeof comments.$inferSelect;
+export type InsertComment = z.infer<typeof insertCommentSchema>;
+
+export type Follow = typeof follows.$inferSelect;
+export type InsertFollow = z.infer<typeof insertFollowSchema>;

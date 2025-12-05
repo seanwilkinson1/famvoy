@@ -1,17 +1,21 @@
 import { useRoute, useLocation } from "wouter";
-import { ChevronLeft, Settings, Send, Image as ImageIcon, Smile, MapPin } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft, Settings, Send, Image as ImageIcon, Smile, MapPin, X, Share2, Camera } from "lucide-react";
+import { useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
+import type { Experience } from "@shared/schema";
 
 export default function PodDetails() {
   const [match, params] = useRoute("/pod/:id");
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"chat" | "experiences" | "trips">("chat");
   const [messageInput, setMessageInput] = useState("");
+  const [showExperiencePicker, setShowExperiencePicker] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   const { data: podDetails } = useQuery({
@@ -41,9 +45,16 @@ export default function PodDetails() {
   });
 
   const sendMessageMutation = useMutation({
-    mutationFn: async () => {
-      if (!params?.id || !messageInput.trim()) return;
-      return api.pods.sendMessage(parseInt(params.id), messageInput);
+    mutationFn: async (data?: { messageType?: string; imageUrl?: string; sharedExperienceId?: number }) => {
+      if (!params?.id) return;
+      const content = data?.messageType === 'image' ? '' : (data?.messageType === 'experience' ? '' : messageInput.trim());
+      if (!content && !data?.imageUrl && !data?.sharedExperienceId) return;
+      return api.pods.sendMessage(parseInt(params.id), {
+        content,
+        messageType: data?.messageType || 'text',
+        imageUrl: data?.imageUrl,
+        sharedExperienceId: data?.sharedExperienceId,
+      });
     },
     onSuccess: () => {
       setMessageInput("");
@@ -54,6 +65,30 @@ export default function PodDetails() {
   const formattedExperiences = experiences.map(exp => 
     formatExperience(exp, "Family", "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400")
   );
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const url = await api.upload.image(file);
+      await sendMessageMutation.mutateAsync({ messageType: 'image', imageUrl: url });
+    } catch (err) {
+      console.error('Failed to upload image:', err);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleShareExperience = async (experience: Experience) => {
+    await sendMessageMutation.mutateAsync({ 
+      messageType: 'experience', 
+      sharedExperienceId: experience.id 
+    });
+    setShowExperiencePicker(false);
+  };
 
   if (!match || !pod) return null;
 
@@ -125,6 +160,8 @@ export default function PodDetails() {
                 </div>
               ) : messages.map((msg) => {
                 const isMe = msg.userId === currentUser?.id;
+                const sharedExp = msg.sharedExperienceId ? experiences.find(e => e.id === msg.sharedExperienceId) : null;
+                
                 return (
                   <div key={msg.id} className={cn("flex gap-3", isMe && "flex-row-reverse")}>
                     {!isMe ? (
@@ -137,42 +174,153 @@ export default function PodDetails() {
                       <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">You</div>
                     )}
                     <div className={cn(
-                      "rounded-2xl p-3 shadow-sm max-w-[70%]",
+                      "rounded-2xl shadow-sm max-w-[75%] overflow-hidden",
+                      msg.messageType === 'image' || msg.messageType === 'experience' ? "p-0" : "p-3",
                       isMe ? "rounded-tr-none bg-primary" : "rounded-tl-none bg-white"
                     )}>
-                      <p className={cn("text-sm", isMe ? "text-white" : "text-gray-800")}>{msg.content}</p>
-                      <span className={cn("mt-1 block text-[10px]", isMe ? "text-primary-foreground/70" : "text-gray-400")}>
-                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                      {msg.messageType === 'image' && msg.imageUrl ? (
+                        <div>
+                          <img 
+                            src={msg.imageUrl} 
+                            alt="Shared image" 
+                            className="w-full max-h-64 object-cover cursor-pointer"
+                            onClick={() => window.open(msg.imageUrl!, '_blank')}
+                          />
+                          <span className={cn("block text-[10px] p-2", isMe ? "text-primary-foreground/70" : "text-gray-400")}>
+                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      ) : msg.messageType === 'experience' && sharedExp ? (
+                        <div 
+                          className="cursor-pointer"
+                          onClick={() => setLocation(`/experience/${sharedExp.id}`)}
+                        >
+                          <div className="relative h-32 w-full">
+                            <img 
+                              src={sharedExp.imageUrl || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400'} 
+                              alt={sharedExp.title}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                            <div className="absolute bottom-2 left-2 right-2">
+                              <span className="inline-block rounded bg-primary/90 px-1.5 py-0.5 text-[10px] font-bold text-white mb-1">
+                                {sharedExp.category}
+                              </span>
+                              <p className="text-xs font-bold text-white line-clamp-1">{sharedExp.title}</p>
+                            </div>
+                          </div>
+                          <div className="p-2">
+                            <p className={cn("text-xs", isMe ? "text-primary-foreground/80" : "text-gray-500")}>
+                              Shared an experience
+                            </p>
+                            <span className={cn("block text-[10px]", isMe ? "text-primary-foreground/70" : "text-gray-400")}>
+                              {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p className={cn("text-sm", isMe ? "text-white" : "text-gray-800")}>{msg.content}</p>
+                          <span className={cn("mt-1 block text-[10px]", isMe ? "text-primary-foreground/70" : "text-gray-400")}>
+                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
 
+            {/* Experience Picker Modal */}
+            {showExperiencePicker && (
+              <div className="absolute inset-0 bg-black/50 z-50 flex items-end">
+                <div className="bg-white rounded-t-3xl w-full max-h-[70vh] overflow-hidden">
+                  <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                    <h3 className="font-heading text-lg font-bold">Share an Experience</h3>
+                    <button 
+                      onClick={() => setShowExperiencePicker(false)}
+                      className="rounded-full bg-gray-100 p-2"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                  <div className="overflow-y-auto p-4 space-y-3 max-h-[55vh]">
+                    {experiences.length === 0 ? (
+                      <p className="text-center text-gray-400 py-8">No experiences to share</p>
+                    ) : experiences.map((exp) => (
+                      <div 
+                        key={exp.id}
+                        onClick={() => handleShareExperience(exp)}
+                        className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                      >
+                        <img 
+                          src={exp.imageUrl || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400'} 
+                          alt={exp.title}
+                          className="h-16 w-16 rounded-lg object-cover"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <span className="inline-block rounded bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary mb-1">
+                            {exp.category}
+                          </span>
+                          <p className="font-bold text-sm text-gray-900 line-clamp-1">{exp.title}</p>
+                          <p className="text-xs text-gray-500 line-clamp-1">{exp.location}</p>
+                        </div>
+                        <Share2 className="h-5 w-5 text-gray-400" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Input Area */}
             <div className="border-t border-gray-200 bg-white p-4 pb-8">
-               <div className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2">
-                 <button className="text-gray-400 hover:text-primary" data-testid="button-image"><ImageIcon className="h-5 w-5" /></button>
-                 <input 
-                    type="text" 
-                    placeholder="Message..." 
-                    className="flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-gray-400"
-                    value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && sendMessageMutation.mutate()}
-                    data-testid="input-message"
-                 />
-                 <button className="text-gray-400 hover:text-primary"><Smile className="h-5 w-5" /></button>
-                 <button 
-                   className="rounded-full bg-primary p-2 text-white shadow-sm active:scale-90 transition-transform disabled:opacity-50"
-                   onClick={() => sendMessageMutation.mutate()}
-                   disabled={sendMessageMutation.isPending || !messageInput.trim()}
-                   data-testid="button-send"
-                 >
-                   <Send className="h-4 w-4" />
-                 </button>
-               </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+              />
+              <div className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2">
+                <button 
+                  className="text-gray-400 hover:text-primary disabled:opacity-50" 
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  data-testid="button-image"
+                >
+                  {isUploading ? (
+                    <div className="h-5 w-5 rounded-full border-2 border-gray-300 border-t-primary animate-spin" />
+                  ) : (
+                    <Camera className="h-5 w-5" />
+                  )}
+                </button>
+                <button 
+                  className="text-gray-400 hover:text-primary"
+                  onClick={() => setShowExperiencePicker(true)}
+                  data-testid="button-share-experience"
+                >
+                  <Share2 className="h-5 w-5" />
+                </button>
+                <input 
+                  type="text" 
+                  placeholder="Message..." 
+                  className="flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-gray-400"
+                  value={messageInput}
+                  onChange={(e) => setMessageInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && messageInput.trim() && sendMessageMutation.mutate({})}
+                  data-testid="input-message"
+                />
+                <button 
+                  className="rounded-full bg-primary p-2 text-white shadow-sm active:scale-90 transition-transform disabled:opacity-50"
+                  onClick={() => sendMessageMutation.mutate({})}
+                  disabled={sendMessageMutation.isPending || !messageInput.trim()}
+                  data-testid="button-send"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
         )}
