@@ -234,6 +234,40 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/pods/:id/details", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const result = await storage.getPodWithMembers(id);
+      if (!result) {
+        return res.status(404).json({ error: "Pod not found" });
+      }
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/pods/direct", requireAuth(), async (req, res) => {
+    try {
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      const { otherUserId } = req.body;
+      if (!otherUserId) {
+        return res.status(400).json({ error: "otherUserId is required" });
+      }
+      const pod = await storage.getOrCreateDirectPod(user.id, otherUserId);
+      res.json(pod);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/pods", requireAuth(), async (req, res) => {
     try {
       const parsed = insertPodSchema.safeParse(req.body);

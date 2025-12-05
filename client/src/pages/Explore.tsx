@@ -1,10 +1,11 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { FamilySwipeCard, SwipeButtons } from "@/components/shared/FamilySwipeCard";
 import { MatchModal } from "@/components/shared/MatchModal";
-import { Search, Navigation, Map, Users, Compass, X, ChevronDown } from "lucide-react";
+import { Search, Navigation, Map, Users, Compass, X, ChevronDown, MessageCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -21,8 +22,19 @@ export default function Explore() {
   const [currentFamilyIndex, setCurrentFamilyIndex] = useState(0);
   const [showMatch, setShowMatch] = useState(false);
   const [matchedFamily, setMatchedFamily] = useState<User | null>(null);
+  const [matchedPodId, setMatchedPodId] = useState<number | undefined>(undefined);
   
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
+
+  const messageMutation = useMutation({
+    mutationFn: async (otherUserId: number) => {
+      return api.pods.createDirect(otherUserId);
+    },
+    onSuccess: (pod) => {
+      setLocation(`/pod/${pod.id}`);
+    },
+  });
 
   const { data: currentUser } = useQuery({
     queryKey: ["currentUser"],
@@ -60,8 +72,10 @@ export default function Explore() {
       if (result.matched) {
         const family = discoverFamilies[currentFamilyIndex];
         setMatchedFamily(family);
+        setMatchedPodId(result.podId);
         setShowMatch(true);
         queryClient.invalidateQueries({ queryKey: ["connections"] });
+        queryClient.invalidateQueries({ queryKey: ["userPods"] });
       }
       setCurrentFamilyIndex((prev) => prev + 1);
       queryClient.invalidateQueries({ queryKey: ["discoverFamilies"] });
@@ -310,7 +324,13 @@ export default function Explore() {
                         ))}
                       </div>
                     </div>
-                    <button className="rounded-full bg-primary/10 px-4 py-2 text-sm font-bold text-primary">
+                    <button 
+                      onClick={() => messageMutation.mutate(family.id)}
+                      disabled={messageMutation.isPending}
+                      className="flex items-center gap-1 rounded-full bg-primary/10 px-4 py-2 text-sm font-bold text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+                      data-testid={`button-message-${family.id}`}
+                    >
+                      <MessageCircle className="h-4 w-4" />
                       Message
                     </button>
                   </div>
@@ -327,6 +347,7 @@ export default function Explore() {
         onClose={() => setShowMatch(false)}
         matchedFamily={matchedFamily}
         currentUser={currentUser || null}
+        podId={matchedPodId}
       />
     </div>
   );

@@ -54,6 +54,8 @@ export const pods = pgTable("pods", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description").notNull(),
+  isDirect: boolean("is_direct").default(false),
+  creatorId: integer("creator_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

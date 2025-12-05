@@ -117,6 +117,12 @@ export const api = {
       return res.json();
     },
     
+    getDetails: async (id: number): Promise<{ pod: Pod; members: User[] }> => {
+      const res = await fetch(`${API_BASE}/pods/${id}/details`);
+      if (!res.ok) throw new Error("Failed to fetch pod details");
+      return res.json();
+    },
+    
     create: async (data: { name: string; description: string }): Promise<Pod> => {
       const res = await fetchWithAuth(`${API_BASE}/pods`, {
         method: "POST",
@@ -124,6 +130,16 @@ export const api = {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to create pod");
+      return res.json();
+    },
+    
+    createDirect: async (otherUserId: number): Promise<Pod> => {
+      const res = await fetchWithAuth(`${API_BASE}/pods/direct`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otherUserId }),
+      });
+      if (!res.ok) throw new Error("Failed to create direct pod");
       return res.json();
     },
     
@@ -158,7 +174,7 @@ export const api = {
       return res.json();
     },
     
-    swipe: async (swipedUserId: number, liked: boolean): Promise<{ matched: boolean }> => {
+    swipe: async (swipedUserId: number, liked: boolean): Promise<{ matched: boolean; podId?: number }> => {
       const res = await fetchWithAuth(`${API_BASE}/families/swipe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

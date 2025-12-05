@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, MessageCircle, X } from "lucide-react";
+import { useLocation } from "wouter";
 import type { User } from "@shared/schema";
 
 interface MatchModalProps {
@@ -7,10 +8,22 @@ interface MatchModalProps {
   onClose: () => void;
   matchedFamily: User | null;
   currentUser: User | null;
+  podId?: number;
 }
 
-export function MatchModal({ isOpen, onClose, matchedFamily, currentUser }: MatchModalProps) {
+export function MatchModal({ isOpen, onClose, matchedFamily, currentUser, podId }: MatchModalProps) {
+  const [, setLocation] = useLocation();
+  
   if (!matchedFamily || !currentUser) return null;
+
+  const handleSendMessage = () => {
+    onClose();
+    if (podId) {
+      setLocation(`/pod/${podId}`);
+    } else {
+      setLocation('/pods');
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -93,7 +106,7 @@ export function MatchModal({ isOpen, onClose, matchedFamily, currentUser }: Matc
                 className="space-y-3"
               >
                 <button
-                  onClick={onClose}
+                  onClick={handleSendMessage}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-lg font-bold text-white shadow-lg shadow-primary/30"
                   data-testid="button-send-message"
                 >

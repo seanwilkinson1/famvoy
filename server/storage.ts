@@ -45,7 +45,11 @@ export interface IStorage {
   getPods(): Promise<Pod[]>;
   getPodById(id: number): Promise<Pod | undefined>;
   getPodsByUser(userId: number): Promise<Pod[]>;
+  getPodWithMembers(podId: number): Promise<{ pod: Pod; members: User[] } | undefined>;
   createPod(pod: InsertPod): Promise<Pod>;
+  createDirectPod(userId1: number, userId2: number): Promise<Pod>;
+  findDirectPod(userId1: number, userId2: number): Promise<Pod | undefined>;
+  getOrCreateDirectPod(userId1: number, userId2: number): Promise<Pod>;
   addPodMember(podId: number, userId: number): Promise<void>;
   
   getMessages(podId: number): Promise<Array<Message & { user: User }>>;
@@ -58,7 +62,7 @@ export interface IStorage {
   declineConnection(connectionId: number): Promise<void>;
   
   getDiscoverableFamilies(userId: number): Promise<User[]>;
-  recordSwipe(data: InsertFamilySwipe): Promise<{ matched: boolean }>;
+  recordSwipe(data: InsertFamilySwipe): Promise<{ matched: boolean; podId?: number }>;
   getMatches(userId: number): Promise<User[]>;
 }
 
@@ -205,9 +209,70 @@ export class DatabaseStorage implements IStorage {
     return userPods.map(p => p.pod);
   }
 
+  async getPodWithMembers(podId: number): Promise<{ pod: Pod; members: User[] } | undefined> {
+    const pod = await this.getPodById(podId);
+    if (!pod) return undefined;
+    
+    const members = await db
+      .select({ user: users })
+      .from(podMembers)
+      .innerJoin(users, eq(podMembers.userId, users.id))
+      .where(eq(podMembers.podId, podId));
+    
+    return { pod, members: members.map(m => m.user) };
+  }
+
   async createPod(pod: InsertPod): Promise<Pod> {
     const [newPod] = await db.insert(pods).values(pod).returning();
     return newPod;
+  }
+
+  async createDirectPod(userId1: number, userId2: number): Promise<Pod> {
+    const user1 = await this.getUser(userId1);
+    const user2 = await this.getUser(userId2);
+    
+    const [newPod] = await db.insert(pods).values({
+      name: `${user1?.name || 'Family'} & ${user2?.name || 'Family'}`,
+      description: 'Direct message',
+      isDirect: true,
+      creatorId: userId1,
+    }).returning();
+    
+    await this.addPodMember(newPod.id, userId1);
+    await this.addPodMember(newPod.id, userId2);
+    
+    return newPod;
+  }
+
+  async findDirectPod(userId1: number, userId2: number): Promise<Pod | undefined> {
+    const user1Pods = await db
+      .select({ podId: podMembers.podId })
+      .from(podMembers)
+      .where(eq(podMembers.userId, userId1));
+    
+    const user1PodIds = user1Pods.map(p => p.podId);
+    
+    if (user1PodIds.length === 0) return undefined;
+    
+    for (const podId of user1PodIds) {
+      const pod = await this.getPodById(podId);
+      if (!pod || !pod.isDirect) continue;
+      
+      const [membership] = await db
+        .select()
+        .from(podMembers)
+        .where(and(eq(podMembers.podId, podId), eq(podMembers.userId, userId2)));
+      
+      if (membership) return pod;
+    }
+    
+    return undefined;
+  }
+
+  async getOrCreateDirectPod(userId1: number, userId2: number): Promise<Pod> {
+    const existing = await this.findDirectPod(userId1, userId2);
+    if (existing) return existing;
+    return this.createDirectPod(userId1, userId2);
   }
 
   async addPodMember(podId: number, userId: number): Promise<void> {
@@ -305,7 +370,7 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(users).where(notInArray(users.id, excludeIds));
   }
 
-  async recordSwipe(data: InsertFamilySwipe): Promise<{ matched: boolean }> {
+  async recordSwipe(data: InsertFamilySwipe): Promise<{ matched: boolean; podId?: number }> {
     await db.insert(familySwipes).values(data);
     
     if (data.liked) {
@@ -328,7 +393,9 @@ export class DatabaseStorage implements IStorage {
           .values({ userId: data.swipedUserId, connectedUserId: data.userId, status: "accepted" })
           .onConflictDoNothing();
         
-        return { matched: true };
+        const pod = await this.getOrCreateDirectPod(data.userId, data.swipedUserId);
+        
+        return { matched: true, podId: pod.id };
       }
     }
     

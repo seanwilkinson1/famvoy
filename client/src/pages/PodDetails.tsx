@@ -14,16 +14,20 @@ export default function PodDetails() {
   const [messageInput, setMessageInput] = useState("");
   const queryClient = useQueryClient();
 
-  const { data: pod } = useQuery({
-    queryKey: ["pod", params?.id],
-    queryFn: () => params?.id ? api.pods.getById(parseInt(params.id)) : null,
+  const { data: podDetails } = useQuery({
+    queryKey: ["podDetails", params?.id],
+    queryFn: () => params?.id ? api.pods.getDetails(parseInt(params.id)) : null,
     enabled: !!match && !!params?.id,
   });
 
-  const { data: messages = [] } = useQuery({
+  const pod = podDetails?.pod;
+  const members = podDetails?.members || [];
+
+  const { data: messages = [], refetch: refetchMessages } = useQuery({
     queryKey: ["messages", params?.id],
     queryFn: () => params?.id ? api.pods.getMessages(parseInt(params.id)) : [],
     enabled: !!match && !!params?.id,
+    refetchInterval: 3000,
   });
 
   const { data: currentUser } = useQuery({
@@ -38,12 +42,12 @@ export default function PodDetails() {
 
   const sendMessageMutation = useMutation({
     mutationFn: async () => {
-      if (!params?.id || !currentUser || !messageInput.trim()) return;
-      return api.pods.sendMessage(parseInt(params.id), currentUser.id, messageInput);
+      if (!params?.id || !messageInput.trim()) return;
+      return api.pods.sendMessage(parseInt(params.id), messageInput);
     },
     onSuccess: () => {
       setMessageInput("");
-      queryClient.invalidateQueries({ queryKey: ["messages", params?.id] });
+      refetchMessages();
     },
   });
 
@@ -52,12 +56,6 @@ export default function PodDetails() {
   );
 
   if (!match || !pod) return null;
-
-  const memberAvatars = [
-    "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400",
-    "https://images.unsplash.com/photo-1609220136736-443140cffec6?w=400",
-    "https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400",
-  ];
 
   return (
     <div className="flex h-screen flex-col bg-background pb-20">
@@ -78,13 +76,23 @@ export default function PodDetails() {
         
         <div className="flex items-center gap-4">
           <div className="flex -space-x-4">
-            {memberAvatars.map((m, i) => (
-              <img key={i} src={m} className="h-12 w-12 rounded-full border-2 border-white ring-1 ring-gray-100" />
+            {members.slice(0, 3).map((member) => (
+              <img 
+                key={member.id} 
+                src={member.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400'} 
+                alt={member.name || 'Family'}
+                className="h-12 w-12 rounded-full border-2 border-white ring-1 ring-gray-100 object-cover" 
+              />
             ))}
+            {members.length > 3 && (
+              <div className="h-12 w-12 rounded-full border-2 border-white ring-1 ring-gray-100 bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
+                +{members.length - 3}
+              </div>
+            )}
           </div>
           <div>
             <h1 className="font-heading text-xl font-bold text-gray-900" data-testid="text-pod-name">{pod.name}</h1>
-            <p className="text-xs font-medium text-gray-500">{memberAvatars.length} families</p>
+            <p className="text-xs font-medium text-gray-500">{members.length} {members.length === 1 ? 'family' : 'families'}</p>
           </div>
         </div>
 
@@ -111,12 +119,20 @@ export default function PodDetails() {
         {activeTab === "chat" && (
           <div className="flex h-full flex-col">
             <div className="flex-1 space-y-4 p-4">
-              {messages.map((msg, i) => {
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+                  <p className="text-sm">No messages yet. Say hi!</p>
+                </div>
+              ) : messages.map((msg) => {
                 const isMe = msg.userId === currentUser?.id;
                 return (
                   <div key={msg.id} className={cn("flex gap-3", isMe && "flex-row-reverse")}>
                     {!isMe ? (
-                      <img src={msg.user.avatar} className="h-8 w-8 rounded-full" alt={msg.user.name} />
+                      <img 
+                        src={msg.user.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400'} 
+                        className="h-8 w-8 rounded-full object-cover" 
+                        alt={msg.user.name || 'Family'} 
+                      />
                     ) : (
                       <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">You</div>
                     )}
