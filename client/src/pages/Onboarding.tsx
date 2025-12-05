@@ -217,10 +217,10 @@ export default function Onboarding() {
                   <button
                     key={interest}
                     onClick={() => toggleInterest(interest)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all border-2 ${
                       formData.interests.includes(interest)
-                        ? 'bg-warm-teal text-white'
-                        : 'bg-soft-beige text-charcoal hover:bg-warm-teal/10'
+                        ? 'bg-warm-teal text-white border-warm-teal shadow-md'
+                        : 'bg-white text-charcoal border-charcoal/20 hover:border-warm-teal hover:bg-warm-teal/5'
                     }`}
                     data-testid={`interest-${interest.toLowerCase()}`}
                   >
@@ -240,7 +240,7 @@ export default function Onboarding() {
             <Button
               variant="outline"
               onClick={() => setStep(step - 1)}
-              className="flex-1 rounded-full"
+              className="flex-1 rounded-full border-2 border-charcoal/30 text-charcoal hover:bg-charcoal/5"
               data-testid="button-back"
             >
               Back
@@ -249,7 +249,11 @@ export default function Onboarding() {
           <Button
             onClick={handleNext}
             disabled={!canProceed() || onboardingMutation.isPending}
-            className="flex-1 bg-warm-teal hover:bg-warm-teal/90 text-white rounded-full"
+            className={`flex-1 rounded-full transition-all ${
+              !canProceed() || onboardingMutation.isPending
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-warm-teal hover:bg-warm-teal/90 text-white shadow-lg shadow-warm-teal/30'
+            }`}
             data-testid="button-next"
           >
             {onboardingMutation.isPending ? (
