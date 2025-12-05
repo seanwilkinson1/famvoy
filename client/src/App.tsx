@@ -1,9 +1,10 @@
 import { Switch, Route } from "wouter";
+import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { BottomNav } from "@/components/layout/BottomNav";
-import { SignedIn, SignedOut } from "@clerk/clerk-react";
+import { SignedIn, SignedOut, useAuth } from "@clerk/clerk-react";
 import NotFound from "@/pages/not-found";
 
 import Landing from "@/pages/Landing";
@@ -16,9 +17,15 @@ import Profile from "@/pages/Profile";
 import ExperienceDetails from "@/pages/ExperienceDetails";
 import PodDetails from "@/pages/PodDetails";
 import { useClerkAuth } from "@/hooks/useAuth";
+import { setAuthTokenGetter } from "@/lib/api";
 
 function AuthenticatedRouter() {
   const { user, isLoading, needsOnboarding } = useClerkAuth();
+  const { getToken } = useAuth();
+
+  useEffect(() => {
+    setAuthTokenGetter(getToken);
+  }, [getToken]);
 
   if (isLoading) {
     return (

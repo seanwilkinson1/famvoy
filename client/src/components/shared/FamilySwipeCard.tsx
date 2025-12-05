@@ -43,8 +43,8 @@ export function FamilySwipeCard({ family, onSwipe, isTop = false }: FamilySwipeC
         {/* Background Image */}
         <div className="absolute inset-0">
           <img
-            src={family.avatar}
-            alt={family.name}
+            src={family.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400'}
+            alt={family.name || 'Family'}
             className="h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -67,16 +67,16 @@ export function FamilySwipeCard({ family, onSwipe, isTop = false }: FamilySwipeC
 
         {/* Content */}
         <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-          <h2 className="font-heading text-3xl font-bold mb-2">{family.name}</h2>
+          <h2 className="font-heading text-3xl font-bold mb-2">{family.name || 'Family'}</h2>
           
           <div className="flex items-center gap-4 mb-3">
             <div className="flex items-center gap-1 text-sm text-white/80">
               <MapPin className="h-4 w-4" />
-              {family.location}
+              {family.location || 'Location not set'}
             </div>
             <div className="flex items-center gap-1 text-sm text-white/80">
               <Users className="h-4 w-4" />
-              {family.kids}
+              {family.kids || 'Kids info not set'}
             </div>
           </div>
           
@@ -86,7 +86,7 @@ export function FamilySwipeCard({ family, onSwipe, isTop = false }: FamilySwipeC
 
           {/* Interests */}
           <div className="flex flex-wrap gap-2">
-            {family.interests.slice(0, 4).map((interest) => (
+            {(family.interests || []).slice(0, 4).map((interest) => (
               <span
                 key={interest}
                 className="rounded-full bg-white/20 backdrop-blur-sm px-3 py-1 text-xs font-medium"

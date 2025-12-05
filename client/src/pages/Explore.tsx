@@ -41,9 +41,9 @@ export default function Explore() {
   });
 
   const { data: discoverFamilies = [], isLoading: loadingFamilies } = useQuery({
-    queryKey: ["discoverFamilies", currentUser?.id],
-    queryFn: () => currentUser ? api.families.discover(currentUser.id) : [],
-    enabled: !!currentUser && activeTab === "discover",
+    queryKey: ["discoverFamilies"],
+    queryFn: api.families.discover,
+    enabled: activeTab === "discover",
   });
 
   const { data: connections = [] } = useQuery({
@@ -54,8 +54,7 @@ export default function Explore() {
 
   const swipeMutation = useMutation({
     mutationFn: async ({ swipedUserId, liked }: { swipedUserId: number; liked: boolean }) => {
-      if (!currentUser) throw new Error("No user");
-      return api.families.swipe(currentUser.id, swipedUserId, liked);
+      return api.families.swipe(swipedUserId, liked);
     },
     onSuccess: (result, variables) => {
       if (result.matched) {
@@ -298,15 +297,15 @@ export default function Explore() {
                     data-testid={`card-connection-${family.id}`}
                   >
                     <img
-                      src={family.avatar}
-                      alt={family.name}
+                      src={family.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400'}
+                      alt={family.name || 'Family'}
                       className="h-16 w-16 rounded-full object-cover ring-2 ring-primary/20"
                     />
                     <div className="flex-1">
-                      <h3 className="font-heading font-bold text-gray-900">{family.name}</h3>
-                      <p className="text-sm text-gray-500">{family.location}</p>
+                      <h3 className="font-heading font-bold text-gray-900">{family.name || 'Family'}</h3>
+                      <p className="text-sm text-gray-500">{family.location || 'Location not set'}</p>
                       <div className="mt-1 flex gap-1">
-                        {family.interests.slice(0, 2).map((i) => (
+                        {(family.interests || []).slice(0, 2).map((i) => (
                           <span key={i} className="text-xs text-primary font-medium">{i}</span>
                         ))}
                       </div>

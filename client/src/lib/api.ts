@@ -2,6 +2,25 @@ import type { Experience, Pod, Message, User, FamilyConnection } from "@shared/s
 
 const API_BASE = "/api";
 
+let getAuthToken: (() => Promise<string | null>) | null = null;
+
+export function setAuthTokenGetter(getter: () => Promise<string | null>) {
+  getAuthToken = getter;
+}
+
+async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(options.headers);
+  
+  if (getAuthToken) {
+    const token = await getAuthToken();
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+  }
+  
+  return fetch(url, { ...options, headers });
+}
+
 export const api = {
   experiences: {
     getAll: async (): Promise<Experience[]> => {
@@ -23,7 +42,7 @@ export const api = {
     },
     
     create: async (data: any): Promise<Experience> => {
-      const res = await fetch(`${API_BASE}/experiences`, {
+      const res = await fetchWithAuth(`${API_BASE}/experiences`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -32,20 +51,16 @@ export const api = {
       return res.json();
     },
     
-    save: async (id: number, userId: number): Promise<void> => {
-      const res = await fetch(`${API_BASE}/experiences/${id}/save`, {
+    save: async (id: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/experiences/${id}/save`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
       });
       if (!res.ok) throw new Error("Failed to save experience");
     },
     
-    unsave: async (id: number, userId: number): Promise<void> => {
-      const res = await fetch(`${API_BASE}/experiences/${id}/save`, {
+    unsave: async (id: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/experiences/${id}/save`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
       });
       if (!res.ok) throw new Error("Failed to unsave experience");
     },
@@ -53,7 +68,7 @@ export const api = {
   
   users: {
     getMe: async (): Promise<User> => {
-      const res = await fetch(`${API_BASE}/users/me`);
+      const res = await fetchWithAuth(`${API_BASE}/users/me`);
       if (!res.ok) throw new Error("Failed to fetch user");
       return res.json();
     },
@@ -103,7 +118,7 @@ export const api = {
     },
     
     create: async (data: { name: string; description: string }): Promise<Pod> => {
-      const res = await fetch(`${API_BASE}/pods`, {
+      const res = await fetchWithAuth(`${API_BASE}/pods`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -112,17 +127,24 @@ export const api = {
       return res.json();
     },
     
+    join: async (podId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/pods/${podId}/members`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to join pod");
+    },
+    
     getMessages: async (podId: number): Promise<Array<Message & { user: User }>> => {
       const res = await fetch(`${API_BASE}/pods/${podId}/messages`);
       if (!res.ok) throw new Error("Failed to fetch messages");
       return res.json();
     },
     
-    sendMessage: async (podId: number, userId: number, content: string): Promise<Message> => {
-      const res = await fetch(`${API_BASE}/pods/${podId}/messages`, {
+    sendMessage: async (podId: number, content: string): Promise<Message> => {
+      const res = await fetchWithAuth(`${API_BASE}/pods/${podId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, content }),
+        body: JSON.stringify({ content }),
       });
       if (!res.ok) throw new Error("Failed to send message");
       return res.json();
@@ -130,17 +152,17 @@ export const api = {
   },
   
   families: {
-    discover: async (userId: number): Promise<User[]> => {
-      const res = await fetch(`${API_BASE}/families/discover?userId=${userId}`);
+    discover: async (): Promise<User[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/families/discover`);
       if (!res.ok) throw new Error("Failed to discover families");
       return res.json();
     },
     
-    swipe: async (userId: number, swipedUserId: number, liked: boolean): Promise<{ matched: boolean }> => {
-      const res = await fetch(`${API_BASE}/families/swipe`, {
+    swipe: async (swipedUserId: number, liked: boolean): Promise<{ matched: boolean }> => {
+      const res = await fetchWithAuth(`${API_BASE}/families/swipe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, swipedUserId, liked }),
+        body: JSON.stringify({ swipedUserId, liked }),
       });
       if (!res.ok) throw new Error("Failed to record swipe");
       return res.json();

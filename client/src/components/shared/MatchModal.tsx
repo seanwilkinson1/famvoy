@@ -63,7 +63,7 @@ export function MatchModal({ isOpen, onClose, matchedFamily, currentUser }: Matc
                 transition={{ delay: 0.4 }}
                 className="text-gray-500 mb-6"
               >
-                You and {matchedFamily.name} both want to connect!
+                You and {matchedFamily.name || 'this family'} both want to connect!
               </motion.p>
 
               {/* Avatars */}
@@ -74,13 +74,13 @@ export function MatchModal({ isOpen, onClose, matchedFamily, currentUser }: Matc
                 className="flex justify-center -space-x-6 mb-8"
               >
                 <img
-                  src={currentUser.avatar}
-                  alt={currentUser.name}
+                  src={currentUser.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400'}
+                  alt={currentUser.name || 'You'}
                   className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-lg"
                 />
                 <img
-                  src={matchedFamily.avatar}
-                  alt={matchedFamily.name}
+                  src={matchedFamily.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400'}
+                  alt={matchedFamily.name || 'Family'}
                   className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-lg"
                 />
               </motion.div>
