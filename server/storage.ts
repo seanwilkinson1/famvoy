@@ -19,6 +19,12 @@ import {
   type InsertComment,
   type Follow,
   type InsertFollow,
+  type PodAlbum,
+  type InsertPodAlbum,
+  type AlbumPhoto,
+  type InsertAlbumPhoto,
+  type Badge,
+  type UserBadge,
   users,
   experiences,
   pods,
@@ -31,6 +37,10 @@ import {
   comments,
   follows,
   podExperiences,
+  podAlbums,
+  albumPhotos,
+  badges,
+  userBadges,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ne, notInArray, ilike, isNotNull } from "drizzle-orm";
@@ -113,6 +123,21 @@ export interface IStorage {
   addExperienceToPod(podId: number, experienceId: number, userId: number): Promise<void>;
   removeExperienceFromPod(podId: number, experienceId: number): Promise<void>;
   isExperienceInPod(podId: number, experienceId: number): Promise<boolean>;
+  
+  getPodAlbums(podId: number): Promise<(PodAlbum & { creator: User; photoCount: number })[]>;
+  getPodAlbumById(albumId: number): Promise<PodAlbum | undefined>;
+  createPodAlbum(data: InsertPodAlbum): Promise<PodAlbum>;
+  deletePodAlbum(albumId: number): Promise<void>;
+  getAlbumPhotos(albumId: number): Promise<(AlbumPhoto & { user: User })[]>;
+  addPhotoToAlbum(data: InsertAlbumPhoto): Promise<AlbumPhoto>;
+  deleteAlbumPhoto(photoId: number): Promise<void>;
+  updateAlbumCover(albumId: number, coverUrl: string): Promise<void>;
+  
+  getAllBadges(): Promise<Badge[]>;
+  getUserBadges(userId: number): Promise<(UserBadge & { badge: Badge })[]>;
+  awardBadge(userId: number, badgeId: number): Promise<UserBadge>;
+  hasUserEarnedBadge(userId: number, badgeId: number): Promise<boolean>;
+  checkAndAwardBadges(userId: number): Promise<Badge[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -716,6 +741,151 @@ export class DatabaseStorage implements IStorage {
       and(eq(podExperiences.podId, podId), eq(podExperiences.experienceId, experienceId))
     );
     return !!exists;
+  }
+
+  async getPodAlbums(podId: number): Promise<(PodAlbum & { creator: User; photoCount: number })[]> {
+    const albums = await db
+      .select()
+      .from(podAlbums)
+      .innerJoin(users, eq(podAlbums.createdByUserId, users.id))
+      .where(eq(podAlbums.podId, podId))
+      .orderBy(desc(podAlbums.createdAt));
+    
+    const result = await Promise.all(albums.map(async (a) => {
+      const photos = await db.select().from(albumPhotos).where(eq(albumPhotos.albumId, a.pod_albums.id));
+      return {
+        ...a.pod_albums,
+        creator: a.users,
+        photoCount: photos.length,
+      };
+    }));
+    
+    return result;
+  }
+
+  async getPodAlbumById(albumId: number): Promise<PodAlbum | undefined> {
+    const [album] = await db.select().from(podAlbums).where(eq(podAlbums.id, albumId));
+    return album || undefined;
+  }
+
+  async createPodAlbum(data: InsertPodAlbum): Promise<PodAlbum> {
+    const [album] = await db.insert(podAlbums).values(data).returning();
+    return album;
+  }
+
+  async deletePodAlbum(albumId: number): Promise<void> {
+    await db.delete(albumPhotos).where(eq(albumPhotos.albumId, albumId));
+    await db.delete(podAlbums).where(eq(podAlbums.id, albumId));
+  }
+
+  async getAlbumPhotos(albumId: number): Promise<(AlbumPhoto & { user: User })[]> {
+    const photos = await db
+      .select()
+      .from(albumPhotos)
+      .innerJoin(users, eq(albumPhotos.uploadedByUserId, users.id))
+      .where(eq(albumPhotos.albumId, albumId))
+      .orderBy(desc(albumPhotos.createdAt));
+    
+    return photos.map(p => ({ ...p.album_photos, user: p.users }));
+  }
+
+  async addPhotoToAlbum(data: InsertAlbumPhoto): Promise<AlbumPhoto> {
+    const [photo] = await db.insert(albumPhotos).values(data).returning();
+    
+    const album = await this.getPodAlbumById(data.albumId);
+    if (album && !album.coverPhotoUrl) {
+      await this.updateAlbumCover(data.albumId, data.photoUrl);
+    }
+    
+    return photo;
+  }
+
+  async deleteAlbumPhoto(photoId: number): Promise<void> {
+    await db.delete(albumPhotos).where(eq(albumPhotos.id, photoId));
+  }
+
+  async updateAlbumCover(albumId: number, coverUrl: string): Promise<void> {
+    await db.update(podAlbums).set({ coverPhotoUrl: coverUrl }).where(eq(podAlbums.id, albumId));
+  }
+
+  async getAllBadges(): Promise<Badge[]> {
+    return db.select().from(badges);
+  }
+
+  async getUserBadges(userId: number): Promise<(UserBadge & { badge: Badge })[]> {
+    const result = await db
+      .select()
+      .from(userBadges)
+      .innerJoin(badges, eq(userBadges.badgeId, badges.id))
+      .where(eq(userBadges.userId, userId))
+      .orderBy(desc(userBadges.earnedAt));
+    
+    return result.map(r => ({ ...r.user_badges, badge: r.badges }));
+  }
+
+  async awardBadge(userId: number, badgeId: number): Promise<UserBadge> {
+    const [userBadge] = await db.insert(userBadges).values({ userId, badgeId }).returning();
+    return userBadge;
+  }
+
+  async hasUserEarnedBadge(userId: number, badgeId: number): Promise<boolean> {
+    const [exists] = await db.select().from(userBadges).where(
+      and(eq(userBadges.userId, userId), eq(userBadges.badgeId, badgeId))
+    );
+    return !!exists;
+  }
+
+  async checkAndAwardBadges(userId: number): Promise<Badge[]> {
+    const allBadges = await this.getAllBadges();
+    const newlyEarned: Badge[] = [];
+    
+    for (const badge of allBadges) {
+      const alreadyHas = await this.hasUserEarnedBadge(userId, badge.id);
+      if (alreadyHas) continue;
+      
+      let count = 0;
+      
+      switch (badge.criteriaType) {
+        case 'experiences_created':
+          const userExperiences = await db.select().from(experiences).where(eq(experiences.userId, userId));
+          count = userExperiences.length;
+          break;
+          
+        case 'pods_joined':
+          const userPods = await db.select().from(podMembers).where(eq(podMembers.userId, userId));
+          count = userPods.length;
+          break;
+          
+        case 'outdoor_experiences':
+          const outdoorExp = await db.select().from(experiences).where(
+            and(eq(experiences.userId, userId), eq(experiences.category, 'Outdoor'))
+          );
+          count = outdoorExp.length;
+          break;
+          
+        case 'park_visits':
+          const parkExp = await db.select().from(experiences).where(eq(experiences.userId, userId));
+          count = parkExp.filter(e => 
+            e.category === 'Parks & Playgrounds' || 
+            e.title.toLowerCase().includes('park')
+          ).length;
+          break;
+          
+        case 'connections_made':
+          const connections = await db.select().from(familyConnections).where(
+            and(eq(familyConnections.userId, userId), eq(familyConnections.status, 'accepted'))
+          );
+          count = connections.length;
+          break;
+      }
+      
+      if (count >= badge.threshold) {
+        await this.awardBadge(userId, badge.id);
+        newlyEarned.push(badge);
+      }
+    }
+    
+    return newlyEarned;
   }
 }
 
