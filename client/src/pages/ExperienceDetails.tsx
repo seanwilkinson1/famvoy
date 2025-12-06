@@ -1,10 +1,10 @@
 import { useRoute, useLocation } from "wouter";
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { CommentsSection } from "@/components/shared/CommentsSection";
-import { ChevronLeft, Heart, Clock, DollarSign, Users, MapPin, Share2, Navigation, Plus, X, FolderPlus } from "lucide-react";
+import { ChevronLeft, Heart, Clock, DollarSign, Users, MapPin, Share2, Navigation, Plus, X, FolderPlus, Camera, Star, CheckCircle, Loader2 } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatExperience, type ExperienceWithCreator } from "@/lib/types";
@@ -28,8 +28,15 @@ export default function ExperienceDetails() {
   const [, setLocation] = useLocation();
   const [isSaved, setIsSaved] = useState(false);
   const [showAddToPodModal, setShowAddToPodModal] = useState(false);
+  const [showCheckinModal, setShowCheckinModal] = useState(false);
+  const [checkinPhoto, setCheckinPhoto] = useState<string>("");
+  const [checkinReview, setCheckinReview] = useState("");
+  const [checkinRating, setCheckinRating] = useState(0);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const checkinPhotoRef = useRef<HTMLInputElement>(null);
   const { user } = useClerkAuth();
   const queryClient = useQueryClient();
+  const experienceId = params?.id ? parseInt(params.id) : 0;
 
   const { data: experience } = useQuery<ExperienceWithCreator | null>({
     queryKey: ["experience", params?.id],
@@ -47,6 +54,59 @@ export default function ExperienceDetails() {
     queryFn: () => user?.id ? api.users.getPods(user.id) : [],
     enabled: !!user?.id,
   });
+
+  const { data: checkins = [] } = useQuery({
+    queryKey: ["experienceCheckins", experienceId],
+    queryFn: () => api.checkins.getByExperience(experienceId),
+    enabled: experienceId > 0,
+  });
+
+  const { data: checkinCount = 0 } = useQuery({
+    queryKey: ["experienceCheckinCount", experienceId],
+    queryFn: () => api.checkins.getCount(experienceId),
+    enabled: experienceId > 0,
+  });
+
+  const { data: hasCheckedIn = false } = useQuery({
+    queryKey: ["hasCheckedIn", experienceId],
+    queryFn: () => api.checkins.hasCheckedIn(experienceId),
+    enabled: experienceId > 0 && !!user,
+  });
+
+  const checkinMutation = useMutation({
+    mutationFn: (data: { photoUrl?: string; review?: string; rating?: number }) => 
+      api.checkins.create(experienceId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["experienceCheckins", experienceId] });
+      queryClient.invalidateQueries({ queryKey: ["experienceCheckinCount", experienceId] });
+      queryClient.invalidateQueries({ queryKey: ["hasCheckedIn", experienceId] });
+      queryClient.invalidateQueries({ queryKey: ["userCheckins", user?.id] });
+      setShowCheckinModal(false);
+      setCheckinPhoto("");
+      setCheckinReview("");
+      setCheckinRating(0);
+      toast.success("You've checked in! Experience added to your profile.");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const handleCheckinPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsUploadingPhoto(true);
+    try {
+      const url = await api.upload.image(file);
+      setCheckinPhoto(url);
+    } catch (err) {
+      toast.error("Failed to upload photo");
+    } finally {
+      setIsUploadingPhoto(false);
+      if (checkinPhotoRef.current) checkinPhotoRef.current.value = '';
+    }
+  };
 
   const addToPodMutation = useMutation({
     mutationFn: ({ podId, experienceId }: { podId: number; experienceId: number }) => 
@@ -166,7 +226,7 @@ export default function ExperienceDetails() {
         </div>
 
         {/* Quick Stats */}
-        <div className="mb-8 grid grid-cols-4 gap-2 rounded-2xl bg-gray-50 p-4">
+        <div className="mb-4 grid grid-cols-4 gap-2 rounded-2xl bg-gray-50 p-4">
           {[
             { icon: Clock, label: "Duration", val: experience.duration },
             { icon: DollarSign, label: "Cost", val: experience.cost },
@@ -179,6 +239,49 @@ export default function ExperienceDetails() {
               <span className="text-xs font-bold text-gray-900">{stat.val}</span>
             </div>
           ))}
+        </div>
+
+        {/* Check-in Banner */}
+        <div className="mb-8 flex items-center justify-between rounded-2xl bg-gradient-to-r from-primary/10 to-secondary/20 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex -space-x-2">
+              {checkins.slice(0, 3).map((c: any, i: number) => (
+                <img
+                  key={c.id}
+                  src={c.user?.avatar || `https://ui-avatars.com/api/?name=Family&background=random`}
+                  alt="Family"
+                  className="h-8 w-8 rounded-full border-2 border-white object-cover"
+                />
+              ))}
+              {checkinCount > 3 && (
+                <div className="h-8 w-8 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
+                  +{checkinCount - 3}
+                </div>
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900">
+                {checkinCount === 0 ? "Be the first!" : `${checkinCount} ${checkinCount === 1 ? 'family' : 'families'} did this`}
+              </p>
+              <p className="text-xs text-gray-500">Share your experience</p>
+            </div>
+          </div>
+          {user && (
+            hasCheckedIn ? (
+              <div className="flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1.5 text-xs font-bold text-green-700">
+                <CheckCircle className="h-4 w-4" />
+                Done!
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowCheckinModal(true)}
+                className="rounded-full bg-primary px-4 py-2 text-xs font-bold text-white shadow-sm active:scale-95 transition-transform"
+                data-testid="button-checkin"
+              >
+                I Did This!
+              </button>
+            )
+          )}
         </div>
 
         {/* Map Preview */}
@@ -252,6 +355,58 @@ export default function ExperienceDetails() {
           </ul>
         </section>
 
+        {/* Families Who Did This */}
+        {checkins.length > 0 && (
+          <section className="mb-8">
+            <h2 className="mb-4 font-heading text-xl font-bold text-gray-900">Families Who Did This</h2>
+            <div className="space-y-4">
+              {checkins.slice(0, 5).map((checkin: any) => (
+                <div key={checkin.id} className="rounded-2xl bg-gray-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <img
+                      src={checkin.user?.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400'}
+                      alt={checkin.user?.name || 'Family'}
+                      className="h-10 w-10 rounded-full object-cover cursor-pointer"
+                      onClick={() => checkin.user && setLocation(`/family/${checkin.user.id}`)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <p 
+                          className="font-bold text-sm text-gray-900 cursor-pointer hover:text-primary"
+                          onClick={() => checkin.user && setLocation(`/family/${checkin.user.id}`)}
+                        >
+                          {checkin.user?.name || 'A Family'}
+                        </p>
+                        {checkin.rating && (
+                          <div className="flex items-center gap-0.5">
+                            {[...Array(checkin.rating)].map((_, i) => (
+                              <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {checkin.review && (
+                        <p className="text-sm text-gray-600 line-clamp-2">{checkin.review}</p>
+                      )}
+                      {checkin.photoUrl && (
+                        <img
+                          src={checkin.photoUrl}
+                          alt="Check-in photo"
+                          className="mt-2 rounded-xl max-h-32 object-cover cursor-pointer"
+                          onClick={() => window.open(checkin.photoUrl, '_blank')}
+                        />
+                      )}
+                      <p className="text-xs text-gray-400 mt-2">
+                        {new Date(checkin.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Reviews & Comments */}
         <CommentsSection 
           experienceId={experience.id} 
@@ -321,6 +476,130 @@ export default function ExperienceDetails() {
                   <Plus className="h-5 w-5 text-primary" />
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Check-in Modal */}
+      {showCheckinModal && (
+        <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md max-h-[85vh] overflow-hidden shadow-xl">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <h3 className="font-heading text-lg font-bold">I Did This!</h3>
+              <button 
+                onClick={() => {
+                  setShowCheckinModal(false);
+                  setCheckinPhoto("");
+                  setCheckinReview("");
+                  setCheckinRating(0);
+                }}
+                className="rounded-full bg-gray-100 p-2"
+                data-testid="button-close-checkin-modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4 space-y-4 max-h-[65vh]">
+              <p className="text-sm text-gray-500">
+                Share your experience with other families! Add a photo and review.
+              </p>
+
+              {/* Photo Upload */}
+              <div>
+                <label className="text-sm font-bold text-gray-700 mb-2 block">Add a Photo (optional)</label>
+                <input
+                  ref={checkinPhotoRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleCheckinPhotoUpload}
+                />
+                {checkinPhoto ? (
+                  <div className="relative">
+                    <img 
+                      src={checkinPhoto} 
+                      alt="Check-in photo"
+                      className="w-full h-40 rounded-xl object-cover"
+                    />
+                    <button
+                      onClick={() => setCheckinPhoto("")}
+                      className="absolute top-2 right-2 rounded-full bg-red-500 p-1 text-white"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => checkinPhotoRef.current?.click()}
+                    disabled={isUploadingPhoto}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 p-6 text-gray-500 hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+                    data-testid="button-upload-checkin-photo"
+                  >
+                    {isUploadingPhoto ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="h-5 w-5" />
+                        Upload Photo
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {/* Rating */}
+              <div>
+                <label className="text-sm font-bold text-gray-700 mb-2 block">Rate your experience</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => setCheckinRating(star)}
+                      className="p-1"
+                      data-testid={`button-rating-${star}`}
+                    >
+                      <Star 
+                        className={cn(
+                          "h-8 w-8 transition-colors",
+                          star <= checkinRating 
+                            ? "fill-amber-400 text-amber-400" 
+                            : "text-gray-300 hover:text-amber-300"
+                        )} 
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Review */}
+              <div>
+                <label className="text-sm font-bold text-gray-700 mb-2 block">Quick Review (optional)</label>
+                <textarea
+                  value={checkinReview}
+                  onChange={(e) => setCheckinReview(e.target.value)}
+                  placeholder="What did your family think? Any tips for others?"
+                  rows={3}
+                  className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:border-primary focus:outline-none resize-none"
+                  data-testid="input-checkin-review"
+                />
+              </div>
+
+              <button
+                onClick={() => checkinMutation.mutate({
+                  photoUrl: checkinPhoto || undefined,
+                  review: checkinReview || undefined,
+                  rating: checkinRating || undefined,
+                })}
+                disabled={checkinMutation.isPending}
+                className="w-full rounded-xl bg-primary py-3 text-sm font-bold text-white disabled:opacity-50"
+                data-testid="button-submit-checkin"
+              >
+                {checkinMutation.isPending ? "Saving..." : "Check In!"}
+              </button>
             </div>
           </div>
         </div>

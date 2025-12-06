@@ -438,4 +438,45 @@ export const api = {
       return res.json();
     },
   },
+
+  checkins: {
+    create: async (experienceId: number, data: { photoUrl?: string; review?: string; rating?: number }): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/experiences/${experienceId}/checkins`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to check in");
+      }
+      return res.json();
+    },
+
+    getByExperience: async (experienceId: number): Promise<any[]> => {
+      const res = await fetch(`${API_BASE}/experiences/${experienceId}/checkins`);
+      if (!res.ok) throw new Error("Failed to fetch check-ins");
+      return res.json();
+    },
+
+    getCount: async (experienceId: number): Promise<number> => {
+      const res = await fetch(`${API_BASE}/experiences/${experienceId}/checkin-count`);
+      if (!res.ok) throw new Error("Failed to fetch check-in count");
+      const data = await res.json();
+      return data.count;
+    },
+
+    getByUser: async (userId: number): Promise<any[]> => {
+      const res = await fetch(`${API_BASE}/users/${userId}/checkins`);
+      if (!res.ok) throw new Error("Failed to fetch user check-ins");
+      return res.json();
+    },
+
+    hasCheckedIn: async (experienceId: number): Promise<boolean> => {
+      const res = await fetchWithAuth(`${API_BASE}/experiences/${experienceId}/has-checkedin`);
+      if (!res.ok) throw new Error("Failed to check status");
+      const data = await res.json();
+      return data.hasCheckedIn;
+    },
+  },
 };
