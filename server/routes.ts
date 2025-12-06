@@ -171,7 +171,17 @@ export async function registerRoutes(
       if (!experience) {
         return res.status(404).json({ error: "Experience not found" });
       }
-      res.json(experience);
+      
+      const creator = await storage.getUser(experience.userId);
+      
+      res.json({
+        ...experience,
+        creator: creator ? {
+          id: creator.id,
+          name: creator.name,
+          avatar: creator.avatar,
+        } : null
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

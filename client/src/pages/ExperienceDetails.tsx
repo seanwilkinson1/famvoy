@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { formatExperience } from "@/lib/types";
+import { formatExperience, type ExperienceWithCreator } from "@/lib/types";
 import { useClerkAuth } from "@/hooks/useAuth";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { Icon } from "leaflet";
@@ -28,9 +28,9 @@ export default function ExperienceDetails() {
   const [isSaved, setIsSaved] = useState(false);
   const { user } = useClerkAuth();
 
-  const { data: experience } = useQuery({
+  const { data: experience } = useQuery<ExperienceWithCreator | null>({
     queryKey: ["experience", params?.id],
-    queryFn: () => params?.id ? api.experiences.getById(parseInt(params.id)) : null,
+    queryFn: () => params?.id ? api.experiences.getById(parseInt(params.id)) as Promise<ExperienceWithCreator> : null,
     enabled: !!match && !!params?.id,
   });
 
@@ -115,15 +115,20 @@ export default function ExperienceDetails() {
         
         {/* Family Row */}
         <div className="mb-8 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div 
+            className="flex items-center gap-3 cursor-pointer"
+            onClick={() => experience.creator && setLocation(`/family/${experience.creator.id}`)}
+          >
             <img
-              src="https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400"
-              alt="Family"
+              src={experience.creator?.avatar || "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400"}
+              alt={experience.creator?.name || "Family"}
               className="h-10 w-10 rounded-full object-cover ring-2 ring-white shadow-sm"
             />
             <div>
               <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Shared by</p>
-              <p className="text-sm font-bold text-gray-900">The Family</p>
+              <p className="text-sm font-bold text-gray-900" data-testid="text-creator-name">
+                {experience.creator?.name || "A Family"}
+              </p>
             </div>
           </div>
           <button className="rounded-full bg-primary/10 px-4 py-1.5 text-xs font-bold text-primary" data-testid="button-follow">
