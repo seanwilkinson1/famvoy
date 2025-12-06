@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronLeft, Camera, MapPin, Clock, Info, X, Loader2 } from "lucide-react";
+import { ChevronLeft, Camera, MapPin, Clock, Info, X, Loader2, Navigation } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -43,6 +43,7 @@ export default function Create() {
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isGettingCurrentLocation, setIsGettingCurrentLocation] = useState(false);
 
   useEffect(() => {
     const searchLocation = async () => {
@@ -130,6 +131,85 @@ export default function Create() {
       locationLng: null,
     });
     setLocationSearch("");
+  };
+
+  const handleUseCurrentLocation = async () => {
+    if (!navigator.geolocation) {
+      toast({
+        title: "Not Supported",
+        description: "Location services are not supported by your browser",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGettingCurrentLocation(true);
+    
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
+            {
+              headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'FamVoy/1.0 (family experience sharing app)',
+              },
+            }
+          );
+          const data = await response.json();
+          
+          const locationName = data.display_name 
+            ? data.display_name.split(',').slice(0, 2).join(', ')
+            : `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          
+          setFormData(prev => ({
+            ...prev,
+            locationName,
+            locationLat: latitude,
+            locationLng: longitude,
+          }));
+          setLocationSearch(locationName);
+          
+          toast({
+            title: "Location Found!",
+            description: locationName,
+            duration: 2000,
+          });
+        } catch (error) {
+          console.error('Failed to reverse geocode:', error);
+          const fallbackName = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          setFormData(prev => ({
+            ...prev,
+            locationName: fallbackName,
+            locationLat: latitude,
+            locationLng: longitude,
+          }));
+          setLocationSearch(fallbackName);
+        } finally {
+          setIsGettingCurrentLocation(false);
+        }
+      },
+      (error) => {
+        setIsGettingCurrentLocation(false);
+        let message = "Could not get your location";
+        if (error.code === error.PERMISSION_DENIED) {
+          message = "Please allow location access in your browser settings";
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          message = "Location information is unavailable";
+        } else if (error.code === error.TIMEOUT) {
+          message = "Location request timed out";
+        }
+        toast({
+          title: "Location Error",
+          description: message,
+          variant: "destructive",
+        });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
   };
 
   const createMutation = useMutation({
@@ -348,7 +428,28 @@ export default function Create() {
           </div>
           
           <div ref={locationInputRef} className="relative">
-            <label className="mb-2 block text-sm font-bold text-gray-700">Location</label>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-sm font-bold text-gray-700">Location</label>
+              <button
+                type="button"
+                onClick={handleUseCurrentLocation}
+                disabled={isGettingCurrentLocation}
+                className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/80 disabled:opacity-50"
+                data-testid="button-use-current-location"
+              >
+                {isGettingCurrentLocation ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Getting location...
+                  </>
+                ) : (
+                  <>
+                    <Navigation className="h-3 w-3" />
+                    Use My Location
+                  </>
+                )}
+              </button>
+            </div>
             <div className="relative">
               <MapPin className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
               <input
