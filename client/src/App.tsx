@@ -18,6 +18,7 @@ import Settings from "@/pages/Settings";
 import FamilyProfile from "@/pages/FamilyProfile";
 import ExperienceDetails from "@/pages/ExperienceDetails";
 import PodDetails from "@/pages/PodDetails";
+import TripDetails from "@/pages/TripDetails";
 import { useClerkAuth } from "@/hooks/useAuth";
 import { setAuthTokenGetter } from "@/lib/api";
 
@@ -52,6 +53,7 @@ function AuthenticatedRouter() {
         <Route path="/settings" component={Settings} />
         <Route path="/experience/:id" component={ExperienceDetails} />
         <Route path="/pod/:id" component={PodDetails} />
+        <Route path="/trip/:id" component={TripDetails} />
         <Route path="/family/:id" component={FamilyProfile} />
         <Route component={NotFound} />
       </Switch>
