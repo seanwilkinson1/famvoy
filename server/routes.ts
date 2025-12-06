@@ -1095,5 +1095,105 @@ export async function registerRoutes(
     }
   });
 
+  // Experience check-ins
+  app.post("/api/experiences/:id/checkins", requireAuth(), async (req, res) => {
+    try {
+      const experienceId = parseInt(req.params.id);
+      if (isNaN(experienceId)) {
+        return res.status(400).json({ error: "Invalid experience ID" });
+      }
+
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      const alreadyCheckedIn = await storage.hasUserCheckedIn(user.id, experienceId);
+      if (alreadyCheckedIn) {
+        return res.status(400).json({ error: "You've already checked into this experience" });
+      }
+
+      const checkin = await storage.createExperienceCheckin({
+        experienceId,
+        userId: user.id,
+        photoUrl: req.body.photoUrl || null,
+        review: req.body.review || null,
+        rating: req.body.rating || null,
+      });
+
+      res.json(checkin);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/experiences/:id/checkins", async (req, res) => {
+    try {
+      const experienceId = parseInt(req.params.id);
+      if (isNaN(experienceId)) {
+        return res.status(400).json({ error: "Invalid experience ID" });
+      }
+      const checkins = await storage.getCheckinsByExperience(experienceId);
+      res.json(checkins);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/experiences/:id/checkin-count", async (req, res) => {
+    try {
+      const experienceId = parseInt(req.params.id);
+      if (isNaN(experienceId)) {
+        return res.status(400).json({ error: "Invalid experience ID" });
+      }
+      const count = await storage.getCheckinCount(experienceId);
+      res.json({ count });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/users/:id/checkins", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+      const checkins = await storage.getCheckinsByUser(userId);
+      res.json(checkins);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/experiences/:id/has-checkedin", requireAuth(), async (req, res) => {
+    try {
+      const experienceId = parseInt(req.params.id);
+      if (isNaN(experienceId)) {
+        return res.status(400).json({ error: "Invalid experience ID" });
+      }
+
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      const hasCheckedIn = await storage.hasUserCheckedIn(user.id, experienceId);
+      res.json({ hasCheckedIn });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }
