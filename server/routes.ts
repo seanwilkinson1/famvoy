@@ -47,6 +47,8 @@ export async function registerRoutes(
 
   app.use('/uploads', express.static('public/uploads'));
 
+  app.use(clerkMiddleware());
+
   app.post('/api/upload', requireAuth(), upload.single('image'), (req, res) => {
     try {
       if (!req.file) {
@@ -58,8 +60,6 @@ export async function registerRoutes(
       res.status(500).json({ error: error.message });
     }
   });
-
-  app.use(clerkMiddleware());
 
   app.get('/api/auth/user', requireAuth(), async (req, res) => {
     try {
