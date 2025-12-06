@@ -25,6 +25,8 @@ import {
   type InsertAlbumPhoto,
   type Badge,
   type UserBadge,
+  type ExperienceCheckin,
+  type InsertExperienceCheckin,
   users,
   experiences,
   pods,
@@ -41,6 +43,7 @@ import {
   albumPhotos,
   badges,
   userBadges,
+  experienceCheckins,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ne, notInArray, ilike, isNotNull } from "drizzle-orm";
@@ -138,6 +141,12 @@ export interface IStorage {
   awardBadge(userId: number, badgeId: number): Promise<UserBadge>;
   hasUserEarnedBadge(userId: number, badgeId: number): Promise<boolean>;
   checkAndAwardBadges(userId: number): Promise<Badge[]>;
+  
+  createExperienceCheckin(data: InsertExperienceCheckin): Promise<ExperienceCheckin>;
+  getCheckinsByExperience(experienceId: number): Promise<(ExperienceCheckin & { user: User })[]>;
+  getCheckinsByUser(userId: number): Promise<(ExperienceCheckin & { experience: Experience })[]>;
+  getCheckinCount(experienceId: number): Promise<number>;
+  hasUserCheckedIn(userId: number, experienceId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -886,6 +895,54 @@ export class DatabaseStorage implements IStorage {
     }
     
     return newlyEarned;
+  }
+
+  async createExperienceCheckin(data: InsertExperienceCheckin): Promise<ExperienceCheckin> {
+    const [checkin] = await db.insert(experienceCheckins).values(data).returning();
+    return checkin;
+  }
+
+  async getCheckinsByExperience(experienceId: number): Promise<(ExperienceCheckin & { user: User })[]> {
+    const results = await db.select()
+      .from(experienceCheckins)
+      .leftJoin(users, eq(experienceCheckins.userId, users.id))
+      .where(eq(experienceCheckins.experienceId, experienceId))
+      .orderBy(desc(experienceCheckins.createdAt));
+    
+    return results.map(r => ({
+      ...r.experience_checkins,
+      user: r.users!,
+    }));
+  }
+
+  async getCheckinsByUser(userId: number): Promise<(ExperienceCheckin & { experience: Experience })[]> {
+    const results = await db.select()
+      .from(experienceCheckins)
+      .leftJoin(experiences, eq(experienceCheckins.experienceId, experiences.id))
+      .where(eq(experienceCheckins.userId, userId))
+      .orderBy(desc(experienceCheckins.createdAt));
+    
+    return results.map(r => ({
+      ...r.experience_checkins,
+      experience: r.experiences!,
+    }));
+  }
+
+  async getCheckinCount(experienceId: number): Promise<number> {
+    const results = await db.select()
+      .from(experienceCheckins)
+      .where(eq(experienceCheckins.experienceId, experienceId));
+    return results.length;
+  }
+
+  async hasUserCheckedIn(userId: number, experienceId: number): Promise<boolean> {
+    const [exists] = await db.select()
+      .from(experienceCheckins)
+      .where(and(
+        eq(experienceCheckins.userId, userId),
+        eq(experienceCheckins.experienceId, experienceId)
+      ));
+    return !!exists;
   }
 }
 
