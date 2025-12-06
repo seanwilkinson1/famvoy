@@ -12,6 +12,27 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### December 6, 2025 - Pod Photo Albums & Badge System
+- **Pod Photo Albums**: Each pod can have multiple photo albums for organizing memories
+  - `pod_albums` table with name, description, createdByUserId, coverPhotoUrl
+  - `album_photos` table with photoUrl, caption, addedByUserId
+  - Storage methods: `getAlbumsByPod()`, `createAlbum()`, `deleteAlbum()`, `addPhotoToAlbum()`, `deletePhoto()`
+  - API routes: GET/POST/DELETE `/api/pods/:id/albums`, GET/POST `/api/albums/:id/photos`, DELETE `/api/album-photos/:id`
+- **Albums Tab in PodDetails**: New tab to browse and manage pod photo albums
+  - Create album modal with name and description fields
+  - Album grid view with cover photos and photo counts
+  - Album detail view with photo grid and upload functionality
+  - Delete album and delete photo actions
+- **Badge/Achievement System**: Gamified achievements for user engagement
+  - `badges` table with predefined achievements (Park Explorer, Social Butterfly, Pod Leader, etc.)
+  - `user_badges` table to track earned badges per user with earnedAt timestamps
+  - 10 initial badge types with criteria (experience_count, category_count, pod_count)
+  - Storage methods: `getAllBadges()`, `getUserBadges()`, `awardBadgeToUser()`, `checkAndAwardBadges()`
+  - API routes: GET `/api/badges`, GET `/api/users/:id/badges`, POST `/api/users/:id/check-badges`
+- **Badges Tab on Profile**: New tab showing earned badges with emoji icons and earned dates
+  - Badge grid with "Soft Pop" design aesthetic
+  - Empty state encouraging activity to earn badges
+
 ### December 6, 2025 - Pod Experience Curation (Pinterest-style Boards)
 - **Pod Experience Board**: Each pod now has its own curated collection of experiences
   - `pod_experiences` table with podId, experienceId, addedByUserId, and unique constraint

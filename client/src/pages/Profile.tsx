@@ -1,7 +1,7 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { PodCard } from "@/components/shared/PodCard";
 import { ImageUpload } from "@/components/shared/ImageUpload";
-import { Settings as SettingsIcon, MapPin, Edit2, X, Check } from "lucide-react";
+import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Trophy } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -10,6 +10,19 @@ import { formatExperience } from "@/lib/types";
 import { useClerk } from "@clerk/clerk-react";
 import { useLocation } from "wouter";
 
+const BADGE_ICONS: Record<string, string> = {
+  "Park Explorer": "🌲",
+  "Outdoor Explorer": "🏕️",
+  "Social Butterfly": "🦋",
+  "Pod Leader": "👑",
+  "Adventure Seeker": "🗺️",
+  "Review Star": "⭐",
+  "Photo Pro": "📸",
+  "Family Champion": "🏆",
+  "First Steps": "👣",
+  "Community Builder": "🤝",
+};
+
 const INTEREST_OPTIONS = [
   "Hiking", "Beach", "Parks", "Museums", "Playgrounds", "Sports", 
   "Art", "Music", "Cooking", "Reading", "Travel", "Camping", 
@@ -17,7 +30,7 @@ const INTEREST_OPTIONS = [
 ];
 
 export default function Profile() {
-  const [activeTab, setActiveTab] = useState<"experiences" | "saved" | "pods">("experiences");
+  const [activeTab, setActiveTab] = useState<"experiences" | "saved" | "pods" | "badges">("experiences");
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     name: "",
@@ -97,6 +110,12 @@ export default function Profile() {
   const { data: pods = [] } = useQuery({
     queryKey: ["userPods", currentUser?.id],
     queryFn: () => currentUser ? api.users.getPods(currentUser.id) : [],
+    enabled: !!currentUser,
+  });
+
+  const { data: userBadges = [] } = useQuery({
+    queryKey: ["userBadges", currentUser?.id],
+    queryFn: () => currentUser ? api.badges.getByUser(currentUser.id) : [],
     enabled: !!currentUser,
   });
 
@@ -267,12 +286,13 @@ export default function Profile() {
           { id: "experiences", label: "Experiences" },
           { id: "saved", label: "Saved" },
           { id: "pods", label: "Pods" },
+          { id: "badges", label: "Badges" },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
             className={cn(
-              "flex-1 rounded-lg py-2 text-sm font-bold transition-all",
+              "flex-1 rounded-lg py-2 text-xs font-bold transition-all",
               activeTab === tab.id
                 ? "bg-white text-gray-900 shadow-sm"
                 : "text-gray-500 hover:text-gray-700"
@@ -324,6 +344,49 @@ export default function Profile() {
               pods.map((pod) => (
                 <PodCard key={pod.id} pod={pod} />
               ))
+            )}
+          </>
+        )}
+
+        {activeTab === "badges" && (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-amber-500" />
+                <span className="font-bold text-gray-900">{userBadges.length} Badges Earned</span>
+              </div>
+            </div>
+            {userBadges.length === 0 ? (
+              <div className="py-8 text-center">
+                <Award className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-sm text-gray-400">No badges earned yet</p>
+                <p className="text-xs text-gray-400 mt-1">Complete activities to earn achievements!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {userBadges.map((badge: any) => (
+                  <div 
+                    key={badge.id}
+                    className="rounded-xl bg-white p-4 shadow-sm border border-gray-100"
+                    data-testid={`badge-card-${badge.id}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="text-3xl">
+                        {BADGE_ICONS[badge.name] || "🏅"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-gray-900 line-clamp-1">{badge.name}</p>
+                        <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">{badge.description}</p>
+                        {badge.earnedAt && (
+                          <p className="text-[10px] text-primary font-medium mt-1">
+                            Earned {new Date(badge.earnedAt).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </>
         )}
