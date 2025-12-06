@@ -1,7 +1,7 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { PodCard } from "@/components/shared/PodCard";
 import { ImageUpload } from "@/components/shared/ImageUpload";
-import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Trophy } from "lucide-react";
+import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Trophy, CheckCircle, Star } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -30,7 +30,7 @@ const INTEREST_OPTIONS = [
 ];
 
 export default function Profile() {
-  const [activeTab, setActiveTab] = useState<"experiences" | "saved" | "pods" | "badges">("experiences");
+  const [activeTab, setActiveTab] = useState<"experiences" | "saved" | "completed" | "pods" | "badges">("experiences");
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     name: "",
@@ -116,6 +116,12 @@ export default function Profile() {
   const { data: userBadges = [] } = useQuery({
     queryKey: ["userBadges", currentUser?.id],
     queryFn: () => currentUser ? api.badges.getByUser(currentUser.id) : [],
+    enabled: !!currentUser,
+  });
+
+  const { data: userCheckins = [] } = useQuery({
+    queryKey: ["userCheckins", currentUser?.id],
+    queryFn: () => currentUser ? api.checkins.getByUser(currentUser.id) : [],
     enabled: !!currentUser,
   });
 
@@ -283,8 +289,9 @@ export default function Profile() {
       {/* Tabs */}
       <div className="mb-6 flex rounded-xl bg-gray-100 p-1">
         {[
-          { id: "experiences", label: "Experiences" },
+          { id: "experiences", label: "Posts" },
           { id: "saved", label: "Saved" },
+          { id: "completed", label: "Done" },
           { id: "pods", label: "Pods" },
           { id: "badges", label: "Badges" },
         ].map((tab) => (
@@ -330,6 +337,63 @@ export default function Profile() {
               formattedSavedExperiences.map((exp) => (
                 <ExperienceCard key={exp.id} experience={exp} />
               ))
+            )}
+          </>
+        )}
+
+        {activeTab === "completed" && (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                <span className="font-bold text-gray-900">{userCheckins.length} Completed</span>
+              </div>
+            </div>
+            {userCheckins.length === 0 ? (
+              <div className="py-8 text-center">
+                <CheckCircle className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-sm text-gray-400">No experiences completed yet</p>
+                <p className="text-xs text-gray-400 mt-1">Try an experience and tap "I Did This!"</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {userCheckins.map((checkin: any) => (
+                  <div 
+                    key={checkin.id}
+                    className="rounded-2xl bg-white p-4 shadow-sm border border-gray-100 cursor-pointer"
+                    onClick={() => setLocation(`/experience/${checkin.experienceId}`)}
+                    data-testid={`checkin-card-${checkin.id}`}
+                  >
+                    <div className="flex gap-4">
+                      {checkin.photoUrl && (
+                        <img
+                          src={checkin.photoUrl}
+                          alt="Check-in"
+                          className="h-20 w-20 rounded-xl object-cover flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-900 line-clamp-1">
+                          {checkin.experience?.title || 'Experience'}
+                        </p>
+                        {checkin.rating && (
+                          <div className="flex items-center gap-0.5 mt-1">
+                            {[...Array(checkin.rating)].map((_, i) => (
+                              <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
+                            ))}
+                          </div>
+                        )}
+                        {checkin.review && (
+                          <p className="text-sm text-gray-600 line-clamp-2 mt-1">{checkin.review}</p>
+                        )}
+                        <p className="text-xs text-gray-400 mt-2">
+                          Completed {new Date(checkin.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </>
         )}
