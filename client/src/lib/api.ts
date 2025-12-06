@@ -31,7 +31,12 @@ export const api = {
         method: 'POST',
         body: formData,
       });
-      if (!res.ok) throw new Error('Failed to upload image');
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Upload failed' }));
+        throw new Error(errorData.error || 'Failed to upload image');
+      }
+      
       const data = await res.json();
       return data.url;
     },

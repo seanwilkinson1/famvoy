@@ -22,7 +22,7 @@ const uploadStorage = multer.diskStorage({
 const upload = multer({
   storage: uploadStorage,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 20 * 1024 * 1024, // 20MB limit
   },
   fileFilter: (_req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -49,16 +49,22 @@ export async function registerRoutes(
 
   app.use(clerkMiddleware());
 
-  app.post('/api/upload', requireAuth(), upload.single('image'), (req, res) => {
-    try {
+  app.post('/api/upload', requireAuth(), (req, res, next) => {
+    upload.single('image')(req, res, (err) => {
+      if (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ error: 'File is too large. Maximum size is 20MB.' });
+        }
+        return res.status(400).json({ error: err.message });
+      }
+      
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
+      
       const imageUrl = `/uploads/${req.file.filename}`;
       res.json({ url: imageUrl, filename: req.file.filename });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
+    });
   });
 
   app.get('/api/auth/user', requireAuth(), async (req, res) => {

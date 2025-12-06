@@ -99,11 +99,11 @@ export default function Create() {
         description: "Your photo has been added.",
         duration: 2000,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to upload image:', error);
       toast({
         title: "Upload failed",
-        description: "Could not upload the photo. Please try again.",
+        description: error.message || "Could not upload the photo. Please try again.",
         variant: "destructive",
       });
     } finally {
