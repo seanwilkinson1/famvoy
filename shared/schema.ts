@@ -130,6 +130,14 @@ export const follows = pgTable("follows", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const podExperiences = pgTable("pod_experiences", {
+  id: serial("id").primaryKey(),
+  podId: integer("pod_id").notNull().references(() => pods.id),
+  experienceId: integer("experience_id").notNull().references(() => experiences.id),
+  addedByUserId: integer("added_by_user_id").notNull().references(() => users.id),
+  addedAt: timestamp("added_at").defaultNow().notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertExperienceSchema = createInsertSchema(experiences).omit({ id: true, createdAt: true });
 export const insertPodSchema = createInsertSchema(pods).omit({ id: true, createdAt: true });
@@ -140,6 +148,7 @@ export const insertFamilySwipeSchema = createInsertSchema(familySwipes).omit({ i
 export const insertActivitySchema = createInsertSchema(activities).omit({ id: true, createdAt: true });
 export const insertCommentSchema = createInsertSchema(comments).omit({ id: true, createdAt: true });
 export const insertFollowSchema = createInsertSchema(follows).omit({ id: true, createdAt: true });
+export const insertPodExperienceSchema = createInsertSchema(podExperiences).omit({ id: true, addedAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -179,3 +188,6 @@ export type InsertComment = z.infer<typeof insertCommentSchema>;
 
 export type Follow = typeof follows.$inferSelect;
 export type InsertFollow = z.infer<typeof insertFollowSchema>;
+
+export type PodExperience = typeof podExperiences.$inferSelect;
+export type InsertPodExperience = z.infer<typeof insertPodExperienceSchema>;

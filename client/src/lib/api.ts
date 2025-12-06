@@ -214,6 +214,31 @@ export const api = {
       if (!res.ok) throw new Error("Failed to send message");
       return res.json();
     },
+    
+    getExperiences: async (podId: number): Promise<Experience[]> => {
+      const res = await fetch(`${API_BASE}/pods/${podId}/experiences`);
+      if (!res.ok) throw new Error("Failed to fetch pod experiences");
+      return res.json();
+    },
+    
+    addExperience: async (podId: number, experienceId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/pods/${podId}/experiences`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ experienceId }),
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: "Failed to add experience" }));
+        throw new Error(error.error || "Failed to add experience to pod");
+      }
+    },
+    
+    removeExperience: async (podId: number, experienceId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/pods/${podId}/experiences/${experienceId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to remove experience from pod");
+    },
   },
   
   families: {

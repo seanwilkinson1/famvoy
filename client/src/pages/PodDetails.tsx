@@ -1,5 +1,5 @@
 import { useRoute, useLocation } from "wouter";
-import { ChevronLeft, Settings, Send, Image as ImageIcon, Smile, MapPin, X, Share2, Camera } from "lucide-react";
+import { ChevronLeft, Settings, Send, Image as ImageIcon, Smile, MapPin, X, Share2, Camera, Plus, Trash2 } from "lucide-react";
 import { useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
 import type { Experience } from "@shared/schema";
+import { toast } from "sonner";
 
 export default function PodDetails() {
   const [match, params] = useRoute("/pod/:id");
@@ -14,9 +15,11 @@ export default function PodDetails() {
   const [activeTab, setActiveTab] = useState<"chat" | "experiences" | "trips">("chat");
   const [messageInput, setMessageInput] = useState("");
   const [showExperiencePicker, setShowExperiencePicker] = useState(false);
+  const [showAddExperienceModal, setShowAddExperienceModal] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  const podId = params?.id ? parseInt(params.id) : 0;
 
   const { data: podDetails } = useQuery({
     queryKey: ["podDetails", params?.id],
@@ -39,9 +42,38 @@ export default function PodDetails() {
     queryFn: api.users.getMe,
   });
 
-  const { data: experiences = [] } = useQuery({
+  const { data: allExperiences = [] } = useQuery({
     queryKey: ["experiences"],
     queryFn: api.experiences.getAll,
+  });
+
+  const { data: podExperiences = [] } = useQuery({
+    queryKey: ["podExperiences", podId],
+    queryFn: () => api.pods.getExperiences(podId),
+    enabled: podId > 0,
+  });
+
+  const addExperienceMutation = useMutation({
+    mutationFn: (experienceId: number) => api.pods.addExperience(podId, experienceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["podExperiences", podId] });
+      setShowAddExperienceModal(false);
+      toast.success("Experience added to pod!");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const removeExperienceMutation = useMutation({
+    mutationFn: (experienceId: number) => api.pods.removeExperience(podId, experienceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["podExperiences", podId] });
+      toast.success("Experience removed from pod");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
   });
 
   const sendMessageMutation = useMutation({
@@ -62,7 +94,10 @@ export default function PodDetails() {
     },
   });
 
-  const formattedExperiences = experiences.map(exp => formatExperience(exp as any));
+  const formattedPodExperiences = podExperiences.map(exp => formatExperience(exp as any));
+  
+  const podExperienceIds = new Set(podExperiences.map(e => e.id));
+  const availableExperiences = allExperiences.filter(e => !podExperienceIds.has(e.id));
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -158,7 +193,7 @@ export default function PodDetails() {
                 </div>
               ) : messages.map((msg) => {
                 const isMe = msg.userId === currentUser?.id;
-                const sharedExp = msg.sharedExperienceId ? experiences.find(e => e.id === msg.sharedExperienceId) : null;
+                const sharedExp = msg.sharedExperienceId ? allExperiences.find(e => e.id === msg.sharedExperienceId) : null;
                 
                 return (
                   <div key={msg.id} className={cn("flex gap-3", isMe && "flex-row-reverse")}>
@@ -195,7 +230,7 @@ export default function PodDetails() {
                         >
                           <div className="relative h-32 w-full">
                             <img 
-                              src={sharedExp.imageUrl || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400'} 
+                              src={sharedExp.image || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400'} 
                               alt={sharedExp.title}
                               className="w-full h-full object-cover"
                             />
@@ -244,16 +279,16 @@ export default function PodDetails() {
                     </button>
                   </div>
                   <div className="overflow-y-auto p-4 space-y-3 max-h-[55vh]">
-                    {experiences.length === 0 ? (
+                    {allExperiences.length === 0 ? (
                       <p className="text-center text-gray-400 py-8">No experiences to share</p>
-                    ) : experiences.map((exp) => (
+                    ) : allExperiences.map((exp) => (
                       <div 
                         key={exp.id}
                         onClick={() => handleShareExperience(exp)}
                         className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
                       >
                         <img 
-                          src={exp.imageUrl || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400'} 
+                          src={exp.image || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400'} 
                           alt={exp.title}
                           className="h-16 w-16 rounded-lg object-cover"
                         />
@@ -262,7 +297,7 @@ export default function PodDetails() {
                             {exp.category}
                           </span>
                           <p className="font-bold text-sm text-gray-900 line-clamp-1">{exp.title}</p>
-                          <p className="text-xs text-gray-500 line-clamp-1">{exp.location}</p>
+                          <p className="text-xs text-gray-500 line-clamp-1">{exp.locationName}</p>
                         </div>
                         <Share2 className="h-5 w-5 text-gray-400" />
                       </div>
@@ -325,10 +360,89 @@ export default function PodDetails() {
 
         {activeTab === "experiences" && (
           <div className="p-6 space-y-4">
-            <p className="text-sm font-medium text-gray-500 mb-4">Experiences recommended by this pod</p>
-            {formattedExperiences.map((exp) => (
-              <ExperienceCard key={exp.id} experience={exp} />
-            ))}
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-medium text-gray-500">Pod's curated experiences</p>
+              <button
+                onClick={() => setShowAddExperienceModal(true)}
+                className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-white shadow-sm active:scale-95 transition-transform"
+                data-testid="button-add-experience"
+              >
+                <Plus className="h-4 w-4" />
+                Add
+              </button>
+            </div>
+            
+            {formattedPodExperiences.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                <MapPin className="h-12 w-12 mb-2 opacity-20" />
+                <p className="text-sm">No experiences added yet</p>
+                <button 
+                  onClick={() => setShowAddExperienceModal(true)}
+                  className="mt-4 text-primary font-bold text-sm"
+                  data-testid="button-add-first-experience"
+                >
+                  Add your first experience
+                </button>
+              </div>
+            ) : (
+              formattedPodExperiences.map((exp) => (
+                <div key={exp.id} className="relative">
+                  <ExperienceCard experience={exp} />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeExperienceMutation.mutate(exp.id);
+                    }}
+                    className="absolute top-2 right-2 rounded-full bg-red-500 p-1.5 text-white shadow-md hover:bg-red-600 transition-colors z-10"
+                    data-testid={`button-remove-experience-${exp.id}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+        
+        {/* Add Experience Modal */}
+        {showAddExperienceModal && (
+          <div className="absolute inset-0 bg-black/50 z-50 flex items-end">
+            <div className="bg-white rounded-t-3xl w-full max-h-[70vh] overflow-hidden">
+              <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                <h3 className="font-heading text-lg font-bold">Add Experience to Pod</h3>
+                <button 
+                  onClick={() => setShowAddExperienceModal(false)}
+                  className="rounded-full bg-gray-100 p-2"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="overflow-y-auto p-4 space-y-3 max-h-[55vh]">
+                {availableExperiences.length === 0 ? (
+                  <p className="text-center text-gray-400 py-8">All experiences already added to this pod</p>
+                ) : availableExperiences.map((exp) => (
+                  <div 
+                    key={exp.id}
+                    onClick={() => addExperienceMutation.mutate(exp.id)}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                  >
+                    <img 
+                      src={exp.image || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400'} 
+                      alt={exp.title}
+                      className="h-16 w-16 rounded-lg object-cover"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="inline-block rounded bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary mb-1">
+                        {exp.category}
+                      </span>
+                      <p className="font-bold text-sm text-gray-900 line-clamp-1">{exp.title}</p>
+                      <p className="text-xs text-gray-500 line-clamp-1">{exp.locationName}</p>
+                    </div>
+                    <Plus className="h-5 w-5 text-primary" />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
         

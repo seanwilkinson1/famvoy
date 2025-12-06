@@ -1,17 +1,18 @@
 import { useRoute, useLocation } from "wouter";
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { CommentsSection } from "@/components/shared/CommentsSection";
-import { ChevronLeft, Heart, Clock, DollarSign, Users, MapPin, Share2, Navigation } from "lucide-react";
+import { ChevronLeft, Heart, Clock, DollarSign, Users, MapPin, Share2, Navigation, Plus, X, FolderPlus } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatExperience, type ExperienceWithCreator } from "@/lib/types";
 import { useClerkAuth } from "@/hooks/useAuth";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { Icon } from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { toast } from "sonner";
 
 const experienceIcon = new Icon({
   iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
@@ -26,7 +27,9 @@ export default function ExperienceDetails() {
   const [match, params] = useRoute("/experience/:id");
   const [, setLocation] = useLocation();
   const [isSaved, setIsSaved] = useState(false);
+  const [showAddToPodModal, setShowAddToPodModal] = useState(false);
   const { user } = useClerkAuth();
+  const queryClient = useQueryClient();
 
   const { data: experience } = useQuery<ExperienceWithCreator | null>({
     queryKey: ["experience", params?.id],
@@ -37,6 +40,25 @@ export default function ExperienceDetails() {
   const { data: allExperiences = [] } = useQuery({
     queryKey: ["experiences"],
     queryFn: api.experiences.getAll,
+  });
+
+  const { data: userPods = [] } = useQuery({
+    queryKey: ["userPods", user?.id],
+    queryFn: () => user?.id ? api.users.getPods(user.id) : [],
+    enabled: !!user?.id,
+  });
+
+  const addToPodMutation = useMutation({
+    mutationFn: ({ podId, experienceId }: { podId: number; experienceId: number }) => 
+      api.pods.addExperience(podId, experienceId),
+    onSuccess: (_, { podId }) => {
+      queryClient.invalidateQueries({ queryKey: ["podExperiences", podId] });
+      setShowAddToPodModal(false);
+      toast.success("Experience added to pod!");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
   });
 
   if (!match || !experience) return null;
@@ -65,6 +87,15 @@ export default function ExperienceDetails() {
             <ChevronLeft className="h-6 w-6" />
           </button>
           <div className="flex gap-3">
+            {user && (
+              <button 
+                onClick={() => setShowAddToPodModal(true)}
+                className="rounded-full bg-white/20 backdrop-blur-md p-2 text-white hover:bg-white/30 transition-colors" 
+                data-testid="button-add-to-pod"
+              >
+                <FolderPlus className="h-5 w-5" />
+              </button>
+            )}
             <button 
               onClick={async () => {
                 if (navigator.share) {
@@ -242,6 +273,56 @@ export default function ExperienceDetails() {
           </section>
         )}
       </div>
+
+      {/* Add to Pod Modal */}
+      {showAddToPodModal && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-end">
+          <div className="bg-white rounded-t-3xl w-full max-h-[70vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <h3 className="font-heading text-lg font-bold">Add to Pod</h3>
+              <button 
+                onClick={() => setShowAddToPodModal(false)}
+                className="rounded-full bg-gray-100 p-2"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4 space-y-3 max-h-[55vh]">
+              {userPods.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-400 mb-4">You're not a member of any pods yet</p>
+                  <button 
+                    onClick={() => {
+                      setShowAddToPodModal(false);
+                      setLocation("/pods");
+                    }}
+                    className="text-primary font-bold text-sm"
+                  >
+                    Browse Pods
+                  </button>
+                </div>
+              ) : userPods.filter(p => !p.isDirect).map((pod) => (
+                <div 
+                  key={pod.id}
+                  onClick={() => addToPodMutation.mutate({ podId: pod.id, experienceId: experience.id })}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                >
+                  <img 
+                    src={pod.image || 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400'} 
+                    alt={pod.name}
+                    className="h-12 w-12 rounded-full object-cover"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm text-gray-900 line-clamp-1">{pod.name}</p>
+                    <p className="text-xs text-gray-500 line-clamp-1">{pod.description}</p>
+                  </div>
+                  <Plus className="h-5 w-5 text-primary" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

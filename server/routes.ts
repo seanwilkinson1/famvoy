@@ -511,6 +511,91 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/pods/:id/experiences", async (req, res) => {
+    try {
+      const podId = parseInt(req.params.id);
+      if (isNaN(podId)) {
+        return res.status(400).json({ error: "Invalid pod ID" });
+      }
+      const experiencesWithCreators = await storage.getPodExperiencesWithCreators(podId);
+      res.json(experiencesWithCreators);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/pods/:id/experiences", requireAuth(), async (req, res) => {
+    try {
+      const podId = parseInt(req.params.id);
+      if (isNaN(podId)) {
+        return res.status(400).json({ error: "Invalid pod ID" });
+      }
+      
+      const { experienceId } = req.body;
+      if (!experienceId || typeof experienceId !== 'number') {
+        return res.status(400).json({ error: "Valid experience ID is required" });
+      }
+      
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found. Please complete your profile." });
+      }
+      
+      const isMember = await storage.isPodMember(podId, user.id);
+      if (!isMember) {
+        return res.status(403).json({ error: "You must be a member of this pod to add experiences" });
+      }
+      
+      const alreadyAdded = await storage.isExperienceInPod(podId, experienceId);
+      if (alreadyAdded) {
+        return res.status(400).json({ error: "Experience already added to this pod" });
+      }
+      
+      await storage.addExperienceToPod(podId, experienceId, user.id);
+      res.status(201).json({ success: true });
+    } catch (error: any) {
+      console.error("Error adding experience to pod:", error);
+      res.status(500).json({ error: "Failed to add experience to pod" });
+    }
+  });
+
+  app.delete("/api/pods/:podId/experiences/:experienceId", requireAuth(), async (req, res) => {
+    try {
+      const podId = parseInt(req.params.podId);
+      const experienceId = parseInt(req.params.experienceId);
+      
+      if (isNaN(podId) || isNaN(experienceId)) {
+        return res.status(400).json({ error: "Invalid pod ID or experience ID" });
+      }
+      
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found. Please complete your profile." });
+      }
+      
+      const isMember = await storage.isPodMember(podId, user.id);
+      if (!isMember) {
+        return res.status(403).json({ error: "You must be a member of this pod to remove experiences" });
+      }
+      
+      await storage.removeExperienceFromPod(podId, experienceId);
+      res.status(200).json({ success: true });
+    } catch (error: any) {
+      console.error("Error removing experience from pod:", error);
+      res.status(500).json({ error: "Failed to remove experience from pod" });
+    }
+  });
+
   app.get("/api/users/:userId/connections", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);

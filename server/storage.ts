@@ -30,6 +30,7 @@ import {
   activities,
   comments,
   follows,
+  podExperiences,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ne, notInArray, ilike, isNotNull } from "drizzle-orm";
@@ -107,6 +108,11 @@ export interface IStorage {
   getFollowers(userId: number): Promise<User[]>;
   getFollowing(userId: number): Promise<User[]>;
   getFollowCounts(userId: number): Promise<{ followers: number; following: number }>;
+  
+  getPodExperiences(podId: number): Promise<Experience[]>;
+  addExperienceToPod(podId: number, experienceId: number, userId: number): Promise<void>;
+  removeExperienceFromPod(podId: number, experienceId: number): Promise<void>;
+  isExperienceInPod(podId: number, experienceId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -671,6 +677,45 @@ export class DatabaseStorage implements IStorage {
     const followers = await db.select().from(follows).where(eq(follows.followingId, userId));
     const following = await db.select().from(follows).where(eq(follows.followerId, userId));
     return { followers: followers.length, following: following.length };
+  }
+
+  async getPodExperiencesWithCreators(podId: number): Promise<(Experience & { creator: { id: number; name: string; avatar: string | null } | null })[]> {
+    const result = await db
+      .select({ 
+        experience: experiences,
+        creator: users 
+      })
+      .from(podExperiences)
+      .innerJoin(experiences, eq(podExperiences.experienceId, experiences.id))
+      .leftJoin(users, eq(experiences.userId, users.id))
+      .where(eq(podExperiences.podId, podId))
+      .orderBy(desc(podExperiences.addedAt));
+    
+    return result.map(r => ({
+      ...r.experience,
+      creator: r.creator ? {
+        id: r.creator.id,
+        name: r.creator.name,
+        avatar: r.creator.avatar,
+      } : null
+    }));
+  }
+
+  async addExperienceToPod(podId: number, experienceId: number, userId: number): Promise<void> {
+    await db.insert(podExperiences).values({ podId, experienceId, addedByUserId: userId });
+  }
+
+  async removeExperienceFromPod(podId: number, experienceId: number): Promise<void> {
+    await db.delete(podExperiences).where(
+      and(eq(podExperiences.podId, podId), eq(podExperiences.experienceId, experienceId))
+    );
+  }
+
+  async isExperienceInPod(podId: number, experienceId: number): Promise<boolean> {
+    const [exists] = await db.select().from(podExperiences).where(
+      and(eq(podExperiences.podId, podId), eq(podExperiences.experienceId, experienceId))
+    );
+    return !!exists;
   }
 }
 
