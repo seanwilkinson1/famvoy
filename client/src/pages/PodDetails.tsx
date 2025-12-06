@@ -1,5 +1,5 @@
 import { useRoute, useLocation } from "wouter";
-import { ChevronLeft, Settings, Send, Image as ImageIcon, Smile, MapPin, X, Share2, Camera, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, Settings, Send, Image as ImageIcon, Smile, MapPin, X, Share2, Camera, Plus, Trash2, FolderPlus, Images, Loader2 } from "lucide-react";
 import { useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
@@ -12,12 +12,18 @@ import { toast } from "sonner";
 export default function PodDetails() {
   const [match, params] = useRoute("/pod/:id");
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<"chat" | "experiences" | "trips">("chat");
+  const [activeTab, setActiveTab] = useState<"chat" | "experiences" | "albums" | "trips">("chat");
   const [messageInput, setMessageInput] = useState("");
   const [showExperiencePicker, setShowExperiencePicker] = useState(false);
   const [showAddExperienceModal, setShowAddExperienceModal] = useState(false);
+  const [showCreateAlbumModal, setShowCreateAlbumModal] = useState(false);
+  const [selectedAlbum, setSelectedAlbum] = useState<any | null>(null);
+  const [albumName, setAlbumName] = useState("");
+  const [albumDescription, setAlbumDescription] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingAlbumPhoto, setIsUploadingAlbumPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const albumPhotoInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const podId = params?.id ? parseInt(params.id) : 0;
 
@@ -51,6 +57,69 @@ export default function PodDetails() {
     queryKey: ["podExperiences", podId],
     queryFn: () => api.pods.getExperiences(podId),
     enabled: podId > 0,
+  });
+
+  const { data: podAlbums = [] } = useQuery({
+    queryKey: ["podAlbums", podId],
+    queryFn: () => api.albums.getByPod(podId),
+    enabled: podId > 0,
+  });
+
+  const { data: albumPhotos = [] } = useQuery({
+    queryKey: ["albumPhotos", selectedAlbum?.id],
+    queryFn: () => selectedAlbum ? api.albums.getPhotos(selectedAlbum.id) : [],
+    enabled: !!selectedAlbum,
+  });
+
+  const createAlbumMutation = useMutation({
+    mutationFn: () => api.albums.create(podId, { name: albumName, description: albumDescription || undefined }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["podAlbums", podId] });
+      setShowCreateAlbumModal(false);
+      setAlbumName("");
+      setAlbumDescription("");
+      toast.success("Album created!");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const deleteAlbumMutation = useMutation({
+    mutationFn: (albumId: number) => api.albums.delete(albumId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["podAlbums", podId] });
+      setSelectedAlbum(null);
+      toast.success("Album deleted");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const addPhotoMutation = useMutation({
+    mutationFn: (data: { photoUrl: string; caption?: string }) => 
+      api.albums.addPhoto(selectedAlbum.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["albumPhotos", selectedAlbum?.id] });
+      queryClient.invalidateQueries({ queryKey: ["podAlbums", podId] });
+      toast.success("Photo added!");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const deletePhotoMutation = useMutation({
+    mutationFn: (photoId: number) => api.albums.deletePhoto(photoId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["albumPhotos", selectedAlbum?.id] });
+      queryClient.invalidateQueries({ queryKey: ["podAlbums", podId] });
+      toast.success("Photo deleted");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
   });
 
   const addExperienceMutation = useMutation({
@@ -123,6 +192,23 @@ export default function PodDetails() {
     setShowExperiencePicker(false);
   };
 
+  const handleAlbumPhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedAlbum) return;
+
+    setIsUploadingAlbumPhoto(true);
+    try {
+      const url = await api.upload.image(file);
+      await addPhotoMutation.mutateAsync({ photoUrl: url });
+    } catch (err) {
+      console.error('Failed to upload album photo:', err);
+      toast.error('Failed to upload photo');
+    } finally {
+      setIsUploadingAlbumPhoto(false);
+      if (albumPhotoInputRef.current) albumPhotoInputRef.current.value = '';
+    }
+  };
+
   if (!match || !pod) return null;
 
   return (
@@ -166,12 +252,12 @@ export default function PodDetails() {
 
         {/* Tabs */}
         <div className="mt-6 flex rounded-xl bg-gray-100 p-1">
-          {["chat", "experiences", "trips"].map((t) => (
+          {["chat", "experiences", "albums", "trips"].map((t) => (
             <button
               key={t}
               onClick={() => setActiveTab(t as any)}
               className={cn(
-                "flex-1 rounded-lg py-2 text-sm font-bold capitalize transition-all",
+                "flex-1 rounded-lg py-2 text-xs font-bold capitalize transition-all",
                 activeTab === t ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-700"
               )}
               data-testid={`button-tab-${t}`}
@@ -446,6 +532,205 @@ export default function PodDetails() {
           </div>
         )}
         
+        {activeTab === "albums" && !selectedAlbum && (
+          <div className="p-6 space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-medium text-gray-500">Pod photo albums</p>
+              <button
+                onClick={() => setShowCreateAlbumModal(true)}
+                className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-white shadow-sm active:scale-95 transition-transform"
+                data-testid="button-create-album"
+              >
+                <FolderPlus className="h-4 w-4" />
+                New Album
+              </button>
+            </div>
+            
+            {podAlbums.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                <Images className="h-12 w-12 mb-2 opacity-20" />
+                <p className="text-sm">No albums yet</p>
+                <button 
+                  onClick={() => setShowCreateAlbumModal(true)}
+                  className="mt-4 text-primary font-bold text-sm"
+                  data-testid="button-create-first-album"
+                >
+                  Create your first album
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {podAlbums.map((album: any) => (
+                  <div 
+                    key={album.id}
+                    onClick={() => setSelectedAlbum(album)}
+                    className="relative rounded-xl overflow-hidden bg-white shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                    data-testid={`album-card-${album.id}`}
+                  >
+                    <div className="aspect-square bg-gray-100">
+                      {album.coverPhotoUrl ? (
+                        <img 
+                          src={album.coverPhotoUrl} 
+                          alt={album.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Images className="h-12 w-12 text-gray-300" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <p className="font-bold text-sm text-gray-900 line-clamp-1">{album.name}</p>
+                      <p className="text-xs text-gray-500">{album.photoCount} photos</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "albums" && selectedAlbum && (
+          <div className="p-6 space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <button 
+                onClick={() => setSelectedAlbum(null)}
+                className="flex items-center gap-2 text-sm font-medium text-gray-600"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back to Albums
+              </button>
+              {selectedAlbum.createdByUserId === currentUser?.id && (
+                <button
+                  onClick={() => deleteAlbumMutation.mutate(selectedAlbum.id)}
+                  className="rounded-full bg-red-100 p-2 text-red-500 hover:bg-red-200 transition-colors"
+                  data-testid="button-delete-album"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            
+            <div className="mb-4">
+              <h3 className="font-heading text-lg font-bold text-gray-900">{selectedAlbum.name}</h3>
+              {selectedAlbum.description && (
+                <p className="text-sm text-gray-500 mt-1">{selectedAlbum.description}</p>
+              )}
+            </div>
+
+            <input
+              ref={albumPhotoInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAlbumPhotoUpload}
+            />
+            
+            <button
+              onClick={() => albumPhotoInputRef.current?.click()}
+              disabled={isUploadingAlbumPhoto}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 p-4 text-gray-500 hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+              data-testid="button-upload-photo"
+            >
+              {isUploadingAlbumPhoto ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Camera className="h-5 w-5" />
+                  Add Photos
+                </>
+              )}
+            </button>
+
+            {albumPhotos.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                <Camera className="h-8 w-8 mb-2 opacity-20" />
+                <p className="text-sm">No photos yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                {albumPhotos.map((photo: any) => (
+                  <div 
+                    key={photo.id}
+                    className="relative aspect-square rounded-lg overflow-hidden group"
+                  >
+                    <img 
+                      src={photo.photoUrl} 
+                      alt={photo.caption || "Photo"}
+                      className="w-full h-full object-cover cursor-pointer"
+                      onClick={() => window.open(photo.photoUrl, '_blank')}
+                    />
+                    <button
+                      onClick={() => deletePhotoMutation.mutate(photo.id)}
+                      className="absolute top-1 right-1 rounded-full bg-red-500 p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                      data-testid={`button-delete-photo-${photo.id}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Create Album Modal */}
+        {showCreateAlbumModal && (
+          <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-6">
+            <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
+              <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                <h3 className="font-heading text-lg font-bold">Create Album</h3>
+                <button 
+                  onClick={() => {
+                    setShowCreateAlbumModal(false);
+                    setAlbumName("");
+                    setAlbumDescription("");
+                  }}
+                  className="rounded-full bg-gray-100 p-2"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="p-4 space-y-4">
+                <div>
+                  <label className="text-sm font-bold text-gray-700 mb-1 block">Album Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Summer Beach Trip"
+                    className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:border-primary focus:outline-none"
+                    value={albumName}
+                    onChange={(e) => setAlbumName(e.target.value)}
+                    data-testid="input-album-name"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-bold text-gray-700 mb-1 block">Description (optional)</label>
+                  <textarea
+                    placeholder="What's this album about?"
+                    rows={2}
+                    className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:border-primary focus:outline-none resize-none"
+                    value={albumDescription}
+                    onChange={(e) => setAlbumDescription(e.target.value)}
+                    data-testid="input-album-description"
+                  />
+                </div>
+                <button
+                  onClick={() => createAlbumMutation.mutate()}
+                  disabled={!albumName.trim() || createAlbumMutation.isPending}
+                  className="w-full rounded-xl bg-primary py-3 text-sm font-bold text-white disabled:opacity-50"
+                  data-testid="button-save-album"
+                >
+                  {createAlbumMutation.isPending ? "Creating..." : "Create Album"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === "trips" && (
            <div className="flex flex-col items-center justify-center h-64 text-gray-400">
               <MapPin className="h-12 w-12 mb-2 opacity-20" />

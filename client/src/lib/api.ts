@@ -368,4 +368,74 @@ export const api = {
       return res.json();
     },
   },
+  
+  albums: {
+    getByPod: async (podId: number): Promise<any[]> => {
+      const res = await fetch(`${API_BASE}/pods/${podId}/albums`);
+      if (!res.ok) throw new Error("Failed to fetch albums");
+      return res.json();
+    },
+    
+    create: async (podId: number, data: { name: string; description?: string }): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/pods/${podId}/albums`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create album");
+      return res.json();
+    },
+    
+    delete: async (albumId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/albums/${albumId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete album");
+    },
+    
+    getPhotos: async (albumId: number): Promise<any[]> => {
+      const res = await fetch(`${API_BASE}/albums/${albumId}/photos`);
+      if (!res.ok) throw new Error("Failed to fetch photos");
+      return res.json();
+    },
+    
+    addPhoto: async (albumId: number, data: { photoUrl: string; caption?: string }): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/albums/${albumId}/photos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to add photo");
+      return res.json();
+    },
+    
+    deletePhoto: async (photoId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/photos/${photoId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete photo");
+    },
+  },
+  
+  badges: {
+    getAll: async (): Promise<any[]> => {
+      const res = await fetch(`${API_BASE}/badges`);
+      if (!res.ok) throw new Error("Failed to fetch badges");
+      return res.json();
+    },
+    
+    getByUser: async (userId: number): Promise<any[]> => {
+      const res = await fetch(`${API_BASE}/users/${userId}/badges`);
+      if (!res.ok) throw new Error("Failed to fetch user badges");
+      return res.json();
+    },
+    
+    checkAndAward: async (userId: number): Promise<{ newBadges: any[] }> => {
+      const res = await fetchWithAuth(`${API_BASE}/users/${userId}/check-badges`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to check badges");
+      return res.json();
+    },
+  },
 };
