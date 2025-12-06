@@ -174,6 +174,16 @@ export const userBadges = pgTable("user_badges", {
   earnedAt: timestamp("earned_at").defaultNow().notNull(),
 });
 
+export const experienceCheckins = pgTable("experience_checkins", {
+  id: serial("id").primaryKey(),
+  experienceId: integer("experience_id").notNull().references(() => experiences.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  photoUrl: text("photo_url"),
+  review: text("review"),
+  rating: integer("rating"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertExperienceSchema = createInsertSchema(experiences).omit({ id: true, createdAt: true });
 export const insertPodSchema = createInsertSchema(pods).omit({ id: true, createdAt: true });
@@ -189,6 +199,7 @@ export const insertPodAlbumSchema = createInsertSchema(podAlbums).omit({ id: tru
 export const insertAlbumPhotoSchema = createInsertSchema(albumPhotos).omit({ id: true, createdAt: true });
 export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true });
 export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({ id: true, earnedAt: true });
+export const insertExperienceCheckinSchema = createInsertSchema(experienceCheckins).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -243,3 +254,6 @@ export type InsertBadge = z.infer<typeof insertBadgeSchema>;
 
 export type UserBadge = typeof userBadges.$inferSelect;
 export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
+
+export type ExperienceCheckin = typeof experienceCheckins.$inferSelect;
+export type InsertExperienceCheckin = z.infer<typeof insertExperienceCheckinSchema>;
