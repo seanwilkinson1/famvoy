@@ -12,6 +12,20 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### December 6, 2025 - Experience Creation Improvements
+- **Photo Upload**: Experience creation now requires photo upload with preview
+  - Uses authenticated upload endpoint `/api/upload` with Clerk token
+  - File size limit: 5MB, preview shown before save
+  - Validation prevents saving without uploaded photo
+- **Location Autocomplete**: Uses Nominatim (OpenStreetMap) geocoding API
+  - Debounced search as user types
+  - Suggestions dropdown with selectable locations
+  - Stores actual lat/lng coordinates when location selected
+  - Validation prevents saving without selected location coordinates
+- **Interactive Maps**: ExperienceDetails page shows Leaflet map with experience location
+  - Custom green marker for experience location
+  - "Get Directions" link opens Google Maps directions
+
 ### December 5, 2025 - Social Features & Messaging Upgrades
 - **Comments System**: Users can add comments with 1-5 star ratings on experiences
   - `comments` table with userId, experienceId, content, rating fields
