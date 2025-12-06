@@ -5,10 +5,60 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
+import { useState, useEffect, useMemo } from "react";
+import { MapPin } from "lucide-react";
 
-const filters = ["Nearby", "Free", "1–2 hrs", "Indoor", "Outdoor", "Toddler-friendly"];
+const filters = ["All", "Nearby", "Free", "1–2 hrs", "Indoor", "Outdoor", "Toddler-friendly"];
+
+function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function isToddlerFriendly(ages: string): boolean {
+  const lower = ages.toLowerCase();
+  if (lower.includes("all ages") || lower.includes("toddler")) return true;
+  const match = ages.match(/(\d+)/);
+  if (match) {
+    const minAge = parseInt(match[1]);
+    return minAge <= 3;
+  }
+  return false;
+}
+
+function isDurationInRange(duration: string): boolean {
+  const match = duration.match(/([\d.]+)/);
+  if (match) {
+    const hours = parseFloat(match[1]);
+    return hours >= 1 && hours <= 2;
+  }
+  return false;
+}
 
 export default function Home() {
+  const [activeFilter, setActiveFilter] = useState("All");
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationError, setLocationError] = useState(false);
+
+  useEffect(() => {
+    if (activeFilter === "Nearby" && !userLocation && !locationError) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        },
+        () => {
+          setLocationError(true);
+        }
+      );
+    }
+  }, [activeFilter, userLocation, locationError]);
+
   const { data: currentUser } = useQuery({
     queryKey: ["currentUser"],
     queryFn: api.users.getMe,
@@ -20,6 +70,34 @@ export default function Home() {
   });
 
   const formattedExperiences = experiences.map(exp => formatExperience(exp as any));
+
+  const filteredExperiences = useMemo(() => {
+    if (activeFilter === "All") return formattedExperiences;
+
+    return formattedExperiences.filter((exp) => {
+      switch (activeFilter) {
+        case "Nearby":
+          if (!userLocation) return true;
+          const distance = getDistanceKm(
+            userLocation.lat, userLocation.lng,
+            exp.locationLat, exp.locationLng
+          );
+          return distance <= 25;
+        case "Free":
+          return exp.cost === "Free";
+        case "1–2 hrs":
+          return isDurationInRange(exp.duration);
+        case "Indoor":
+          return exp.category?.toLowerCase() === "indoor";
+        case "Outdoor":
+          return exp.category?.toLowerCase() === "outdoor";
+        case "Toddler-friendly":
+          return isToddlerFriendly(exp.ages);
+        default:
+          return true;
+      }
+    });
+  }, [formattedExperiences, activeFilter, userLocation]);
 
   return (
     <div className="min-h-screen bg-background pb-32">
@@ -33,20 +111,25 @@ export default function Home() {
         {/* Filters */}
         <ScrollArea className="mt-6 w-full whitespace-nowrap">
           <div className="flex w-max space-x-3 pb-4">
-            {filters.map((filter, i) => (
-              <button
-                key={filter}
-                className={cn(
-                  "rounded-full px-4 py-2 text-sm font-medium transition-all active:scale-95",
-                  i === 0
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                    : "bg-white text-gray-600 shadow-sm hover:bg-gray-50"
-                )}
-                data-testid={`filter-${filter.toLowerCase().replace(/\s/g, '-')}`}
-              >
-                {filter}
-              </button>
-            ))}
+            {filters.map((filter) => {
+              const isActive = activeFilter === filter;
+              return (
+                <button
+                  key={filter}
+                  onClick={() => setActiveFilter(filter)}
+                  className={cn(
+                    "rounded-full px-4 py-2 text-sm font-medium transition-all active:scale-95",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                      : "bg-white text-gray-600 shadow-sm hover:bg-gray-50"
+                  )}
+                  data-testid={`filter-${filter.toLowerCase().replace(/\s/g, '-')}`}
+                >
+                  {filter === "Nearby" && <MapPin className="inline h-3 w-3 mr-1" />}
+                  {filter}
+                </button>
+              );
+            })}
           </div>
           <ScrollBar orientation="horizontal" className="hidden" />
         </ScrollArea>
@@ -57,32 +140,54 @@ export default function Home() {
           <div className="text-center py-8 text-gray-400">Loading experiences...</div>
         ) : (
           <>
-            {/* Suggestions */}
-            <section>
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="font-heading text-lg font-bold text-gray-900">Suggestions for Today</h2>
-                <button className="text-sm font-medium text-primary" data-testid="button-see-all">See all</button>
-              </div>
-              <ScrollArea className="w-full whitespace-nowrap">
-                <div className="flex w-max space-x-4 pb-4">
-                  {formattedExperiences.slice(0, 3).map((exp) => (
-                    <ExperienceCard key={exp.id} experience={exp} horizontal />
-                  ))}
+            {/* Suggestions - only show when "All" filter is active */}
+            {activeFilter === "All" && (
+              <section>
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="font-heading text-lg font-bold text-gray-900">Suggestions for Today</h2>
+                  <button className="text-sm font-medium text-primary" data-testid="button-see-all">See all</button>
                 </div>
-                <ScrollBar orientation="horizontal" className="hidden" />
-              </ScrollArea>
-            </section>
+                <ScrollArea className="w-full whitespace-nowrap">
+                  <div className="flex w-max space-x-4 pb-4">
+                    {formattedExperiences.slice(0, 3).map((exp) => (
+                      <ExperienceCard key={exp.id} experience={exp} horizontal />
+                    ))}
+                  </div>
+                  <ScrollBar orientation="horizontal" className="hidden" />
+                </ScrollArea>
+              </section>
+            )}
 
-            {/* Popular */}
+            {/* Results section */}
             <section>
               <h2 className="mb-4 font-heading text-lg font-bold text-gray-900">
-                Popular with Families Like Yours
+                {activeFilter === "All" 
+                  ? "Popular with Families Like Yours" 
+                  : `${activeFilter} Experiences`}
               </h2>
-              <div className="grid gap-6">
-                {formattedExperiences.map((exp) => (
-                  <ExperienceCard key={`pop-${exp.id}`} experience={exp} />
-                ))}
-              </div>
+              {activeFilter === "Nearby" && locationError && (
+                <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+                  <MapPin className="inline h-4 w-4 mr-1" />
+                  Location access denied. Enable location to see nearby experiences.
+                </div>
+              )}
+              {activeFilter === "Nearby" && !userLocation && !locationError && (
+                <div className="mb-4 rounded-xl bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">
+                  <MapPin className="inline h-4 w-4 mr-1" />
+                  Getting your location...
+                </div>
+              )}
+              {filteredExperiences.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  No experiences match this filter
+                </div>
+              ) : (
+                <div className="grid gap-6">
+                  {filteredExperiences.map((exp) => (
+                    <ExperienceCard key={`filtered-${exp.id}`} experience={exp} />
+                  ))}
+                </div>
+              )}
             </section>
           </>
         )}
