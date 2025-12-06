@@ -12,6 +12,22 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### December 6, 2025 - Pod Experience Curation (Pinterest-style Boards)
+- **Pod Experience Board**: Each pod now has its own curated collection of experiences
+  - `pod_experiences` table with podId, experienceId, addedByUserId, and unique constraint
+  - Storage methods: `getPodExperiencesWithCreators()`, `addExperienceToPod()`, `removeExperienceFromPod()`, `isExperienceInPod()`
+- **API Endpoints**:
+  - `GET /api/pods/:id/experiences` - Returns pod's curated experiences with creator info
+  - `POST /api/pods/:id/experiences` - Add experience to pod (requires pod membership)
+  - `DELETE /api/pods/:podId/experiences/:experienceId` - Remove experience from pod
+- **PodDetails Experiences Tab**: Shows only pod-specific experiences
+  - Add button opens modal to browse and add experiences
+  - Remove button (trash icon) on each experience card
+  - Empty state with "Add your first experience" prompt
+- **Add to Pod Button**: New FolderPlus button on ExperienceDetails page
+  - Opens modal showing user's group pods to select from
+  - Prevents duplicate additions with helpful error messages
+
 ### December 6, 2025 - Experience Creation Improvements
 - **Photo Upload**: Experience creation now requires photo upload with preview
   - Uses authenticated upload endpoint `/api/upload` with Clerk token
