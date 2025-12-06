@@ -138,6 +138,42 @@ export const podExperiences = pgTable("pod_experiences", {
   addedAt: timestamp("added_at").defaultNow().notNull(),
 });
 
+export const podAlbums = pgTable("pod_albums", {
+  id: serial("id").primaryKey(),
+  podId: integer("pod_id").notNull().references(() => pods.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  coverPhotoUrl: text("cover_photo_url"),
+  createdByUserId: integer("created_by_user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const albumPhotos = pgTable("album_photos", {
+  id: serial("id").primaryKey(),
+  albumId: integer("album_id").notNull().references(() => podAlbums.id),
+  photoUrl: text("photo_url").notNull(),
+  caption: text("caption"),
+  uploadedByUserId: integer("uploaded_by_user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const badges = pgTable("badges", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  icon: text("icon").notNull(),
+  category: text("category").notNull(),
+  criteriaType: text("criteria_type").notNull(),
+  threshold: integer("threshold").notNull(),
+});
+
+export const userBadges = pgTable("user_badges", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  badgeId: integer("badge_id").notNull().references(() => badges.id),
+  earnedAt: timestamp("earned_at").defaultNow().notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertExperienceSchema = createInsertSchema(experiences).omit({ id: true, createdAt: true });
 export const insertPodSchema = createInsertSchema(pods).omit({ id: true, createdAt: true });
@@ -149,6 +185,10 @@ export const insertActivitySchema = createInsertSchema(activities).omit({ id: tr
 export const insertCommentSchema = createInsertSchema(comments).omit({ id: true, createdAt: true });
 export const insertFollowSchema = createInsertSchema(follows).omit({ id: true, createdAt: true });
 export const insertPodExperienceSchema = createInsertSchema(podExperiences).omit({ id: true, addedAt: true });
+export const insertPodAlbumSchema = createInsertSchema(podAlbums).omit({ id: true, createdAt: true });
+export const insertAlbumPhotoSchema = createInsertSchema(albumPhotos).omit({ id: true, createdAt: true });
+export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true });
+export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({ id: true, earnedAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -191,3 +231,15 @@ export type InsertFollow = z.infer<typeof insertFollowSchema>;
 
 export type PodExperience = typeof podExperiences.$inferSelect;
 export type InsertPodExperience = z.infer<typeof insertPodExperienceSchema>;
+
+export type PodAlbum = typeof podAlbums.$inferSelect;
+export type InsertPodAlbum = z.infer<typeof insertPodAlbumSchema>;
+
+export type AlbumPhoto = typeof albumPhotos.$inferSelect;
+export type InsertAlbumPhoto = z.infer<typeof insertAlbumPhotoSchema>;
+
+export type Badge = typeof badges.$inferSelect;
+export type InsertBadge = z.infer<typeof insertBadgeSchema>;
+
+export type UserBadge = typeof userBadges.$inferSelect;
+export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
