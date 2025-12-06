@@ -32,32 +32,57 @@ function isToddlerFriendly(ages: string): boolean {
   return false;
 }
 
-function isDurationInRange(duration: string): boolean {
-  const match = duration.match(/([\d.]+)/);
-  if (match) {
-    const hours = parseFloat(match[1]);
-    return hours >= 1 && hours <= 2;
+function parseDurationToHours(duration: string): number | null {
+  const normalized = duration.toLowerCase().replace(/[–—]/g, '-');
+  
+  const rangeMatch = normalized.match(/([\d.]+)\s*-\s*([\d.]+)\s*(hrs?|hours?|mins?|minutes?)/);
+  if (rangeMatch) {
+    const avg = (parseFloat(rangeMatch[1]) + parseFloat(rangeMatch[2])) / 2;
+    if (rangeMatch[3].startsWith('min')) return avg / 60;
+    return avg;
   }
-  return false;
+  
+  const singleMatch = normalized.match(/([\d.]+)\s*(hrs?|hours?|mins?|minutes?)/);
+  if (singleMatch) {
+    const val = parseFloat(singleMatch[1]);
+    if (singleMatch[2].startsWith('min')) return val / 60;
+    return val;
+  }
+  
+  return null;
+}
+
+function isDurationInRange(duration: string): boolean {
+  const hours = parseDurationToHours(duration);
+  if (hours === null) return false;
+  return hours >= 1 && hours <= 2;
 }
 
 export default function Home() {
   const [activeFilter, setActiveFilter] = useState("All");
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
 
   useEffect(() => {
-    if (activeFilter === "Nearby" && !userLocation && !locationError) {
+    if (activeFilter === "Nearby" && !userLocation && !locationError && !locationLoading) {
+      if (!navigator.geolocation) {
+        setLocationError(true);
+        return;
+      }
+      setLocationLoading(true);
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          setLocationLoading(false);
         },
         () => {
           setLocationError(true);
+          setLocationLoading(false);
         }
       );
     }
-  }, [activeFilter, userLocation, locationError]);
+  }, [activeFilter, userLocation, locationError, locationLoading]);
 
   const { data: currentUser } = useQuery({
     queryKey: ["currentUser"],
@@ -77,7 +102,7 @@ export default function Home() {
     return formattedExperiences.filter((exp) => {
       switch (activeFilter) {
         case "Nearby":
-          if (!userLocation) return true;
+          if (!userLocation) return false;
           const distance = getDistanceKm(
             userLocation.lat, userLocation.lng,
             exp.locationLat, exp.locationLng
