@@ -479,4 +479,108 @@ export const api = {
       return data.hasCheckedIn;
     },
   },
+
+  trips: {
+    getByPod: async (podId: number): Promise<any[]> => {
+      const res = await fetch(`${API_BASE}/pods/${podId}/trips`);
+      if (!res.ok) throw new Error("Failed to fetch trips");
+      return res.json();
+    },
+
+    getById: async (tripId: number): Promise<any> => {
+      const res = await fetch(`${API_BASE}/trips/${tripId}`);
+      if (!res.ok) throw new Error("Failed to fetch trip");
+      return res.json();
+    },
+
+    create: async (podId: number, data: { name: string; destination: string; startDate: string; endDate: string }): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/pods/${podId}/trips`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create trip");
+      return res.json();
+    },
+
+    update: async (tripId: number, data: Partial<{ name: string; destination: string; startDate: string; endDate: string; aiSummary: string }>): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update trip");
+      return res.json();
+    },
+
+    delete: async (tripId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete trip");
+    },
+
+    generate: async (tripId: number): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/generate`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: "Failed to generate itinerary" }));
+        throw new Error(error.error || "Failed to generate itinerary");
+      }
+      return res.json();
+    },
+
+    regenerateDay: async (tripId: number, dayNumber: number): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/regenerate-day/${dayNumber}`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to regenerate day");
+      return res.json();
+    },
+
+    addItem: async (tripId: number, data: { dayNumber: number; time: string; title: string; description?: string; itemType: string; sortOrder: number; dayTitle?: string; experienceId?: number }): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to add item");
+      return res.json();
+    },
+
+    updateItem: async (itemId: number, data: Partial<{ time: string; title: string; description: string; itemType: string; sortOrder: number }>): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trip-items/${itemId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update item");
+      return res.json();
+    },
+
+    deleteItem: async (itemId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/trip-items/${itemId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete item");
+    },
+
+    bulkAddItems: async (tripId: number, items: any[]): Promise<any[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/items/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items }),
+      });
+      if (!res.ok) throw new Error("Failed to add items");
+      return res.json();
+    },
+
+    clearItems: async (tripId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/items`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to clear items");
+    },
+  },
 };

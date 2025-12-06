@@ -1,5 +1,5 @@
 import { useRoute, useLocation } from "wouter";
-import { ChevronLeft, Settings, Send, Image as ImageIcon, Smile, MapPin, X, Share2, Camera, Plus, Trash2, FolderPlus, Images, Loader2 } from "lucide-react";
+import { ChevronLeft, Settings, Send, Image as ImageIcon, Smile, MapPin, X, Share2, Camera, Plus, Trash2, FolderPlus, Images, Loader2, Plane, Calendar, Sparkles } from "lucide-react";
 import { useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
 import type { Experience } from "@shared/schema";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 export default function PodDetails() {
   const [match, params] = useRoute("/pod/:id");
@@ -17,9 +18,14 @@ export default function PodDetails() {
   const [showExperiencePicker, setShowExperiencePicker] = useState(false);
   const [showAddExperienceModal, setShowAddExperienceModal] = useState(false);
   const [showCreateAlbumModal, setShowCreateAlbumModal] = useState(false);
+  const [showCreateTripModal, setShowCreateTripModal] = useState(false);
   const [selectedAlbum, setSelectedAlbum] = useState<any | null>(null);
   const [albumName, setAlbumName] = useState("");
   const [albumDescription, setAlbumDescription] = useState("");
+  const [tripName, setTripName] = useState("");
+  const [tripDestination, setTripDestination] = useState("");
+  const [tripStartDate, setTripStartDate] = useState("");
+  const [tripEndDate, setTripEndDate] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [isUploadingAlbumPhoto, setIsUploadingAlbumPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -69,6 +75,34 @@ export default function PodDetails() {
     queryKey: ["albumPhotos", selectedAlbum?.id],
     queryFn: () => selectedAlbum ? api.albums.getPhotos(selectedAlbum.id) : [],
     enabled: !!selectedAlbum,
+  });
+
+  const { data: podTrips = [] } = useQuery({
+    queryKey: ["podTrips", podId],
+    queryFn: () => api.trips.getByPod(podId),
+    enabled: podId > 0,
+  });
+
+  const createTripMutation = useMutation({
+    mutationFn: () => api.trips.create(podId, {
+      name: tripName,
+      destination: tripDestination,
+      startDate: tripStartDate,
+      endDate: tripEndDate,
+    }),
+    onSuccess: (trip) => {
+      queryClient.invalidateQueries({ queryKey: ["podTrips", podId] });
+      setShowCreateTripModal(false);
+      setTripName("");
+      setTripDestination("");
+      setTripStartDate("");
+      setTripEndDate("");
+      toast.success("Trip created!");
+      setLocation(`/trip/${trip.id}`);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
   });
 
   const createAlbumMutation = useMutation({
@@ -732,11 +766,151 @@ export default function PodDetails() {
         )}
 
         {activeTab === "trips" && (
-           <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-              <MapPin className="h-12 w-12 mb-2 opacity-20" />
-              <p className="text-sm">No trips planned yet.</p>
-              <button className="mt-4 text-primary font-bold text-sm" data-testid="button-plan-trip">Plan a Trip</button>
-           </div>
+          <div className="flex-1 overflow-y-auto p-4 pb-20">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-heading text-lg font-bold">Trip Plans</h3>
+              <button
+                onClick={() => setShowCreateTripModal(true)}
+                className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white"
+                data-testid="button-create-trip"
+              >
+                <Plus className="h-4 w-4" />
+                New Trip
+              </button>
+            </div>
+
+            {podTrips.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                <Plane className="h-12 w-12 mb-2 opacity-20" />
+                <p className="text-sm">No trips planned yet.</p>
+                <button 
+                  onClick={() => setShowCreateTripModal(true)}
+                  className="mt-4 text-primary font-bold text-sm"
+                  data-testid="button-plan-first-trip"
+                >
+                  Plan your first trip
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {podTrips.map((trip: any) => (
+                  <button
+                    key={trip.id}
+                    onClick={() => setLocation(`/trip/${trip.id}`)}
+                    className="w-full bg-white rounded-2xl border border-gray-100 p-4 text-left hover:shadow-md transition-shadow"
+                    data-testid={`card-trip-${trip.id}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                        <Plane className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-heading font-bold text-charcoal truncate">{trip.name}</h4>
+                        <div className="flex items-center gap-1 text-sm text-gray-500 mt-0.5">
+                          <MapPin className="h-3.5 w-3.5" />
+                          <span className="truncate">{trip.destination}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-gray-400 mt-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>
+                            {format(new Date(trip.startDate), "MMM d")} - {format(new Date(trip.endDate), "MMM d, yyyy")}
+                          </span>
+                        </div>
+                      </div>
+                      {trip.aiSummary && (
+                        <div className="flex items-center gap-1 px-2 py-1 bg-purple-50 rounded-full">
+                          <Sparkles className="h-3 w-3 text-purple-500" />
+                          <span className="text-xs text-purple-600 font-medium">AI</span>
+                        </div>
+                      )}
+                    </div>
+                    {trip.items && trip.items.length > 0 && (
+                      <div className="mt-3 text-xs text-gray-500">
+                        {trip.items.length} activities planned
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {showCreateTripModal && (
+          <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-6">
+            <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
+              <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                <h3 className="font-heading text-lg font-bold">Plan a Trip</h3>
+                <button 
+                  onClick={() => {
+                    setShowCreateTripModal(false);
+                    setTripName("");
+                    setTripDestination("");
+                    setTripStartDate("");
+                    setTripEndDate("");
+                  }}
+                  className="rounded-full bg-gray-100 p-2"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="p-4 space-y-4">
+                <div>
+                  <label className="text-sm font-bold text-gray-700 mb-1 block">Trip Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Summer Beach Vacation"
+                    className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:border-primary focus:outline-none"
+                    value={tripName}
+                    onChange={(e) => setTripName(e.target.value)}
+                    data-testid="input-trip-name"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-bold text-gray-700 mb-1 block">Destination</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., San Diego, CA"
+                    className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:border-primary focus:outline-none"
+                    value={tripDestination}
+                    onChange={(e) => setTripDestination(e.target.value)}
+                    data-testid="input-trip-destination"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-bold text-gray-700 mb-1 block">Start Date</label>
+                    <input
+                      type="date"
+                      className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:border-primary focus:outline-none"
+                      value={tripStartDate}
+                      onChange={(e) => setTripStartDate(e.target.value)}
+                      data-testid="input-trip-start"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-bold text-gray-700 mb-1 block">End Date</label>
+                    <input
+                      type="date"
+                      className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:border-primary focus:outline-none"
+                      value={tripEndDate}
+                      onChange={(e) => setTripEndDate(e.target.value)}
+                      min={tripStartDate}
+                      data-testid="input-trip-end"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={() => createTripMutation.mutate()}
+                  disabled={!tripName.trim() || !tripDestination.trim() || !tripStartDate || !tripEndDate || createTripMutation.isPending}
+                  className="w-full rounded-xl bg-primary py-3 text-sm font-bold text-white disabled:opacity-50"
+                  data-testid="button-save-trip"
+                >
+                  {createTripMutation.isPending ? "Creating..." : "Create Trip"}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
