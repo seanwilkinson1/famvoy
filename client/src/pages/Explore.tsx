@@ -173,7 +173,7 @@ export default function Explore() {
   }, [displayExperiences, categoryFilter, ageFilter, costFilter, maxDistance]);
 
   const formattedExperiences = filteredExperiences.map(exp => ({
-    ...formatExperience(exp, "Family", "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400"),
+    ...formatExperience(exp as any),
     distance: 'distance' in exp ? (exp as any).distance : undefined,
   }));
   

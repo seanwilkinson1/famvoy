@@ -19,9 +19,7 @@ export default function Home() {
     queryFn: api.experiences.getAll,
   });
 
-  const formattedExperiences = experiences.map(exp => 
-    formatExperience(exp, "Family", "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400")
-  );
+  const formattedExperiences = experiences.map(exp => formatExperience(exp as any));
 
   return (
     <div className="min-h-screen bg-background pb-32">

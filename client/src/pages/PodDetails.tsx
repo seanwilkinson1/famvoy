@@ -62,9 +62,7 @@ export default function PodDetails() {
     },
   });
 
-  const formattedExperiences = experiences.map(exp => 
-    formatExperience(exp, "Family", "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400")
-  );
+  const formattedExperiences = experiences.map(exp => formatExperience(exp as any));
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

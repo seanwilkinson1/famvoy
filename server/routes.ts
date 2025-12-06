@@ -148,7 +148,22 @@ export async function registerRoutes(
   app.get("/api/experiences", async (req, res) => {
     try {
       const allExperiences = await storage.getExperiences();
-      res.json(allExperiences);
+      
+      const experiencesWithCreators = await Promise.all(
+        allExperiences.map(async (exp) => {
+          const creator = await storage.getUser(exp.userId);
+          return {
+            ...exp,
+            creator: creator ? {
+              id: creator.id,
+              name: creator.name,
+              avatar: creator.avatar,
+            } : null
+          };
+        })
+      );
+      
+      res.json(experiencesWithCreators);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

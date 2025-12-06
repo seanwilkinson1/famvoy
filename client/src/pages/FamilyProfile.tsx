@@ -76,9 +76,7 @@ export default function FamilyProfile() {
   const isConnected = matches.some(m => m.id === userId);
   const isOwnProfile = currentUser?.id === userId;
 
-  const formattedExperiences = familyExperiences.map(exp => 
-    formatExperience(exp, family?.name, family?.avatar)
-  );
+  const formattedExperiences = familyExperiences.map(exp => formatExperience(exp as any));
 
   if (isLoading) {
     return (

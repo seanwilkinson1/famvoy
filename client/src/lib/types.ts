@@ -13,12 +13,13 @@ export interface ExperienceWithCreator extends DBExperience {
 export interface ExperienceWithFamily extends DBExperience {
   family?: string;
   familyAvatar?: string;
+  creator?: ExperienceCreator | null;
 }
 
-export function formatExperience(exp: DBExperience, family?: string, avatar?: string): ExperienceWithFamily {
+export function formatExperience(exp: ExperienceWithCreator): ExperienceWithFamily {
   return {
     ...exp,
-    family: family || "Unknown Family",
-    familyAvatar: avatar || exp.image,
+    family: exp.creator?.name || "A Family",
+    familyAvatar: exp.creator?.avatar || exp.image,
   };
 }

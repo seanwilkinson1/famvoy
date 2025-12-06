@@ -100,13 +100,9 @@ export default function Profile() {
     enabled: !!currentUser,
   });
 
-  const formattedUserExperiences = userExperiences.map(exp => 
-    formatExperience(exp, currentUser?.name || undefined, currentUser?.avatar || undefined)
-  );
+  const formattedUserExperiences = userExperiences.map(exp => formatExperience(exp as any));
 
-  const formattedSavedExperiences = savedExperiences.map(exp => 
-    formatExperience(exp, "Family", "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400")
-  );
+  const formattedSavedExperiences = savedExperiences.map(exp => formatExperience(exp as any));
 
   return (
     <div className="min-h-screen bg-background pt-14 pb-32 px-6">
