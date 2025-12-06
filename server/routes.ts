@@ -7,6 +7,7 @@ import { clerkMiddleware, getAuth, requireAuth } from "@clerk/express";
 import { storage } from "./storage";
 import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema } from "@shared/schema";
 import { fromError } from "zod-validation-error";
+import OpenAI from "openai";
 
 const uploadStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -1191,6 +1192,451 @@ export async function registerRoutes(
       const hasCheckedIn = await storage.hasUserCheckedIn(user.id, experienceId);
       res.json({ hasCheckedIn });
     } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/pods/:id/trips", async (req, res) => {
+    try {
+      const podId = parseInt(req.params.id);
+      if (isNaN(podId)) {
+        return res.status(400).json({ error: "Invalid pod ID" });
+      }
+      const trips = await storage.getTripsByPod(podId);
+      res.json(trips);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/trips/:id", async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.id);
+      if (isNaN(tripId)) {
+        return res.status(400).json({ error: "Invalid trip ID" });
+      }
+      const trip = await storage.getTripById(tripId);
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+      res.json(trip);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/pods/:id/trips", requireAuth(), async (req, res) => {
+    try {
+      const podId = parseInt(req.params.id);
+      if (isNaN(podId)) {
+        return res.status(400).json({ error: "Invalid pod ID" });
+      }
+
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      const isMember = await storage.isPodMember(podId, user.id);
+      if (!isMember) {
+        return res.status(403).json({ error: "Not a member of this pod" });
+      }
+
+      const { name, destination, startDate, endDate } = req.body;
+      if (!name || !destination || !startDate || !endDate) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const trip = await storage.createTrip({
+        podId,
+        name,
+        destination,
+        startDate,
+        endDate,
+        createdByUserId: user.id,
+      });
+
+      res.json(trip);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/trips/:id", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.id);
+      if (isNaN(tripId)) {
+        return res.status(400).json({ error: "Invalid trip ID" });
+      }
+
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const trip = await storage.updateTrip(tripId, req.body);
+      res.json(trip);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/trips/:id", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.id);
+      if (isNaN(tripId)) {
+        return res.status(400).json({ error: "Invalid trip ID" });
+      }
+
+      await storage.deleteTrip(tripId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/trips/:id/items", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.id);
+      if (isNaN(tripId)) {
+        return res.status(400).json({ error: "Invalid trip ID" });
+      }
+
+      const { dayNumber, time, title, description, itemType, sortOrder, dayTitle, experienceId } = req.body;
+      if (dayNumber === undefined || !time || !title || !itemType || sortOrder === undefined) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const item = await storage.createTripItem({
+        tripId,
+        dayNumber,
+        dayTitle: dayTitle || null,
+        time,
+        title,
+        description: description || null,
+        itemType,
+        sortOrder,
+        experienceId: experienceId || null,
+      });
+
+      res.json(item);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/trip-items/:id", requireAuth(), async (req, res) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      if (isNaN(itemId)) {
+        return res.status(400).json({ error: "Invalid item ID" });
+      }
+
+      const item = await storage.updateTripItem(itemId, req.body);
+      res.json(item);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/trip-items/:id", requireAuth(), async (req, res) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      if (isNaN(itemId)) {
+        return res.status(400).json({ error: "Invalid item ID" });
+      }
+
+      await storage.deleteTripItem(itemId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/trips/:id/items/bulk", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.id);
+      if (isNaN(tripId)) {
+        return res.status(400).json({ error: "Invalid trip ID" });
+      }
+
+      const { items } = req.body;
+      if (!Array.isArray(items)) {
+        return res.status(400).json({ error: "Items must be an array" });
+      }
+
+      const tripItems = items.map((item: any) => ({
+        tripId,
+        dayNumber: item.dayNumber,
+        dayTitle: item.dayTitle || null,
+        time: item.time,
+        title: item.title,
+        description: item.description || null,
+        itemType: item.itemType,
+        sortOrder: item.sortOrder,
+        experienceId: item.experienceId || null,
+      }));
+
+      const createdItems = await storage.bulkCreateTripItems(tripItems);
+      res.json(createdItems);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/trips/:id/items", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.id);
+      if (isNaN(tripId)) {
+        return res.status(400).json({ error: "Invalid trip ID" });
+      }
+
+      await storage.clearTripItems(tripId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/trips/:id/generate", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.id);
+      if (isNaN(tripId)) {
+        return res.status(400).json({ error: "Invalid trip ID" });
+      }
+
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const trip = await storage.getTripById(tripId);
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+
+      const pod = await storage.getPodWithMembers(trip.podId);
+      if (!pod) {
+        return res.status(404).json({ error: "Pod not found" });
+      }
+
+      const podExperiences = await storage.getPodExperiences(trip.podId);
+
+      const familyProfiles = pod.members.map(m => ({
+        name: m.name,
+        kids: m.kids,
+        interests: m.interests || [],
+      }));
+
+      const podExperiencesList = podExperiences.map(e => ({
+        id: e.id,
+        title: e.title,
+        category: e.category,
+        duration: e.duration,
+        cost: e.cost,
+        ages: e.ages,
+        description: e.description,
+        locationName: e.locationName,
+      }));
+
+      const startDate = new Date(trip.startDate);
+      const endDate = new Date(trip.endDate);
+      const numDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+      const openai = new OpenAI({
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      });
+
+      const prompt = `You are a family trip planner AI. Create a detailed ${numDays}-day itinerary for a family trip to ${trip.destination} from ${trip.startDate} to ${trip.endDate}.
+
+Family profiles in this trip:
+${JSON.stringify(familyProfiles, null, 2)}
+
+${podExperiencesList.length > 0 ? `The families have saved these experiences to consider including:
+${JSON.stringify(podExperiencesList, null, 2)}` : ''}
+
+Generate a structured JSON response with:
+1. "summary": A 2-3 sentence personalized overview explaining how the itinerary caters to all families' interests and children's ages
+2. "days": An array of day objects, each containing:
+   - "dayNumber": The day number (1, 2, 3, etc.)
+   - "dayTitle": A catchy thematic title for that day (e.g., "Tropical Arrival and Beach Exploration")
+   - "items": Array of activities for that day, each with:
+     - "time": Time in format "HH:MM AM/PM" (e.g., "09:00 AM")
+     - "title": Short activity title
+     - "description": 1-2 sentence description mentioning which family interests it serves
+     - "itemType": One of: "ACTIVITY", "MEAL", "STAY", "TRANSPORT"
+     - "sortOrder": Number for ordering (0, 1, 2, etc.)
+     ${podExperiencesList.length > 0 ? '- "experienceId": If this activity matches a saved pod experience, include its ID' : ''}
+
+Guidelines:
+- Include 4-6 activities per day
+- Balance activities with rest time (especially for younger children)
+- Include meals at appropriate times
+- Consider each family's interests when planning
+- Make activities age-appropriate for all children mentioned
+- Include a mix of activity types
+- Start each day with morning activities and end with evening/downtime
+
+Return ONLY valid JSON, no markdown or explanations.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are a helpful family trip planning assistant. Always respond with valid JSON only." },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 4000,
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        return res.status(500).json({ error: "Failed to generate itinerary" });
+      }
+
+      let parsed;
+      try {
+        const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        parsed = JSON.parse(cleanContent);
+      } catch (e) {
+        console.error("Failed to parse AI response:", content);
+        return res.status(500).json({ error: "Failed to parse AI response" });
+      }
+
+      await storage.clearTripItems(tripId);
+
+      const allItems: any[] = [];
+      for (const day of parsed.days) {
+        for (const item of day.items) {
+          allItems.push({
+            tripId,
+            dayNumber: day.dayNumber,
+            dayTitle: day.dayTitle,
+            time: item.time,
+            title: item.title,
+            description: item.description,
+            itemType: item.itemType,
+            sortOrder: item.sortOrder,
+            experienceId: item.experienceId || null,
+          });
+        }
+      }
+
+      const createdItems = await storage.bulkCreateTripItems(allItems);
+
+      await storage.updateTrip(tripId, { aiSummary: parsed.summary });
+
+      const updatedTrip = await storage.getTripById(tripId);
+      res.json(updatedTrip);
+    } catch (error: any) {
+      console.error("AI generation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/trips/:id/regenerate-day/:dayNumber", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.id);
+      const dayNumber = parseInt(req.params.dayNumber);
+      
+      if (isNaN(tripId) || isNaN(dayNumber)) {
+        return res.status(400).json({ error: "Invalid parameters" });
+      }
+
+      const trip = await storage.getTripById(tripId);
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+
+      const pod = await storage.getPodWithMembers(trip.podId);
+      if (!pod) {
+        return res.status(404).json({ error: "Pod not found" });
+      }
+
+      const familyProfiles = pod.members.map(m => ({
+        name: m.name,
+        kids: m.kids,
+        interests: m.interests || [],
+      }));
+
+      const currentDayItems = trip.items.filter(i => i.dayNumber === dayNumber);
+      const currentDayTitle = currentDayItems[0]?.dayTitle || `Day ${dayNumber}`;
+
+      const openai = new OpenAI({
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      });
+
+      const prompt = `Regenerate Day ${dayNumber} of a family trip to ${trip.destination}.
+
+Family profiles:
+${JSON.stringify(familyProfiles, null, 2)}
+
+Current day title: "${currentDayTitle}"
+
+Generate a fresh set of activities for this day. Return JSON with:
+- "dayTitle": A new catchy thematic title
+- "items": Array of 4-6 activities with:
+  - "time": Time in "HH:MM AM/PM" format
+  - "title": Activity title
+  - "description": 1-2 sentence description
+  - "itemType": One of: "ACTIVITY", "MEAL", "STAY", "TRANSPORT"
+  - "sortOrder": Number for ordering
+
+Make it different from typical tourist activities - suggest unique local experiences.
+Return ONLY valid JSON.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are a creative family trip planner. Respond with JSON only." },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.9,
+        max_tokens: 1500,
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        return res.status(500).json({ error: "Failed to regenerate day" });
+      }
+
+      let parsed;
+      try {
+        const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        parsed = JSON.parse(cleanContent);
+      } catch (e) {
+        return res.status(500).json({ error: "Failed to parse AI response" });
+      }
+
+      for (const item of currentDayItems) {
+        await storage.deleteTripItem(item.id);
+      }
+
+      const newItems = parsed.items.map((item: any) => ({
+        tripId,
+        dayNumber,
+        dayTitle: parsed.dayTitle,
+        time: item.time,
+        title: item.title,
+        description: item.description,
+        itemType: item.itemType,
+        sortOrder: item.sortOrder,
+        experienceId: null,
+      }));
+
+      await storage.bulkCreateTripItems(newItems);
+
+      const updatedTrip = await storage.getTripById(tripId);
+      res.json(updatedTrip);
+    } catch (error: any) {
+      console.error("Day regeneration error:", error);
       res.status(500).json({ error: error.message });
     }
   });
