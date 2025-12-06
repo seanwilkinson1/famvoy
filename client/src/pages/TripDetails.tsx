@@ -46,6 +46,7 @@ export default function TripDetails() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [regeneratingDay, setRegeneratingDay] = useState<number | null>(null);
   const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [showExperiencePicker, setShowExperiencePicker] = useState(false);
   const [addItemDayNumber, setAddItemDayNumber] = useState(1);
   const [editingItem, setEditingItem] = useState<TripItem | null>(null);
   const [itemForm, setItemForm] = useState({
@@ -53,6 +54,7 @@ export default function TripDetails() {
     title: "",
     description: "",
     itemType: "ACTIVITY",
+    experienceId: null as number | null,
   });
   const queryClient = useQueryClient();
   const tripId = params?.id ? parseInt(params.id) : 0;
@@ -61,6 +63,12 @@ export default function TripDetails() {
     queryKey: ["trip", tripId],
     queryFn: () => api.trips.getById(tripId),
     enabled: !!match && tripId > 0,
+  });
+
+  const { data: podExperiences = [] } = useQuery({
+    queryKey: ["podExperiences", trip?.podId],
+    queryFn: () => trip?.podId ? api.pods.getExperiences(trip.podId) : [],
+    enabled: !!trip?.podId,
   });
 
   const generateMutation = useMutation({
@@ -97,12 +105,17 @@ export default function TripDetails() {
     },
   });
 
+  const resetItemForm = () => {
+    setItemForm({ time: "09:00 AM", title: "", description: "", itemType: "ACTIVITY", experienceId: null });
+  };
+
   const addItemMutation = useMutation({
     mutationFn: (data: any) => api.trips.addItem(tripId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trip", tripId] });
       setShowAddItemModal(false);
-      setItemForm({ time: "09:00 AM", title: "", description: "", itemType: "ACTIVITY" });
+      setShowExperiencePicker(false);
+      resetItemForm();
       toast.success("Activity added!");
     },
     onError: (error: Error) => {
@@ -116,7 +129,7 @@ export default function TripDetails() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trip", tripId] });
       setEditingItem(null);
-      setItemForm({ time: "09:00 AM", title: "", description: "", itemType: "ACTIVITY" });
+      resetItemForm();
       toast.success("Activity updated!");
     },
     onError: (error: Error) => {
@@ -194,6 +207,21 @@ export default function TripDetails() {
       itemType: itemForm.itemType,
       sortOrder: dayItems.length,
       dayTitle: dayTitles[addItemDayNumber] || `Day ${addItemDayNumber}`,
+      experienceId: itemForm.experienceId,
+    });
+  };
+
+  const handleAddFromExperience = (exp: any) => {
+    const dayItems = itemsByDay[addItemDayNumber] || [];
+    addItemMutation.mutate({
+      dayNumber: addItemDayNumber,
+      time: "10:00 AM",
+      title: exp.title,
+      description: exp.description,
+      itemType: "ACTIVITY",
+      sortOrder: dayItems.length,
+      dayTitle: dayTitles[addItemDayNumber] || `Day ${addItemDayNumber}`,
+      experienceId: exp.id,
     });
   };
 
@@ -217,6 +245,7 @@ export default function TripDetails() {
       title: item.title,
       description: item.description || "",
       itemType: item.itemType,
+      experienceId: item.experienceId,
     });
   };
 
@@ -438,15 +467,53 @@ export default function TripDetails() {
               <button 
                 onClick={() => {
                   setShowAddItemModal(false);
+                  setShowExperiencePicker(false);
                   setEditingItem(null);
-                  setItemForm({ time: "09:00 AM", title: "", description: "", itemType: "ACTIVITY" });
+                  resetItemForm();
                 }}
                 className="rounded-full bg-gray-100 p-2"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+              {!editingItem && podExperiences.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-bold text-gray-700">From Pod Experiences</label>
+                    <button
+                      onClick={() => setShowExperiencePicker(!showExperiencePicker)}
+                      className="text-xs text-primary font-medium"
+                      data-testid="button-toggle-experiences"
+                    >
+                      {showExperiencePicker ? "Hide" : "Show saved experiences"}
+                    </button>
+                  </div>
+                  {showExperiencePicker && (
+                    <div className="space-y-2 mb-4 max-h-40 overflow-y-auto rounded-xl bg-gray-50 p-2">
+                      {podExperiences.map((exp: any) => (
+                        <button
+                          key={exp.id}
+                          onClick={() => handleAddFromExperience(exp)}
+                          className="w-full flex items-center gap-3 p-2 rounded-lg bg-white border border-gray-100 hover:border-primary transition-colors text-left"
+                          data-testid={`button-add-experience-${exp.id}`}
+                        >
+                          <img 
+                            src={exp.image} 
+                            alt={exp.title} 
+                            className="w-10 h-10 rounded-lg object-cover"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{exp.title}</p>
+                            <p className="text-xs text-gray-500 truncate">{exp.locationName}</p>
+                          </div>
+                          <Plus className="h-4 w-4 text-primary shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="text-sm font-bold text-gray-700 mb-1 block">Time</label>
                 <input

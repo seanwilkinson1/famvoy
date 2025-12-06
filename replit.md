@@ -12,6 +12,43 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### December 6, 2025 - AI-Powered Trip Planning
+- **Trip Planning System**: Pods can now collaboratively plan family trips
+  - `pod_trips` table with name, destination, startDate, endDate, aiSummary, createdByUserId
+  - `trip_items` table with dayNumber, dayTitle, time, title, description, itemType, sortOrder, experienceId
+  - Item types: ACTIVITY (teal), MEAL (orange), STAY (blue), TRANSPORT (gray)
+  - Storage methods: `createTrip()`, `getTripById()`, `getTripsByPod()`, `updateTrip()`, `deleteTrip()`
+  - Trip item methods: `createTripItem()`, `updateTripItem()`, `deleteTripItem()`, `bulkCreateTripItems()`, `clearTripItems()`
+- **API Endpoints**:
+  - `GET /api/pods/:id/trips` - List trips for a pod
+  - `GET /api/trips/:id` - Get trip with all items
+  - `POST /api/pods/:id/trips` - Create new trip
+  - `PATCH /api/trips/:id` - Update trip details
+  - `DELETE /api/trips/:id` - Delete trip
+  - `POST /api/trips/:id/generate` - AI-generate full itinerary based on pod member interests
+  - `POST /api/trips/:id/regenerate-day/:dayNumber` - Regenerate a single day with fresh ideas
+  - `POST /api/trips/:id/items` - Add single activity
+  - `POST /api/trips/:id/items/bulk` - Add multiple activities
+  - `PATCH /api/trip-items/:id` - Update activity
+  - `DELETE /api/trip-items/:id` - Delete activity
+- **AI Itinerary Generation**: Uses OpenAI GPT-4o-mini via Replit AI Integrations
+  - Generates personalized multi-day itineraries based on pod members' interests and children's ages
+  - Creates AI summary explaining how trip caters to all families
+  - Suggests 4-6 activities per day with times, descriptions, and types
+  - Can incorporate pod's saved experiences into the itinerary
+- **Trips Tab in PodDetails**: New tab showing pod's trip plans
+  - Trip cards with destination, dates, and AI indicator
+  - Create trip modal with name, destination, date range
+- **TripDetails Page** (`/trip/:id`): Full trip view and editing
+  - AI summary banner at top
+  - Day-by-day timeline view with activity cards
+  - Color-coded activity types with icons
+  - "Generate with AI" button for empty trips
+  - "Regenerate" button for existing itineraries
+  - Per-day regeneration for fresh ideas
+  - Add/edit/delete individual activities
+  - Add from pod's saved experiences directly
+
 ### December 6, 2025 - Pod Photo Albums & Badge System
 - **Pod Photo Albums**: Each pod can have multiple photo albums for organizing memories
   - `pod_albums` table with name, description, createdByUserId, coverPhotoUrl
