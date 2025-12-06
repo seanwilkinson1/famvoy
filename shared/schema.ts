@@ -184,6 +184,33 @@ export const experienceCheckins = pgTable("experience_checkins", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const podTrips = pgTable("pod_trips", {
+  id: serial("id").primaryKey(),
+  podId: integer("pod_id").notNull().references(() => pods.id),
+  name: text("name").notNull(),
+  destination: text("destination").notNull(),
+  startDate: text("start_date").notNull(),
+  endDate: text("end_date").notNull(),
+  aiSummary: text("ai_summary"),
+  createdByUserId: integer("created_by_user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const tripItems = pgTable("trip_items", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => podTrips.id),
+  dayNumber: integer("day_number").notNull(),
+  dayTitle: text("day_title"),
+  time: text("time").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  itemType: text("item_type").notNull(),
+  sortOrder: integer("sort_order").notNull(),
+  experienceId: integer("experience_id").references(() => experiences.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertExperienceSchema = createInsertSchema(experiences).omit({ id: true, createdAt: true });
 export const insertPodSchema = createInsertSchema(pods).omit({ id: true, createdAt: true });
@@ -200,6 +227,8 @@ export const insertAlbumPhotoSchema = createInsertSchema(albumPhotos).omit({ id:
 export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true });
 export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({ id: true, earnedAt: true });
 export const insertExperienceCheckinSchema = createInsertSchema(experienceCheckins).omit({ id: true, createdAt: true });
+export const insertPodTripSchema = createInsertSchema(podTrips).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertTripItemSchema = createInsertSchema(tripItems).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -257,3 +286,9 @@ export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
 
 export type ExperienceCheckin = typeof experienceCheckins.$inferSelect;
 export type InsertExperienceCheckin = z.infer<typeof insertExperienceCheckinSchema>;
+
+export type PodTrip = typeof podTrips.$inferSelect;
+export type InsertPodTrip = z.infer<typeof insertPodTripSchema>;
+
+export type TripItem = typeof tripItems.$inferSelect;
+export type InsertTripItem = z.infer<typeof insertTripItemSchema>;
