@@ -1,7 +1,7 @@
 import { useRoute, useLocation } from "wouter";
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { CommentsSection } from "@/components/shared/CommentsSection";
-import { ChevronLeft, Heart, Clock, DollarSign, Users, MapPin, Share2 } from "lucide-react";
+import { ChevronLeft, Heart, Clock, DollarSign, Users, MapPin, Share2, Navigation } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -9,7 +9,18 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
 import { useClerkAuth } from "@/hooks/useAuth";
-import mapBg from "@assets/generated_images/stylized_map_background_for_explore_screen.png";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { Icon } from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+const experienceIcon = new Icon({
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
 
 export default function ExperienceDetails() {
   const [match, params] = useRoute("/experience/:id");
@@ -138,17 +149,46 @@ export default function ExperienceDetails() {
 
         {/* Map Preview */}
         <div className="mb-8 overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
-          <div className="relative h-32 w-full">
-            <img src={mapBg} alt="Location" className="h-full w-full object-cover opacity-80" />
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-              <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/20 animate-pulse">
-                <div className="h-4 w-4 rounded-full bg-primary ring-2 ring-white" />
-              </div>
-            </div>
+          <div className="relative h-40 w-full">
+            <MapContainer
+              center={[experience.locationLat, experience.locationLng]}
+              zoom={14}
+              scrollWheelZoom={false}
+              className="h-full w-full z-0"
+              zoomControl={false}
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <Marker 
+                position={[experience.locationLat, experience.locationLng]}
+                icon={experienceIcon}
+              >
+                <Popup>
+                  <div className="text-center">
+                    <p className="font-bold text-sm">{experience.title}</p>
+                    <p className="text-xs text-gray-500">{experience.locationName}</p>
+                  </div>
+                </Popup>
+              </Marker>
+            </MapContainer>
           </div>
           <div className="bg-white p-3 flex justify-between items-center">
-             <div className="text-sm font-medium text-gray-900">{experience.locationName}</div>
-             <button className="text-xs font-bold text-primary" data-testid="button-directions">Get Directions</button>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-gray-900">{experience.locationName}</span>
+            </div>
+            <a 
+              href={`https://www.google.com/maps/dir/?api=1&destination=${experience.locationLat},${experience.locationLng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs font-bold text-primary"
+              data-testid="button-directions"
+            >
+              <Navigation className="h-3 w-3" />
+              Get Directions
+            </a>
           </div>
         </div>
 

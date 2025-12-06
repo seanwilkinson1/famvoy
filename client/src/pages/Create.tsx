@@ -1,15 +1,24 @@
-import { useState } from "react";
-import { ChevronLeft, Camera, MapPin, Clock, Info } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { ChevronLeft, Camera, MapPin, Clock, Info, X, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
+interface LocationSuggestion {
+  display_name: string;
+  lat: string;
+  lon: string;
+  place_id: number;
+}
+
 export default function Create() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const locationInputRef = useRef<HTMLInputElement>(null);
 
   const { data: currentUser } = useQuery({
     queryKey: ["currentUser"],
@@ -22,19 +31,124 @@ export default function Create() {
     duration: "",
     ages: "",
     locationName: "",
+    locationLat: null as number | null,
+    locationLng: null as number | null,
     category: "Outdoor",
     description: "",
   });
 
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [locationSearch, setLocationSearch] = useState("");
+  const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  useEffect(() => {
+    const searchLocation = async () => {
+      if (locationSearch.length < 3) {
+        setLocationSuggestions([]);
+        return;
+      }
+
+      setIsSearchingLocation(true);
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationSearch)}&limit=5`,
+          {
+            headers: {
+              'Accept': 'application/json',
+              'User-Agent': 'FamVoy/1.0 (family experience sharing app)',
+            },
+          }
+        );
+        const data = await response.json();
+        setLocationSuggestions(data);
+        setShowSuggestions(true);
+      } catch (error) {
+        console.error('Failed to search location:', error);
+      } finally {
+        setIsSearchingLocation(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(searchLocation, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [locationSearch]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (locationInputRef.current && !locationInputRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const url = await api.upload.image(file);
+      setUploadedImageUrl(url);
+      toast({
+        title: "Photo uploaded!",
+        description: "Your photo has been added.",
+        duration: 2000,
+      });
+    } catch (error) {
+      console.error('Failed to upload image:', error);
+      toast({
+        title: "Upload failed",
+        description: "Could not upload the photo. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleSelectLocation = (suggestion: LocationSuggestion) => {
+    setFormData({
+      ...formData,
+      locationName: suggestion.display_name.split(',').slice(0, 2).join(', '),
+      locationLat: parseFloat(suggestion.lat),
+      locationLng: parseFloat(suggestion.lon),
+    });
+    setLocationSearch(suggestion.display_name.split(',').slice(0, 2).join(', '));
+    setShowSuggestions(false);
+  };
+
+  const clearLocation = () => {
+    setFormData({
+      ...formData,
+      locationName: "",
+      locationLat: null,
+      locationLng: null,
+    });
+    setLocationSearch("");
+  };
+
   const createMutation = useMutation({
     mutationFn: async () => {
       if (!currentUser) throw new Error("No user logged in");
+      if (!uploadedImageUrl) throw new Error("Photo required");
+      if (!formData.locationLat || !formData.locationLng) throw new Error("Location required");
       
       return api.experiences.create({
-        ...formData,
-        image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=800",
-        locationLat: 37.7749,
-        locationLng: -122.4194,
+        title: formData.title,
+        cost: formData.cost,
+        duration: formData.duration,
+        ages: formData.ages,
+        locationName: formData.locationName,
+        category: formData.category,
+        description: formData.description,
+        image: uploadedImageUrl,
+        locationLat: formData.locationLat,
+        locationLng: formData.locationLng,
         userId: currentUser.id,
         tips: [],
       });
@@ -58,10 +172,34 @@ export default function Create() {
   });
 
   const handleSave = () => {
-    if (!formData.title || !formData.duration) {
+    if (!formData.title) {
       toast({
-        title: "Missing Fields",
-        description: "Please fill in at least the title and duration",
+        title: "Title Required",
+        description: "Please add a title for your experience",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!formData.duration) {
+      toast({
+        title: "Duration Required",
+        description: "Please add how long the experience takes",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!uploadedImageUrl) {
+      toast({
+        title: "Photo Required",
+        description: "Please add a photo of your experience",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!formData.locationLat || !formData.locationLng) {
+      toast({
+        title: "Location Required",
+        description: "Please search and select a location from the suggestions",
         variant: "destructive",
       });
       return;
@@ -87,11 +225,59 @@ export default function Create() {
         {/* Step 1: Photo */}
         <section>
           <label className="mb-2 block text-sm font-bold text-gray-700">Photos</label>
-          <div className="relative aspect-video w-full overflow-hidden rounded-3xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center group cursor-pointer hover:bg-gray-50 transition-colors">
-            <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center shadow-sm mb-3 group-active:scale-90 transition-transform">
-              <Camera className="h-8 w-8 text-primary" />
-            </div>
-            <p className="text-sm font-medium text-gray-500">Add a photo (placeholder)</p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={handleImageUpload}
+          />
+          <div 
+            onClick={() => !isUploading && fileInputRef.current?.click()}
+            className={cn(
+              "relative aspect-video w-full overflow-hidden rounded-3xl border-2 border-dashed flex flex-col items-center justify-center group cursor-pointer transition-colors",
+              uploadedImageUrl 
+                ? "border-transparent bg-gray-900" 
+                : "border-gray-300 bg-gray-100 hover:bg-gray-50"
+            )}
+          >
+            {uploadedImageUrl ? (
+              <>
+                <img 
+                  src={uploadedImageUrl} 
+                  alt="Uploaded" 
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="h-12 w-12 rounded-full bg-white/90 flex items-center justify-center">
+                    <Camera className="h-6 w-6 text-gray-700" />
+                  </div>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setUploadedImageUrl(null);
+                  }}
+                  className="absolute top-3 right-3 h-8 w-8 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </>
+            ) : isUploading ? (
+              <>
+                <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center shadow-sm mb-3">
+                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                </div>
+                <p className="text-sm font-medium text-gray-500">Uploading...</p>
+              </>
+            ) : (
+              <>
+                <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center shadow-sm mb-3 group-active:scale-90 transition-transform">
+                  <Camera className="h-8 w-8 text-primary" />
+                </div>
+                <p className="text-sm font-medium text-gray-500">Tap to add a photo</p>
+              </>
+            )}
           </div>
         </section>
 
@@ -161,19 +347,61 @@ export default function Create() {
             </div>
           </div>
           
-          <div>
-             <label className="mb-2 block text-sm font-bold text-gray-700">Location</label>
-              <div className="relative">
-                <MapPin className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Add location"
-                  className="w-full rounded-xl border border-gray-200 bg-white py-4 pl-12 pr-4 text-base font-medium placeholder:text-gray-400 focus:border-primary focus:outline-none"
-                  value={formData.locationName}
-                  onChange={(e) => setFormData({ ...formData, locationName: e.target.value })}
-                  data-testid="input-location"
-                />
+          <div ref={locationInputRef} className="relative">
+            <label className="mb-2 block text-sm font-bold text-gray-700">Location</label>
+            <div className="relative">
+              <MapPin className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search for a location..."
+                className={cn(
+                  "w-full rounded-xl border bg-white py-4 pl-12 pr-10 text-base font-medium placeholder:text-gray-400 focus:border-primary focus:outline-none",
+                  formData.locationLat ? "border-primary bg-primary/5" : "border-gray-200"
+                )}
+                value={locationSearch}
+                onChange={(e) => {
+                  setLocationSearch(e.target.value);
+                  if (formData.locationLat) {
+                    setFormData({ ...formData, locationName: "", locationLat: null, locationLng: null });
+                  }
+                }}
+                onFocus={() => locationSuggestions.length > 0 && setShowSuggestions(true)}
+                data-testid="input-location"
+              />
+              {isSearchingLocation && (
+                <Loader2 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 animate-spin" />
+              )}
+              {formData.locationLat && (
+                <button
+                  onClick={clearLocation}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+                >
+                  <X className="h-3 w-3 text-gray-600" />
+                </button>
+              )}
+            </div>
+            
+            {showSuggestions && locationSuggestions.length > 0 && (
+              <div className="absolute z-50 mt-2 w-full rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden">
+                {locationSuggestions.map((suggestion) => (
+                  <button
+                    key={suggestion.place_id}
+                    onClick={() => handleSelectLocation(suggestion)}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-start gap-3 border-b border-gray-100 last:border-0"
+                  >
+                    <MapPin className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-gray-700 line-clamp-2">{suggestion.display_name}</span>
+                  </button>
+                ))}
               </div>
+            )}
+            
+            {formData.locationLat && (
+              <p className="mt-2 text-xs text-primary font-medium flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                Location selected - will appear on maps
+              </p>
+            )}
           </div>
 
            <div>
