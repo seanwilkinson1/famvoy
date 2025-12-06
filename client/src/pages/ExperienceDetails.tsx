@@ -276,21 +276,22 @@ export default function ExperienceDetails() {
 
       {/* Add to Pod Modal */}
       {showAddToPodModal && (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-end">
-          <div className="bg-white rounded-t-3xl w-full max-h-[70vh] overflow-hidden">
+        <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md max-h-[80vh] overflow-hidden shadow-xl">
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <h3 className="font-heading text-lg font-bold">Add to Pod</h3>
               <button 
                 onClick={() => setShowAddToPodModal(false)}
                 className="rounded-full bg-gray-100 p-2"
+                data-testid="button-close-add-pod-modal"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="overflow-y-auto p-4 space-y-3 max-h-[55vh]">
-              {userPods.length === 0 ? (
+            <div className="overflow-y-auto p-4 space-y-3 max-h-[60vh]">
+              {userPods.filter(p => !p.isDirect).length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-400 mb-4">You're not a member of any pods yet</p>
+                  <p className="text-gray-400 mb-4">You're not a member of any group pods yet</p>
                   <button 
                     onClick={() => {
                       setShowAddToPodModal(false);
@@ -306,6 +307,7 @@ export default function ExperienceDetails() {
                   key={pod.id}
                   onClick={() => addToPodMutation.mutate({ podId: pod.id, experienceId: experience.id })}
                   className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                  data-testid={`pod-item-${pod.id}`}
                 >
                   <img 
                     src={pod.image || 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400'} 
