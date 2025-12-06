@@ -27,6 +27,10 @@ import {
   type UserBadge,
   type ExperienceCheckin,
   type InsertExperienceCheckin,
+  type PodTrip,
+  type InsertPodTrip,
+  type TripItem,
+  type InsertTripItem,
   users,
   experiences,
   pods,
@@ -44,6 +48,8 @@ import {
   badges,
   userBadges,
   experienceCheckins,
+  podTrips,
+  tripItems,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ne, notInArray, ilike, isNotNull } from "drizzle-orm";
@@ -147,6 +153,18 @@ export interface IStorage {
   getCheckinsByUser(userId: number): Promise<(ExperienceCheckin & { experience: Experience })[]>;
   getCheckinCount(experienceId: number): Promise<number>;
   hasUserCheckedIn(userId: number, experienceId: number): Promise<boolean>;
+  
+  getTripsByPod(podId: number): Promise<(PodTrip & { creator: User; itemCount: number })[]>;
+  getTripById(tripId: number): Promise<(PodTrip & { items: TripItem[] }) | undefined>;
+  createTrip(data: InsertPodTrip): Promise<PodTrip>;
+  updateTrip(tripId: number, data: Partial<PodTrip>): Promise<PodTrip>;
+  deleteTrip(tripId: number): Promise<void>;
+  getTripItems(tripId: number): Promise<TripItem[]>;
+  createTripItem(data: InsertTripItem): Promise<TripItem>;
+  updateTripItem(itemId: number, data: Partial<TripItem>): Promise<TripItem>;
+  deleteTripItem(itemId: number): Promise<void>;
+  bulkCreateTripItems(items: InsertTripItem[]): Promise<TripItem[]>;
+  clearTripItems(tripId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -943,6 +961,88 @@ export class DatabaseStorage implements IStorage {
         eq(experienceCheckins.experienceId, experienceId)
       ));
     return !!exists;
+  }
+
+  async getTripsByPod(podId: number): Promise<(PodTrip & { creator: User; itemCount: number })[]> {
+    const results = await db.select()
+      .from(podTrips)
+      .leftJoin(users, eq(podTrips.createdByUserId, users.id))
+      .where(eq(podTrips.podId, podId))
+      .orderBy(desc(podTrips.createdAt));
+    
+    const tripsWithCounts = await Promise.all(results.map(async (r) => {
+      const items = await db.select().from(tripItems).where(eq(tripItems.tripId, r.pod_trips.id));
+      return {
+        ...r.pod_trips,
+        creator: r.users!,
+        itemCount: items.length,
+      };
+    }));
+    
+    return tripsWithCounts;
+  }
+
+  async getTripById(tripId: number): Promise<(PodTrip & { items: TripItem[] }) | undefined> {
+    const [trip] = await db.select().from(podTrips).where(eq(podTrips.id, tripId));
+    if (!trip) return undefined;
+    
+    const items = await db.select()
+      .from(tripItems)
+      .where(eq(tripItems.tripId, tripId))
+      .orderBy(tripItems.dayNumber, tripItems.sortOrder);
+    
+    return { ...trip, items };
+  }
+
+  async createTrip(data: InsertPodTrip): Promise<PodTrip> {
+    const [trip] = await db.insert(podTrips).values(data).returning();
+    return trip;
+  }
+
+  async updateTrip(tripId: number, data: Partial<PodTrip>): Promise<PodTrip> {
+    const [trip] = await db.update(podTrips)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(podTrips.id, tripId))
+      .returning();
+    return trip;
+  }
+
+  async deleteTrip(tripId: number): Promise<void> {
+    await db.delete(tripItems).where(eq(tripItems.tripId, tripId));
+    await db.delete(podTrips).where(eq(podTrips.id, tripId));
+  }
+
+  async getTripItems(tripId: number): Promise<TripItem[]> {
+    return db.select()
+      .from(tripItems)
+      .where(eq(tripItems.tripId, tripId))
+      .orderBy(tripItems.dayNumber, tripItems.sortOrder);
+  }
+
+  async createTripItem(data: InsertTripItem): Promise<TripItem> {
+    const [item] = await db.insert(tripItems).values(data).returning();
+    return item;
+  }
+
+  async updateTripItem(itemId: number, data: Partial<TripItem>): Promise<TripItem> {
+    const [item] = await db.update(tripItems)
+      .set(data)
+      .where(eq(tripItems.id, itemId))
+      .returning();
+    return item;
+  }
+
+  async deleteTripItem(itemId: number): Promise<void> {
+    await db.delete(tripItems).where(eq(tripItems.id, itemId));
+  }
+
+  async bulkCreateTripItems(items: InsertTripItem[]): Promise<TripItem[]> {
+    if (items.length === 0) return [];
+    return db.insert(tripItems).values(items).returning();
+  }
+
+  async clearTripItems(tripId: number): Promise<void> {
+    await db.delete(tripItems).where(eq(tripItems.tripId, tripId));
   }
 }
 
