@@ -119,7 +119,7 @@ export interface IStorage {
   getFollowing(userId: number): Promise<User[]>;
   getFollowCounts(userId: number): Promise<{ followers: number; following: number }>;
   
-  getPodExperiences(podId: number): Promise<Experience[]>;
+  getPodExperiences(podId: number): Promise<(Experience & { creator: { id: number; name: string | null; avatar: string | null } | null })[]>;
   addExperienceToPod(podId: number, experienceId: number, userId: number): Promise<void>;
   removeExperienceFromPod(podId: number, experienceId: number): Promise<void>;
   isExperienceInPod(podId: number, experienceId: number): Promise<boolean>;
@@ -704,7 +704,7 @@ export class DatabaseStorage implements IStorage {
     return { followers: followers.length, following: following.length };
   }
 
-  async getPodExperiencesWithCreators(podId: number): Promise<(Experience & { creator: { id: number; name: string; avatar: string | null } | null })[]> {
+  async getPodExperiences(podId: number): Promise<(Experience & { creator: { id: number; name: string | null; avatar: string | null } | null })[]> {
     const result = await db
       .select({ 
         experience: experiences,

@@ -5,7 +5,7 @@ import multer from "multer";
 import express from "express";
 import { clerkMiddleware, getAuth, requireAuth } from "@clerk/express";
 import { storage } from "./storage";
-import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema } from "@shared/schema";
+import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 
 const uploadStorage = multer.diskStorage({
@@ -517,7 +517,7 @@ export async function registerRoutes(
       if (isNaN(podId)) {
         return res.status(400).json({ error: "Invalid pod ID" });
       }
-      const experiencesWithCreators = await storage.getPodExperiencesWithCreators(podId);
+      const experiencesWithCreators = await storage.getPodExperiences(podId);
       res.json(experiencesWithCreators);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -888,6 +888,208 @@ export async function registerRoutes(
       const userId = parseInt(req.params.id);
       const counts = await storage.getFollowCounts(userId);
       res.json(counts);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/pods/:id/albums", async (req, res) => {
+    try {
+      const podId = parseInt(req.params.id);
+      if (isNaN(podId)) {
+        return res.status(400).json({ error: "Invalid pod ID" });
+      }
+      const albums = await storage.getPodAlbums(podId);
+      res.json(albums);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/pods/:id/albums", requireAuth(), async (req, res) => {
+    try {
+      const podId = parseInt(req.params.id);
+      if (isNaN(podId)) {
+        return res.status(400).json({ error: "Invalid pod ID" });
+      }
+      
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      const isMember = await storage.isPodMember(podId, user.id);
+      if (!isMember) {
+        return res.status(403).json({ error: "You must be a pod member to create albums" });
+      }
+      
+      const parsed = insertPodAlbumSchema.safeParse({ ...req.body, podId, createdByUserId: user.id });
+      if (!parsed.success) {
+        return res.status(400).json({ error: fromError(parsed.error).toString() });
+      }
+      
+      const album = await storage.createPodAlbum(parsed.data);
+      res.status(201).json(album);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/albums/:id", requireAuth(), async (req, res) => {
+    try {
+      const albumId = parseInt(req.params.id);
+      if (isNaN(albumId)) {
+        return res.status(400).json({ error: "Invalid album ID" });
+      }
+      
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      const album = await storage.getPodAlbumById(albumId);
+      if (!album) {
+        return res.status(404).json({ error: "Album not found" });
+      }
+      
+      if (album.createdByUserId !== user.id) {
+        return res.status(403).json({ error: "Only the album creator can delete it" });
+      }
+      
+      await storage.deletePodAlbum(albumId);
+      res.status(200).json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/albums/:id/photos", async (req, res) => {
+    try {
+      const albumId = parseInt(req.params.id);
+      if (isNaN(albumId)) {
+        return res.status(400).json({ error: "Invalid album ID" });
+      }
+      const photos = await storage.getAlbumPhotos(albumId);
+      res.json(photos);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/albums/:id/photos", requireAuth(), async (req, res) => {
+    try {
+      const albumId = parseInt(req.params.id);
+      if (isNaN(albumId)) {
+        return res.status(400).json({ error: "Invalid album ID" });
+      }
+      
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      const album = await storage.getPodAlbumById(albumId);
+      if (!album) {
+        return res.status(404).json({ error: "Album not found" });
+      }
+      
+      const isMember = await storage.isPodMember(album.podId, user.id);
+      if (!isMember) {
+        return res.status(403).json({ error: "You must be a pod member to add photos" });
+      }
+      
+      const parsed = insertAlbumPhotoSchema.safeParse({ ...req.body, albumId, uploadedByUserId: user.id });
+      if (!parsed.success) {
+        return res.status(400).json({ error: fromError(parsed.error).toString() });
+      }
+      
+      const photo = await storage.addPhotoToAlbum(parsed.data);
+      res.status(201).json(photo);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/photos/:id", requireAuth(), async (req, res) => {
+    try {
+      const photoId = parseInt(req.params.id);
+      if (isNaN(photoId)) {
+        return res.status(400).json({ error: "Invalid photo ID" });
+      }
+      
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      await storage.deleteAlbumPhoto(photoId);
+      res.status(200).json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/badges", async (req, res) => {
+    try {
+      const allBadges = await storage.getAllBadges();
+      res.json(allBadges);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/users/:id/badges", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+      const userBadges = await storage.getUserBadges(userId);
+      res.json(userBadges);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/users/:id/check-badges", requireAuth(), async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+      
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user || user.id !== userId) {
+        return res.status(403).json({ error: "Can only check your own badges" });
+      }
+      
+      const newBadges = await storage.checkAndAwardBadges(userId);
+      res.json({ newBadges });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
