@@ -90,10 +90,15 @@ export async function registerRoutes(
       const objectStorageService = new ObjectStorageService();
       const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
       
+      const exists = await objectStorageService.verifyObjectExists(objectPath);
+      if (!exists) {
+        return res.status(400).json({ error: "Upload not found. Please try uploading again." });
+      }
+      
       res.json({ objectPath });
     } catch (error: any) {
       console.error("Error confirming upload:", error);
-      res.status(500).json({ error: error.message || "Failed to confirm upload" });
+      res.status(400).json({ error: error.message || "Failed to confirm upload" });
     }
   });
 

@@ -94,23 +94,35 @@ export class ObjectStorageService {
 
   normalizeObjectEntityPath(rawPath: string): string {
     if (!rawPath.startsWith("https://storage.googleapis.com/")) {
-      return rawPath;
+      throw new Error("Invalid upload URL: must be a Google Cloud Storage URL");
     }
 
     const url = new URL(rawPath);
     const rawObjectPath = url.pathname;
 
     let objectEntityDir = this.getPrivateObjectDir();
+    if (!objectEntityDir.startsWith("/")) {
+      objectEntityDir = `/${objectEntityDir}`;
+    }
     if (!objectEntityDir.endsWith("/")) {
       objectEntityDir = `${objectEntityDir}/`;
     }
 
     if (!rawObjectPath.startsWith(objectEntityDir)) {
-      return rawObjectPath;
+      throw new Error("Invalid upload URL: file not in expected storage directory");
     }
 
     const entityId = rawObjectPath.slice(objectEntityDir.length);
     return `/objects/${entityId}`;
+  }
+
+  async verifyObjectExists(objectPath: string): Promise<boolean> {
+    try {
+      await this.getObjectEntityFile(objectPath);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async downloadObject(file: File, res: Response, cacheTtlSec: number = 3600) {
