@@ -24,42 +24,21 @@ async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Re
 export const api = {
   upload: {
     image: async (file: File): Promise<string> => {
-      const uploadRes = await fetchWithAuth(`${API_BASE}/objects/upload`, {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const res = await fetchWithAuth(`${API_BASE}/upload`, {
         method: 'POST',
+        body: formData,
       });
       
-      if (!uploadRes.ok) {
-        const errorData = await uploadRes.json().catch(() => ({ error: 'Failed to get upload URL' }));
-        throw new Error(errorData.error || 'Failed to get upload URL');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to upload image' }));
+        throw new Error(errorData.error || 'Failed to upload image');
       }
       
-      const { uploadURL } = await uploadRes.json();
-      
-      const putRes = await fetch(uploadURL, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type,
-        },
-      });
-      
-      if (!putRes.ok) {
-        throw new Error('Failed to upload file to storage');
-      }
-      
-      const confirmRes = await fetchWithAuth(`${API_BASE}/objects/confirm`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uploadURL }),
-      });
-      
-      if (!confirmRes.ok) {
-        const errorData = await confirmRes.json().catch(() => ({ error: 'Failed to confirm upload' }));
-        throw new Error(errorData.error || 'Failed to confirm upload');
-      }
-      
-      const { objectPath } = await confirmRes.json();
-      return objectPath;
+      const { url } = await res.json();
+      return url;
     },
   },
   
