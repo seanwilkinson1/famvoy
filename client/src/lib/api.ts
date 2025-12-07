@@ -286,7 +286,7 @@ export const api = {
     },
     
     search: async (query: string): Promise<User[]> => {
-      const res = await fetchWithAuth(`${API_BASE}/families/search?q=${encodeURIComponent(query)}`);
+      const res = await fetch(`${API_BASE}/families/search?q=${encodeURIComponent(query)}`);
       if (!res.ok) throw new Error("Failed to search families");
       return res.json();
     },

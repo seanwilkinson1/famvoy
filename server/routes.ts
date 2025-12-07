@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import path from "path";
 import multer from "multer";
 import express from "express";
-import { clerkMiddleware, getAuth, requireAuth } from "@clerk/express";
+import { clerkMiddleware, getAuth, requireAuth, clerkClient } from "@clerk/express";
 import { storage } from "./storage";
 import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema } from "@shared/schema";
 import { fromError } from "zod-validation-error";
@@ -122,10 +122,23 @@ export async function registerRoutes(
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      const user = await storage.getUserByClerkId(userId);
+      let user = await storage.getUserByClerkId(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found", needsOnboarding: true });
       }
+      
+      if (!user.email) {
+        try {
+          const clerkUser = await clerkClient.users.getUser(userId);
+          const email = clerkUser.emailAddresses?.[0]?.emailAddress || null;
+          if (email) {
+            user = await storage.updateUserProfile(user.id, { email });
+          }
+        } catch (e) {
+          console.error("Failed to fetch email from Clerk:", e);
+        }
+      }
+      
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -142,8 +155,17 @@ export async function registerRoutes(
       
       const { name, location, kids, interests, bio, avatar } = req.body;
       
+      let email: string | null = null;
+      try {
+        const clerkUser = await clerkClient.users.getUser(userId);
+        email = clerkUser.emailAddresses?.[0]?.emailAddress || null;
+      } catch (e) {
+        console.error("Failed to fetch email from Clerk:", e);
+      }
+      
       const user = await storage.upsertUser({
         clerkId: userId,
+        email: email,
         name: name || 'New Family',
         location: location || 'Not set',
         kids: kids || 'Not specified',
@@ -165,10 +187,23 @@ export async function registerRoutes(
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      const user = await storage.getUserByClerkId(userId);
+      let user = await storage.getUserByClerkId(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
+      
+      if (!user.email) {
+        try {
+          const clerkUser = await clerkClient.users.getUser(userId);
+          const email = clerkUser.emailAddresses?.[0]?.emailAddress || null;
+          if (email) {
+            user = await storage.updateUserProfile(user.id, { email });
+          }
+        } catch (e) {
+          console.error("Failed to fetch email from Clerk:", e);
+        }
+      }
+      
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);

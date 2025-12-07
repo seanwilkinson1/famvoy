@@ -234,6 +234,7 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = {
   clerkId: string;
+  email?: string | null;
   name?: string | null;
   avatar?: string | null;
   location?: string | null;

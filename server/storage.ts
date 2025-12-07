@@ -185,6 +185,7 @@ export class DatabaseStorage implements IStorage {
       const [user] = await db
         .update(users)
         .set({
+          email: userData.email || existingUser.email,
           name: userData.name || existingUser.name,
           avatar: userData.avatar || existingUser.avatar,
           location: userData.location || existingUser.location,
@@ -202,6 +203,7 @@ export class DatabaseStorage implements IStorage {
       .insert(users)
       .values({
         clerkId: userData.clerkId,
+        email: userData.email,
         name: userData.name || 'New Family',
         avatar: userData.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400',
         location: userData.location || 'Not set',

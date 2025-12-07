@@ -55,6 +55,8 @@ export default function Explore() {
   const [matchedFamily, setMatchedFamily] = useState<User | null>(null);
   const [matchedPodId, setMatchedPodId] = useState<number | undefined>(undefined);
   
+  const [familySearchQuery, setFamilySearchQuery] = useState("");
+  
   const [showFilters, setShowFilters] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [ageFilter, setAgeFilter] = useState("All Ages");
@@ -93,7 +95,13 @@ export default function Explore() {
   const { data: discoverFamilies = [], isLoading: loadingFamilies } = useQuery({
     queryKey: ["discoverFamilies", userLocation?.lat, userLocation?.lng],
     queryFn: () => api.families.discover(userLocation?.lat, userLocation?.lng),
-    enabled: activeTab === "discover",
+    enabled: activeTab === "discover" && familySearchQuery.length < 2,
+  });
+
+  const { data: familySearchResults = [], isLoading: searchingFamilies } = useQuery({
+    queryKey: ["familySearch", familySearchQuery],
+    queryFn: () => api.families.search(familySearchQuery),
+    enabled: familySearchQuery.length >= 2,
   });
 
   const { data: nearbyExperiences = [] } = useQuery({
@@ -505,45 +513,127 @@ export default function Explore() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 pt-28 pb-24 px-4"
+            className="absolute inset-0 pt-28 pb-24 px-4 flex flex-col"
           >
-            <div className="relative h-full w-full max-w-sm mx-auto">
-              {loadingFamilies ? (
-                <div className="flex items-center justify-center h-full text-gray-400">
-                  Loading families...
-                </div>
-              ) : currentFamilyIndex >= discoverFamilies.length ? (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <div className="h-20 w-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-                    <Users className="h-10 w-10 text-gray-300" />
-                  </div>
-                  <h3 className="font-heading text-xl font-bold text-gray-900 mb-2">No more families</h3>
-                  <p className="text-sm text-gray-500">Check back later for new families nearby!</p>
-                </div>
-              ) : (
-                <>
-                  {/* Card Stack */}
-                  <div className="relative h-[70%]">
-                    {nextFamily && (
-                      <div className="absolute inset-0 scale-95 opacity-50">
-                        <FamilySwipeCard family={nextFamily} onSwipe={() => {}} isTop={false} />
-                      </div>
-                    )}
-                    {currentFamily && (
-                      <FamilySwipeCard
-                        key={currentFamily.id}
-                        family={currentFamily}
-                        onSwipe={handleSwipe}
-                        isTop={true}
-                      />
-                    )}
-                  </div>
-
-                  {/* Swipe Buttons */}
-                  <SwipeButtons onSwipe={handleSwipe} disabled={swipeMutation.isPending} />
-                </>
-              )}
+            {/* Family Search Bar */}
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search families by name or email..."
+                  value={familySearchQuery}
+                  onChange={(e) => setFamilySearchQuery(e.target.value)}
+                  className="w-full rounded-2xl bg-white py-3 pl-12 pr-10 text-sm shadow-sm outline-none placeholder:text-gray-400 focus:ring-2 focus:ring-primary/20"
+                  data-testid="input-family-search"
+                />
+                {familySearchQuery && (
+                  <button
+                    onClick={() => setFamilySearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-gray-100 p-1"
+                    data-testid="button-clear-family-search"
+                  >
+                    <X className="h-4 w-4 text-gray-500" />
+                  </button>
+                )}
+              </div>
             </div>
+
+            {/* Search Results or Swipe Cards */}
+            {familySearchQuery.length >= 2 ? (
+              <div className="flex-1 overflow-y-auto no-scrollbar">
+                {searchingFamilies ? (
+                  <div className="flex items-center justify-center h-40 text-gray-400">
+                    Searching...
+                  </div>
+                ) : familySearchResults.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                      <Search className="h-8 w-8 text-gray-300" />
+                    </div>
+                    <h3 className="font-heading text-lg font-bold text-gray-900 mb-2">No families found</h3>
+                    <p className="text-sm text-gray-500">Try searching with a different name or email</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">
+                      {familySearchResults.length} {familySearchResults.length === 1 ? 'family' : 'families'} found
+                    </p>
+                    {familySearchResults.filter(f => f.id !== currentUser?.id).map((family) => (
+                      <div
+                        key={family.id}
+                        className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm"
+                        data-testid={`card-search-result-${family.id}`}
+                      >
+                        <div 
+                          className="flex items-center gap-4 flex-1 cursor-pointer"
+                          onClick={() => setLocation(`/family/${family.id}`)}
+                        >
+                          <img
+                            src={family.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400'}
+                            alt={family.name || 'Family'}
+                            className="h-14 w-14 rounded-full object-cover ring-2 ring-primary/10"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-heading font-bold text-gray-900 truncate">{family.name || 'Family'}</h3>
+                            <p className="text-sm text-gray-500 truncate">{family.location || 'Location not set'}</p>
+                            {family.email && (
+                              <p className="text-xs text-gray-400 truncate">{family.email}</p>
+                            )}
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => messageMutation.mutate(family.id)}
+                          disabled={messageMutation.isPending}
+                          className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-2 text-sm font-bold text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+                          data-testid={`button-message-search-${family.id}`}
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="relative flex-1 w-full max-w-sm mx-auto">
+                {loadingFamilies ? (
+                  <div className="flex items-center justify-center h-full text-gray-400">
+                    Loading families...
+                  </div>
+                ) : currentFamilyIndex >= discoverFamilies.length ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center">
+                    <div className="h-20 w-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                      <Users className="h-10 w-10 text-gray-300" />
+                    </div>
+                    <h3 className="font-heading text-xl font-bold text-gray-900 mb-2">No more families</h3>
+                    <p className="text-sm text-gray-500">Check back later for new families nearby!</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Card Stack */}
+                    <div className="relative h-[70%]">
+                      {nextFamily && (
+                        <div className="absolute inset-0 scale-95 opacity-50">
+                          <FamilySwipeCard family={nextFamily} onSwipe={() => {}} isTop={false} />
+                        </div>
+                      )}
+                      {currentFamily && (
+                        <FamilySwipeCard
+                          key={currentFamily.id}
+                          family={currentFamily}
+                          onSwipe={handleSwipe}
+                          isTop={true}
+                        />
+                      )}
+                    </div>
+
+                    {/* Swipe Buttons */}
+                    <SwipeButtons onSwipe={handleSwipe} disabled={swipeMutation.isPending} />
+                  </>
+                )}
+              </div>
+            )}
           </motion.div>
         )}
 
