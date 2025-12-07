@@ -307,6 +307,33 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/experiences/:id", requireAuth(), async (req, res) => {
+    try {
+      const experienceId = parseInt(req.params.id);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      const experience = await storage.getExperienceById(experienceId);
+      if (!experience) {
+        return res.status(404).json({ error: "Experience not found" });
+      }
+      if (experience.userId !== user.id) {
+        return res.status(403).json({ error: "You can only delete your own experiences" });
+      }
+      
+      await storage.deleteExperience(experienceId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/users/:userId", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);

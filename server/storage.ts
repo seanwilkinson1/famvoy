@@ -76,6 +76,7 @@ export interface IStorage {
   getExperiences(): Promise<Experience[]>;
   getExperienceById(id: number): Promise<Experience | undefined>;
   getExperiencesByUser(userId: number): Promise<Experience[]>;
+  deleteExperience(id: number): Promise<void>;
   getSavedExperiences(userId: number): Promise<Experience[]>;
   createExperience(experience: InsertExperience): Promise<Experience>;
   saveExperience(data: InsertSavedExperience): Promise<void>;
@@ -252,6 +253,14 @@ export class DatabaseStorage implements IStorage {
 
   async getExperiencesByUser(userId: number): Promise<Experience[]> {
     return db.select().from(experiences).where(eq(experiences.userId, userId));
+  }
+
+  async deleteExperience(id: number): Promise<void> {
+    await db.delete(savedExperiences).where(eq(savedExperiences.experienceId, id));
+    await db.delete(comments).where(eq(comments.experienceId, id));
+    await db.delete(podExperiences).where(eq(podExperiences.experienceId, id));
+    await db.delete(experienceCheckins).where(eq(experienceCheckins.experienceId, id));
+    await db.delete(experiences).where(eq(experiences.id, id));
   }
 
   async getSavedExperiences(userId: number): Promise<Experience[]> {

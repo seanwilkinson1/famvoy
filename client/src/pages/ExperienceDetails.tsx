@@ -1,7 +1,7 @@
 import { useRoute, useLocation } from "wouter";
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { CommentsSection } from "@/components/shared/CommentsSection";
-import { ChevronLeft, Heart, Clock, DollarSign, Users, MapPin, Share2, Navigation, Plus, X, FolderPlus, Camera, Star, CheckCircle, Loader2 } from "lucide-react";
+import { ChevronLeft, Heart, Clock, DollarSign, Users, MapPin, Share2, Navigation, Plus, X, FolderPlus, Camera, Star, CheckCircle, Loader2, Trash2 } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useState, useRef } from "react";
@@ -29,6 +29,7 @@ export default function ExperienceDetails() {
   const [isSaved, setIsSaved] = useState(false);
   const [showAddToPodModal, setShowAddToPodModal] = useState(false);
   const [showCheckinModal, setShowCheckinModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [checkinPhoto, setCheckinPhoto] = useState<string>("");
   const [checkinReview, setCheckinReview] = useState("");
   const [checkinRating, setCheckinRating] = useState(0);
@@ -121,7 +122,21 @@ export default function ExperienceDetails() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => api.experiences.delete(experienceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["experiences"] });
+      toast.success("Experience deleted");
+      setLocation("/");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
   if (!match || !experience) return null;
+  
+  const isCreator = user?.id === experience.userId;
 
   const similar = allExperiences.filter((e) => e.id !== experience.id);
   const formattedSimilar = similar.map(exp => formatExperience(exp as any));
@@ -147,6 +162,15 @@ export default function ExperienceDetails() {
             <ChevronLeft className="h-6 w-6" />
           </button>
           <div className="flex gap-3">
+            {isCreator && (
+              <button 
+                onClick={() => setShowDeleteConfirm(true)}
+                className="rounded-full bg-red-500/80 backdrop-blur-md p-2 text-white hover:bg-red-500 transition-colors" 
+                data-testid="button-delete-experience"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            )}
             {user && (
               <button 
                 onClick={() => setShowAddToPodModal(true)}
@@ -599,6 +623,35 @@ export default function ExperienceDetails() {
                 data-testid="button-submit-checkin"
               >
                 {checkinMutation.isPending ? "Saving..." : "Check In!"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-6">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full">
+            <h3 className="font-heading text-lg font-bold text-gray-900 mb-2">Delete Experience?</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Are you sure you want to delete "{experience.title}"? This will remove all comments and check-ins. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-3 rounded-xl border border-gray-200 font-medium text-gray-700"
+                data-testid="button-cancel-delete"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+                className="flex-1 py-3 rounded-xl bg-red-500 text-white font-medium disabled:opacity-50"
+                data-testid="button-confirm-delete"
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>

@@ -84,6 +84,16 @@ export const api = {
       });
       if (!res.ok) throw new Error("Failed to unsave experience");
     },
+    
+    delete: async (id: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/experiences/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: "Failed to delete experience" }));
+        throw new Error(error.error || "Failed to delete experience");
+      }
+    },
   },
   
   users: {
