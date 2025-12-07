@@ -1,6 +1,5 @@
 import { useRoute, useLocation } from "wouter";
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
-import { CommentsSection } from "@/components/shared/CommentsSection";
 import { ChevronLeft, Heart, Clock, DollarSign, Users, MapPin, Share2, Navigation, Plus, X, FolderPlus, Camera, Star, CheckCircle, Loader2, Trash2 } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -430,12 +429,6 @@ export default function ExperienceDetails() {
             </div>
           </section>
         )}
-
-        {/* Reviews & Comments */}
-        <CommentsSection 
-          experienceId={experience.id} 
-          currentUserId={user?.id}
-        />
 
         {/* Similar Experiences */}
         {formattedSimilar.length > 0 && (
