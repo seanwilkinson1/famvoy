@@ -3,6 +3,7 @@ import { ChevronLeft, Settings, Send, Image as ImageIcon, Smile, MapPin, X, Shar
 import { useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
+import { PodSettingsModal } from "@/components/shared/PodSettingsModal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
@@ -19,6 +20,7 @@ export default function PodDetails() {
   const [showAddExperienceModal, setShowAddExperienceModal] = useState(false);
   const [showCreateAlbumModal, setShowCreateAlbumModal] = useState(false);
   const [showCreateTripModal, setShowCreateTripModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [selectedAlbum, setSelectedAlbum] = useState<any | null>(null);
   const [albumName, setAlbumName] = useState("");
   const [albumDescription, setAlbumDescription] = useState("");
@@ -257,7 +259,11 @@ export default function PodDetails() {
           >
             <ChevronLeft className="h-6 w-6 text-gray-700" />
           </button>
-          <button className="rounded-full bg-gray-100 p-2 active:scale-90" data-testid="button-settings">
+          <button 
+            onClick={() => setShowSettingsModal(true)}
+            className="rounded-full bg-gray-100 p-2 active:scale-90" 
+            data-testid="button-settings"
+          >
             <Settings className="h-6 w-6 text-gray-700" />
           </button>
         </div>
@@ -913,6 +919,24 @@ export default function PodDetails() {
           </div>
         )}
       </div>
+
+      {pod && currentUser && (
+        <PodSettingsModal
+          isOpen={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
+          pod={pod}
+          members={members}
+          currentUserId={currentUser.id}
+          onPodDeleted={() => {
+            setShowSettingsModal(false);
+            setLocation("/pods");
+          }}
+          onPodLeft={() => {
+            setShowSettingsModal(false);
+            setLocation("/pods");
+          }}
+        />
+      )}
     </div>
   );
 }

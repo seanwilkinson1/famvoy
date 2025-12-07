@@ -535,6 +535,131 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/pods/:id", requireAuth(), async (req, res) => {
+    try {
+      const podId = parseInt(req.params.id);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      const pod = await storage.getPodById(podId);
+      if (!pod) {
+        return res.status(404).json({ error: "Pod not found" });
+      }
+      if (pod.creatorId !== user.id) {
+        return res.status(403).json({ error: "Only the pod creator can edit this pod" });
+      }
+      
+      const { name, description, isPublic } = req.body;
+      const updatedPod = await storage.updatePod(podId, { name, description, isPublic });
+      res.json(updatedPod);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/pods/:id", requireAuth(), async (req, res) => {
+    try {
+      const podId = parseInt(req.params.id);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      const pod = await storage.getPodById(podId);
+      if (!pod) {
+        return res.status(404).json({ error: "Pod not found" });
+      }
+      if (pod.creatorId !== user.id) {
+        return res.status(403).json({ error: "Only the pod creator can delete this pod" });
+      }
+      
+      await storage.deletePod(podId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/pods/:id/invite", requireAuth(), async (req, res) => {
+    try {
+      const podId = parseInt(req.params.id);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      const isMember = await storage.isPodMember(podId, user.id);
+      if (!isMember) {
+        return res.status(403).json({ error: "You must be a member to invite others" });
+      }
+      
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      
+      const invitedUser = await storage.getUserByEmail(email);
+      if (!invitedUser) {
+        return res.status(404).json({ error: "No user found with that email" });
+      }
+      
+      const alreadyMember = await storage.isPodMember(podId, invitedUser.id);
+      if (alreadyMember) {
+        return res.status(400).json({ error: "User is already a member of this pod" });
+      }
+      
+      await storage.addPodMember(podId, invitedUser.id);
+      res.json({ success: true, user: { id: invitedUser.id, name: invitedUser.name, avatar: invitedUser.avatar } });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/pods/:podId/members/:userId", requireAuth(), async (req, res) => {
+    try {
+      const podId = parseInt(req.params.podId);
+      const memberUserId = parseInt(req.params.userId);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      const pod = await storage.getPodById(podId);
+      if (!pod) {
+        return res.status(404).json({ error: "Pod not found" });
+      }
+      if (pod.creatorId !== user.id) {
+        return res.status(403).json({ error: "Only the pod creator can remove members" });
+      }
+      if (memberUserId === pod.creatorId) {
+        return res.status(400).json({ error: "Cannot remove the pod creator" });
+      }
+      
+      await storage.removePodMember(podId, memberUserId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/users/:userId/pods", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);

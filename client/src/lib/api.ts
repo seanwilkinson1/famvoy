@@ -260,6 +260,52 @@ export const api = {
       });
       if (!res.ok) throw new Error("Failed to remove experience from pod");
     },
+    
+    update: async (podId: number, data: { name?: string; description?: string; isPublic?: boolean }): Promise<Pod> => {
+      const res = await fetchWithAuth(`${API_BASE}/pods/${podId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: "Failed to update pod" }));
+        throw new Error(error.error || "Failed to update pod");
+      }
+      return res.json();
+    },
+    
+    delete: async (podId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/pods/${podId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: "Failed to delete pod" }));
+        throw new Error(error.error || "Failed to delete pod");
+      }
+    },
+    
+    invite: async (podId: number, email: string): Promise<{ success: boolean; user: User }> => {
+      const res = await fetchWithAuth(`${API_BASE}/pods/${podId}/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: "Failed to invite user" }));
+        throw new Error(error.error || "Failed to invite user");
+      }
+      return res.json();
+    },
+    
+    removeMember: async (podId: number, userId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/pods/${podId}/members/${userId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: "Failed to remove member" }));
+        throw new Error(error.error || "Failed to remove member");
+      }
+    },
   },
   
   families: {

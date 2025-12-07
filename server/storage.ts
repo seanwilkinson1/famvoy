@@ -97,6 +97,9 @@ export interface IStorage {
   removePodMember(podId: number, userId: number): Promise<void>;
   isPodMember(podId: number, userId: number): Promise<boolean>;
   updatePodMemberCount(podId: number): Promise<void>;
+  updatePod(podId: number, data: { name?: string; description?: string; isPublic?: boolean }): Promise<Pod>;
+  deletePod(podId: number): Promise<void>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   
   getMessages(podId: number): Promise<Array<Message & { user: User }>>;
   createMessage(message: InsertMessage): Promise<Message>;
@@ -401,6 +404,27 @@ export class DatabaseStorage implements IStorage {
   async updatePodMemberCount(podId: number): Promise<void> {
     const members = await db.select().from(podMembers).where(eq(podMembers.podId, podId));
     await db.update(pods).set({ memberCount: members.length }).where(eq(pods.id, podId));
+  }
+
+  async updatePod(podId: number, data: { name?: string; description?: string; isPublic?: boolean }): Promise<Pod> {
+    const [pod] = await db
+      .update(pods)
+      .set(data)
+      .where(eq(pods.id, podId))
+      .returning();
+    return pod;
+  }
+
+  async deletePod(podId: number): Promise<void> {
+    await db.delete(podMembers).where(eq(podMembers.podId, podId));
+    await db.delete(messages).where(eq(messages.podId, podId));
+    await db.delete(podExperiences).where(eq(podExperiences.podId, podId));
+    await db.delete(pods).where(eq(pods.id, podId));
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
   }
 
   async getPublicPods(userId?: number): Promise<Pod[]> {
