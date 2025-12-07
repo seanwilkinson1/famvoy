@@ -285,6 +285,12 @@ export const api = {
       return res.json();
     },
     
+    search: async (query: string): Promise<User[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/families/search?q=${encodeURIComponent(query)}`);
+      if (!res.ok) throw new Error("Failed to search families");
+      return res.json();
+    },
+    
     swipe: async (swipedUserId: number, liked: boolean): Promise<{ matched: boolean; podId?: number }> => {
       const res = await fetchWithAuth(`${API_BASE}/families/swipe`, {
         method: "POST",
@@ -292,12 +298,6 @@ export const api = {
         body: JSON.stringify({ swipedUserId, liked }),
       });
       if (!res.ok) throw new Error("Failed to record swipe");
-      return res.json();
-    },
-    
-    search: async (query: string): Promise<User[]> => {
-      const res = await fetch(`${API_BASE}/families/search?q=${encodeURIComponent(query)}`);
-      if (!res.ok) throw new Error("Failed to search families");
       return res.json();
     },
   },

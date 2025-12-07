@@ -230,6 +230,7 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(users).where(
       or(
         ilike(users.name, `%${query}%`),
+        ilike(users.email, `%${query}%`),
         ilike(users.location, `%${query}%`)
       )
     );
