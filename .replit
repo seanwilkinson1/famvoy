@@ -23,7 +23,7 @@ localPort = 41693
 externalPort = 3002
 
 [[ports]]
-localPort = 42515
+localPort = 43423
 externalPort = 3003
 
 [[ports]]
@@ -61,3 +61,4 @@ integrations = ["javascript_database:1.0.0", "javascript_openai_ai_integrations:
 [userenv]
 
 [userenv.shared]
+PRIVATE_OBJECT_DIR = "/famvoy-storage"

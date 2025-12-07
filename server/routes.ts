@@ -8,6 +8,7 @@ import { storage } from "./storage";
 import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 import OpenAI from "openai";
+import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 
 const uploadStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -66,6 +67,48 @@ export async function registerRoutes(
       const imageUrl = `/uploads/${req.file.filename}`;
       res.json({ url: imageUrl, filename: req.file.filename });
     });
+  });
+
+  app.post('/api/objects/upload', requireAuth(), async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error: any) {
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ error: error.message || "Failed to get upload URL" });
+    }
+  });
+
+  app.put('/api/objects/confirm', requireAuth(), async (req, res) => {
+    try {
+      const { uploadURL } = req.body;
+      if (!uploadURL) {
+        return res.status(400).json({ error: "uploadURL is required" });
+      }
+      
+      const objectStorageService = new ObjectStorageService();
+      const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
+      
+      res.json({ objectPath });
+    } catch (error: any) {
+      console.error("Error confirming upload:", error);
+      res.status(500).json({ error: error.message || "Failed to confirm upload" });
+    }
+  });
+
+  app.get('/objects/:objectPath(*)', async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error serving object:", error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
+    }
   });
 
   app.get('/api/auth/user', requireAuth(), async (req, res) => {
