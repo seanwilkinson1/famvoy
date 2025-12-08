@@ -868,16 +868,31 @@ export default function Profile() {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Role</label>
-                <div className="flex flex-wrap gap-2">
-                  {FAMILY_ROLES.map((role) => (
+                <label className="block text-sm font-bold text-gray-700 mb-2">Role (Adults)</label>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {FAMILY_ROLES.adults.map((role) => (
                     <button
                       key={role}
                       type="button"
-                      onClick={() => {
-                        const isAdultRole = ["Mom", "Dad", "Grandma", "Grandpa", "Aunt", "Uncle", "Other Adult"].includes(role);
-                        setNewMember({ ...newMember, role, isAdult: isAdultRole });
+                      onClick={() => setNewMember({ ...newMember, role, isAdult: true })}
+                      style={{
+                        backgroundColor: newMember.role === role ? '#14b8a6' : '#f3f4f6',
+                        color: newMember.role === role ? 'white' : '#6b7280',
                       }}
+                      className="rounded-full px-4 py-2 text-sm font-bold transition-all"
+                      data-testid={`button-role-${role.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      {role}
+                    </button>
+                  ))}
+                </div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Role (Kids)</label>
+                <div className="flex flex-wrap gap-2">
+                  {FAMILY_ROLES.kids.map((role) => (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => setNewMember({ ...newMember, role, isAdult: false })}
                       style={{
                         backgroundColor: newMember.role === role ? '#14b8a6' : '#f3f4f6',
                         color: newMember.role === role ? 'white' : '#6b7280',
