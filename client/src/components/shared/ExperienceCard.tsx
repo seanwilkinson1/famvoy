@@ -47,7 +47,12 @@ export function ExperienceCard({ experience, className, horizontal = false }: Ex
         data-testid={`card-experience-${experience.id}`}
       >
         {/* Image */}
-        <div className="aspect-[4/3] w-full overflow-hidden bg-gray-100">
+        <div 
+          className={cn(
+            "w-full overflow-hidden bg-gray-100",
+            horizontal ? "h-[180px]" : "aspect-[4/3]"
+          )}
+        >
           <img
             src={experience.image || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400'}
             alt={experience.title}
