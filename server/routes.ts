@@ -5,7 +5,7 @@ import multer from "multer";
 import express from "express";
 import { clerkMiddleware, getAuth, requireAuth, clerkClient } from "@clerk/express";
 import { storage } from "./storage";
-import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema } from "@shared/schema";
+import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema, insertFamilyMemberSchema } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 import OpenAI from "openai";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -362,6 +362,68 @@ export async function registerRoutes(
       const userId = parseInt(req.params.userId);
       const saved = await storage.getSavedExperiences(userId);
       res.json(saved);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/users/:userId/family-members", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const members = await storage.getFamilyMembers(userId);
+      res.json(members);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/family-members", requireAuth(), async (req, res) => {
+    try {
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      const parsed = insertFamilyMemberSchema.safeParse({
+        ...req.body,
+        userId: user.id,
+      });
+      if (!parsed.success) {
+        return res.status(400).json({ error: fromError(parsed.error).toString() });
+      }
+      const member = await storage.createFamilyMember(parsed.data);
+      res.status(201).json(member);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/family-members/:id", requireAuth(), async (req, res) => {
+    try {
+      const memberId = parseInt(req.params.id);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const member = await storage.updateFamilyMember(memberId, req.body);
+      res.json(member);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/family-members/:id", requireAuth(), async (req, res) => {
+    try {
+      const memberId = parseInt(req.params.id);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      await storage.deleteFamilyMember(memberId);
+      res.status(200).json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

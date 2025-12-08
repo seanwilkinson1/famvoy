@@ -31,6 +31,8 @@ import {
   type InsertPodTrip,
   type TripItem,
   type InsertTripItem,
+  type FamilyMember,
+  type InsertFamilyMember,
   users,
   experiences,
   pods,
@@ -50,6 +52,7 @@ import {
   experienceCheckins,
   podTrips,
   tripItems,
+  familyMembers,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ne, notInArray, ilike, isNotNull } from "drizzle-orm";
@@ -169,6 +172,11 @@ export interface IStorage {
   deleteTripItem(itemId: number): Promise<void>;
   bulkCreateTripItems(items: InsertTripItem[]): Promise<TripItem[]>;
   clearTripItems(tripId: number): Promise<void>;
+  
+  getFamilyMembers(userId: number): Promise<FamilyMember[]>;
+  createFamilyMember(data: InsertFamilyMember): Promise<FamilyMember>;
+  updateFamilyMember(memberId: number, data: Partial<FamilyMember>): Promise<FamilyMember>;
+  deleteFamilyMember(memberId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -196,6 +204,12 @@ export class DatabaseStorage implements IStorage {
           kids: userData.kids || existingUser.kids,
           interests: userData.interests || existingUser.interests,
           bio: userData.bio || existingUser.bio,
+          familyValues: userData.familyValues || existingUser.familyValues,
+          languages: userData.languages || existingUser.languages,
+          pets: userData.pets || existingUser.pets,
+          familyMotto: userData.familyMotto || existingUser.familyMotto,
+          favoriteTraditions: userData.favoriteTraditions || existingUser.favoriteTraditions,
+          dreamVacation: userData.dreamVacation || existingUser.dreamVacation,
           updatedAt: new Date(),
         })
         .where(eq(users.clerkId, userData.clerkId))
@@ -1079,6 +1093,30 @@ export class DatabaseStorage implements IStorage {
 
   async clearTripItems(tripId: number): Promise<void> {
     await db.delete(tripItems).where(eq(tripItems.tripId, tripId));
+  }
+
+  async getFamilyMembers(userId: number): Promise<FamilyMember[]> {
+    return db.select()
+      .from(familyMembers)
+      .where(eq(familyMembers.userId, userId))
+      .orderBy(familyMembers.isAdult, familyMembers.sortOrder);
+  }
+
+  async createFamilyMember(data: InsertFamilyMember): Promise<FamilyMember> {
+    const [member] = await db.insert(familyMembers).values(data).returning();
+    return member;
+  }
+
+  async updateFamilyMember(memberId: number, data: Partial<FamilyMember>): Promise<FamilyMember> {
+    const [member] = await db.update(familyMembers)
+      .set(data)
+      .where(eq(familyMembers.id, memberId))
+      .returning();
+    return member;
+  }
+
+  async deleteFamilyMember(memberId: number): Promise<void> {
+    await db.delete(familyMembers).where(eq(familyMembers.id, memberId));
   }
 }
 

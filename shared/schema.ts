@@ -29,8 +29,25 @@ export const users = pgTable("users", {
   kids: text("kids"),
   interests: text("interests").array(),
   bio: text("bio"),
+  familyValues: text("family_values").array(),
+  languages: text("languages").array(),
+  pets: text("pets"),
+  familyMotto: text("family_motto"),
+  favoriteTraditions: text("favorite_traditions"),
+  dreamVacation: text("dream_vacation"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const familyMembers = pgTable("family_members", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  role: text("role").notNull(),
+  photo: text("photo"),
+  ageGroup: text("age_group"),
+  isAdult: boolean("is_adult").default(true),
+  sortOrder: integer("sort_order").default(0),
 });
 
 export const experiences = pgTable("experiences", {
@@ -212,6 +229,7 @@ export const tripItems = pgTable("trip_items", {
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({ id: true });
 export const insertExperienceSchema = createInsertSchema(experiences).omit({ id: true, createdAt: true });
 export const insertPodSchema = createInsertSchema(pods).omit({ id: true, createdAt: true });
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
@@ -241,7 +259,16 @@ export type UpsertUser = {
   kids?: string | null;
   interests?: string[] | null;
   bio?: string | null;
+  familyValues?: string[] | null;
+  languages?: string[] | null;
+  pets?: string | null;
+  familyMotto?: string | null;
+  favoriteTraditions?: string | null;
+  dreamVacation?: string | null;
 };
+
+export type FamilyMember = typeof familyMembers.$inferSelect;
+export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;
 
 export type Experience = typeof experiences.$inferSelect;
 export type InsertExperience = z.infer<typeof insertExperienceSchema>;
