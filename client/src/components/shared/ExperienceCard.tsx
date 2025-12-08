@@ -49,14 +49,14 @@ export function ExperienceCard({ experience, className, horizontal = false }: Ex
         {/* Image */}
         <div 
           className={cn(
-            "w-full overflow-hidden bg-gray-100",
-            horizontal ? "h-[180px]" : "aspect-[4/3]"
+            "relative w-full overflow-hidden bg-gray-100 flex-shrink-0",
+            horizontal ? "h-[160px]" : "aspect-[4/3]"
           )}
         >
           <img
             src={experience.image || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400'}
             alt={experience.title}
-            className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
