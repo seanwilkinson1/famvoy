@@ -23,22 +23,56 @@ async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Re
 
 export const api = {
   upload: {
-    image: async (file: File): Promise<string> => {
-      const formData = new FormData();
-      formData.append('image', file);
-      
-      const res = await fetchWithAuth(`${API_BASE}/upload`, {
+    image: async (file: File, onProgress?: (percent: number) => void): Promise<string> => {
+      const urlRes = await fetchWithAuth(`${API_BASE}/objects/upload`, {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
       });
       
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Failed to upload image' }));
-        throw new Error(errorData.error || 'Failed to upload image');
+      if (!urlRes.ok) {
+        const errorData = await urlRes.json().catch(() => ({ error: 'Failed to get upload URL' }));
+        throw new Error(errorData.error || 'Failed to get upload URL');
       }
       
-      const { url } = await res.json();
-      return url;
+      const { uploadURL } = await urlRes.json();
+      
+      const uploadRes = await new Promise<Response>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', uploadURL);
+        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+        
+        if (onProgress) {
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              onProgress(Math.round((e.loaded / e.total) * 100));
+            }
+          };
+        }
+        
+        xhr.onload = () => {
+          resolve(new Response(null, { status: xhr.status, statusText: xhr.statusText }));
+        };
+        xhr.onerror = () => reject(new Error('Upload failed'));
+        xhr.send(file);
+      });
+      
+      if (!uploadRes.ok) {
+        throw new Error('Failed to upload file to storage');
+      }
+      
+      const confirmRes = await fetchWithAuth(`${API_BASE}/objects/confirm`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uploadURL }),
+      });
+      
+      if (!confirmRes.ok) {
+        const errorData = await confirmRes.json().catch(() => ({ error: 'Failed to confirm upload' }));
+        throw new Error(errorData.error || 'Failed to confirm upload');
+      }
+      
+      const { objectPath } = await confirmRes.json();
+      return objectPath;
     },
   },
   

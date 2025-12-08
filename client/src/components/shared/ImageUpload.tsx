@@ -23,11 +23,17 @@ export function ImageUpload({
   const [preview, setPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [uploadProgress, setUploadProgress] = useState(0);
+  
   const uploadMutation = useMutation({
-    mutationFn: (file: File) => api.upload.image(file),
-    onSuccess: (data) => {
-      onImageChange(data.url);
+    mutationFn: (file: File) => api.upload.image(file, (percent) => setUploadProgress(percent)),
+    onSuccess: (url) => {
+      onImageChange(url);
       setPreview(null);
+      setUploadProgress(0);
+    },
+    onError: () => {
+      setUploadProgress(0);
     },
   });
 
@@ -89,20 +95,33 @@ export function ImageUpload({
             </div>
           )}
 
-          <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="rounded-full bg-white/90 p-3 hover:bg-white transition-colors"
-              disabled={uploadMutation.isPending}
-              data-testid="button-upload-cover"
-            >
-              {uploadMutation.isPending ? (
-                <Loader2 className="h-5 w-5 animate-spin text-gray-700" />
-              ) : (
-                <Camera className="h-5 w-5 text-gray-700" />
+          {uploadMutation.isPending ? (
+            <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-white mb-2" />
+              {uploadProgress > 0 && (
+                <>
+                  <span className="text-sm text-white font-medium">{uploadProgress}%</span>
+                  <div className="w-24 h-1.5 bg-white/30 rounded-full mt-2 overflow-hidden">
+                    <div 
+                      className="h-full bg-white rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </>
               )}
-            </button>
-          </div>
+            </div>
+          ) : (
+            <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="rounded-full bg-white/90 p-3 hover:bg-white transition-colors"
+                disabled={uploadMutation.isPending}
+                data-testid="button-upload-cover"
+              >
+                <Camera className="h-5 w-5 text-gray-700" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -143,9 +162,12 @@ export function ImageUpload({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/50 flex items-center justify-center"
+              className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-1"
             >
               <Loader2 className="h-6 w-6 animate-spin text-white" />
+              {uploadProgress > 0 && (
+                <span className="text-xs text-white font-medium">{uploadProgress}%</span>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

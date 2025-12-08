@@ -39,6 +39,7 @@ export default function Create() {
 
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [locationSearch, setLocationSearch] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
@@ -92,12 +93,13 @@ export default function Create() {
     if (!file) return;
 
     setIsUploading(true);
+    setUploadProgress(0);
     try {
-      const url = await api.upload.image(file);
+      const url = await api.upload.image(file, (percent) => setUploadProgress(percent));
       setUploadedImageUrl(url);
       toast({
         title: "Photo uploaded!",
-        description: "Your photo has been added.",
+        description: "Your photo has been saved permanently.",
         duration: 2000,
       });
     } catch (error: any) {
@@ -109,6 +111,7 @@ export default function Create() {
       });
     } finally {
       setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -345,10 +348,20 @@ export default function Create() {
               </>
             ) : isUploading ? (
               <>
-                <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center shadow-sm mb-3">
+                <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center shadow-sm mb-3 relative">
                   <Loader2 className="h-8 w-8 text-primary animate-spin" />
                 </div>
-                <p className="text-sm font-medium text-gray-500">Uploading...</p>
+                <p className="text-sm font-medium text-gray-500">
+                  Uploading... {uploadProgress > 0 && `${uploadProgress}%`}
+                </p>
+                {uploadProgress > 0 && (
+                  <div className="w-32 h-1.5 bg-gray-200 rounded-full mt-2 overflow-hidden">
+                    <div 
+                      className="h-full bg-primary rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                )}
               </>
             ) : (
               <>

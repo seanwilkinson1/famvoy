@@ -85,3 +85,5 @@ Preferred communication style: Simple, everyday language.
 
 ### Object Storage
 - **Replit Object Storage (Google Cloud Storage)**: For persistent photo uploads.
+- **Upload Flow**: Frontend gets presigned URL from `/api/objects/upload`, uploads directly to cloud storage via PUT, then confirms via `/api/objects/confirm`. Returns `/objects/{uuid}` path that persists across deployments.
+- **Environment Variables**: `DEFAULT_OBJECT_STORAGE_BUCKET_ID`, `PUBLIC_OBJECT_SEARCH_PATHS`, `PRIVATE_OBJECT_DIR` are automatically set when bucket is created.
