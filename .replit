@@ -15,7 +15,7 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 37179
+localPort = 33477
 externalPort = 3003
 
 [[ports]]
@@ -56,7 +56,7 @@ waitForPort = 5000
 
 [agent]
 mockupState = "FULLSTACK"
-integrations = ["javascript_database:1.0.0", "javascript_openai_ai_integrations:1.0.0"]
+integrations = ["javascript_database:1.0.0", "javascript_openai_ai_integrations:1.0.0", "javascript_object_storage:1.0.0"]
 
 [userenv]
 

@@ -54,13 +54,13 @@ export function ExperienceCard({ experience, className, horizontal = false }: Ex
           )}
         >
           <img
-            src={experience.image || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400'}
+            src={experience.image || 'https://images.unsplash.com/photo-1609220136736-443140cffec6?w=800'}
             alt={experience.title}
             className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              target.src = 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400';
+              target.src = 'https://images.unsplash.com/photo-1609220136736-443140cffec6?w=800';
             }}
           />
         </div>
