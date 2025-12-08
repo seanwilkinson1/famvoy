@@ -1,4 +1,4 @@
-import type { Experience, Pod, Message, User, FamilyConnection, Comment } from "@shared/schema";
+import type { Experience, Pod, Message, User, FamilyConnection, Comment, FamilyMember, InsertFamilyMember } from "@shared/schema";
 
 const API_BASE = "/api";
 
@@ -165,6 +165,41 @@ export const api = {
       const res = await fetch(`${API_BASE}/users/${userId}/matches`);
       if (!res.ok) throw new Error("Failed to fetch matches");
       return res.json();
+    },
+    
+    getFamilyMembers: async (userId: number): Promise<FamilyMember[]> => {
+      const res = await fetch(`${API_BASE}/users/${userId}/family-members`);
+      if (!res.ok) throw new Error("Failed to fetch family members");
+      return res.json();
+    },
+  },
+  
+  familyMembers: {
+    create: async (data: Omit<InsertFamilyMember, 'userId'>): Promise<FamilyMember> => {
+      const res = await fetchWithAuth(`${API_BASE}/family-members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create family member");
+      return res.json();
+    },
+    
+    update: async (id: number, data: Partial<FamilyMember>): Promise<FamilyMember> => {
+      const res = await fetchWithAuth(`${API_BASE}/family-members/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update family member");
+      return res.json();
+    },
+    
+    delete: async (id: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/family-members/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete family member");
     },
   },
   

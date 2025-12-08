@@ -1,7 +1,7 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { PodCard } from "@/components/shared/PodCard";
 import { ImageUpload } from "@/components/shared/ImageUpload";
-import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Trophy, CheckCircle, Star } from "lucide-react";
+import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Trophy, CheckCircle, Star, Heart, Globe, Quote, Plane, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +9,9 @@ import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
 import { useClerk } from "@clerk/clerk-react";
 import { useLocation } from "wouter";
+import type { FamilyMember } from "@shared/schema";
+import { FAMILY_VALUES, LANGUAGES, FAMILY_ROLES, AGE_GROUPS } from "@/lib/constants";
+import { Plus, Trash2, UserPlus } from "lucide-react";
 
 const BADGE_ICONS: Record<string, string> = {
   "Park Explorer": "🌲",
@@ -32,6 +35,14 @@ const INTEREST_OPTIONS = [
 export default function Profile() {
   const [activeTab, setActiveTab] = useState<"experiences" | "saved" | "completed" | "pods" | "badges">("experiences");
   const [isEditing, setIsEditing] = useState(false);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [newMember, setNewMember] = useState({
+    name: "",
+    role: "",
+    ageGroup: "",
+    isAdult: true,
+    photo: "",
+  });
   const [editForm, setEditForm] = useState({
     name: "",
     location: "",
@@ -39,6 +50,12 @@ export default function Profile() {
     bio: "",
     interests: [] as string[],
     avatar: "",
+    familyValues: [] as string[],
+    languages: [] as string[],
+    pets: "",
+    familyMotto: "",
+    favoriteTraditions: "",
+    dreamVacation: "",
   });
   const [, setLocation] = useLocation();
 
@@ -59,6 +76,12 @@ export default function Profile() {
         bio: currentUser.bio || "",
         interests: currentUser.interests || [],
         avatar: currentUser.avatar || "",
+        familyValues: currentUser.familyValues || [],
+        languages: currentUser.languages || [],
+        pets: currentUser.pets || "",
+        familyMotto: currentUser.familyMotto || "",
+        favoriteTraditions: currentUser.favoriteTraditions || "",
+        dreamVacation: currentUser.dreamVacation || "",
       });
     }
   }, [currentUser, isEditing]);
@@ -95,6 +118,40 @@ export default function Profile() {
     }));
   };
 
+  const toggleFamilyValue = (value: string) => {
+    setEditForm(prev => ({
+      ...prev,
+      familyValues: prev.familyValues.includes(value)
+        ? prev.familyValues.filter(v => v !== value)
+        : [...prev.familyValues, value]
+    }));
+  };
+
+  const toggleLanguage = (language: string) => {
+    setEditForm(prev => ({
+      ...prev,
+      languages: prev.languages.includes(language)
+        ? prev.languages.filter(l => l !== language)
+        : [...prev.languages, language]
+    }));
+  };
+
+  const addMemberMutation = useMutation({
+    mutationFn: () => api.familyMembers.create(newMember),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["familyMembers"] });
+      setShowAddMemberModal(false);
+      setNewMember({ name: "", role: "", ageGroup: "", isAdult: true, photo: "" });
+    },
+  });
+
+  const deleteMemberMutation = useMutation({
+    mutationFn: (memberId: number) => api.familyMembers.delete(memberId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["familyMembers"] });
+    },
+  });
+
   const { data: userExperiences = [] } = useQuery({
     queryKey: ["userExperiences", currentUser?.id],
     queryFn: () => currentUser ? api.users.getExperiences(currentUser.id) : [],
@@ -124,6 +181,15 @@ export default function Profile() {
     queryFn: () => currentUser ? api.checkins.getByUser(currentUser.id) : [],
     enabled: !!currentUser,
   });
+
+  const { data: familyMembers = [] } = useQuery<FamilyMember[]>({
+    queryKey: ["familyMembers", currentUser?.id],
+    queryFn: () => currentUser ? api.users.getFamilyMembers(currentUser.id) : [],
+    enabled: !!currentUser,
+  });
+
+  const adultMembers = familyMembers.filter(m => m.isAdult);
+  const kidMembers = familyMembers.filter(m => !m.isAdult);
 
   const formattedUserExperiences = userExperiences.map(exp => formatExperience(exp as any));
 
@@ -248,6 +314,172 @@ export default function Profile() {
               ))}
             </div>
           </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              <Heart className="inline-block h-4 w-4 mr-1 text-rose-500" />
+              Family Values
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {FAMILY_VALUES.map((value) => (
+                <button
+                  key={value}
+                  onClick={() => toggleFamilyValue(value)}
+                  style={{
+                    backgroundColor: editForm.familyValues.includes(value) ? '#f43f5e' : '#f3f4f6',
+                    color: editForm.familyValues.includes(value) ? 'white' : '#6b7280',
+                  }}
+                  className="rounded-full px-4 py-2 text-sm font-bold transition-all"
+                  data-testid={`button-value-${value.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              <Globe className="inline-block h-4 w-4 mr-1 text-blue-500" />
+              Languages We Speak
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {LANGUAGES.map((language) => (
+                <button
+                  key={language}
+                  onClick={() => toggleLanguage(language)}
+                  style={{
+                    backgroundColor: editForm.languages.includes(language) ? '#3b82f6' : '#f3f4f6',
+                    color: editForm.languages.includes(language) ? 'white' : '#6b7280',
+                  }}
+                  className="rounded-full px-4 py-2 text-sm font-bold transition-all"
+                  data-testid={`button-language-${language.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  {language}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              🐾 Pets
+            </label>
+            <input
+              type="text"
+              value={editForm.pets}
+              onChange={(e) => setEditForm({ ...editForm, pets: e.target.value })}
+              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
+              placeholder="e.g., Dog named Max, 2 cats"
+              data-testid="input-edit-pets"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              <Quote className="inline-block h-4 w-4 mr-1 text-purple-500" />
+              Family Motto
+            </label>
+            <input
+              type="text"
+              value={editForm.familyMotto}
+              onChange={(e) => setEditForm({ ...editForm, familyMotto: e.target.value })}
+              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
+              placeholder="e.g., Adventure awaits!"
+              data-testid="input-edit-motto"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              <Star className="inline-block h-4 w-4 mr-1 text-amber-500" />
+              Favorite Traditions
+            </label>
+            <textarea
+              value={editForm.favoriteTraditions}
+              onChange={(e) => setEditForm({ ...editForm, favoriteTraditions: e.target.value })}
+              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none resize-none"
+              rows={2}
+              placeholder="e.g., Sunday pancakes, Friday movie nights"
+              data-testid="input-edit-traditions"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              <Plane className="inline-block h-4 w-4 mr-1 text-teal-500" />
+              Dream Vacation
+            </label>
+            <input
+              type="text"
+              value={editForm.dreamVacation}
+              onChange={(e) => setEditForm({ ...editForm, dreamVacation: e.target.value })}
+              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
+              placeholder="e.g., Disney World, Japan"
+              data-testid="input-edit-dream-vacation"
+            />
+          </div>
+
+          <div className="border-t border-gray-200 pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <label className="block text-sm font-bold text-gray-700">
+                <Users className="inline-block h-4 w-4 mr-1 text-primary" />
+                Family Members
+              </label>
+              <button
+                onClick={() => setShowAddMemberModal(true)}
+                className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-sm font-bold rounded-full"
+                data-testid="button-add-member"
+              >
+                <Plus className="h-4 w-4" />
+                Add
+              </button>
+            </div>
+
+            {familyMembers.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                <UserPlus className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No family members added yet</p>
+                <button
+                  onClick={() => setShowAddMemberModal(true)}
+                  className="mt-2 text-sm text-primary font-bold"
+                >
+                  Add your first family member
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {familyMembers.map((member) => (
+                  <div key={member.id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200">
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
+                      {member.photo ? (
+                        <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-lg bg-gradient-to-br from-primary/20 to-primary/40">
+                          {member.name.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-gray-900 truncate">{member.name}</p>
+                      <p className="text-xs text-primary">{member.role}</p>
+                      {member.ageGroup && (
+                        <p className="text-xs text-gray-400">{member.ageGroup}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => deleteMemberMutation.mutate(member.id)}
+                      disabled={deleteMemberMutation.isPending}
+                      className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                      data-testid={`button-delete-member-${member.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <div className="flex flex-col items-center text-center mb-8">
@@ -282,6 +514,148 @@ export default function Profile() {
                 {tag}
               </span>
             ))}
+          </div>
+
+          {/* Family Members Grid - Team Style */}
+          {familyMembers.length > 0 && (
+            <div className="mt-8 w-full max-w-md">
+              <h3 className="font-heading text-lg font-bold text-gray-900 text-center mb-4">
+                <Users className="inline-block h-5 w-5 mr-2 text-primary" />
+                Meet Our Family
+              </h3>
+              
+              {adultMembers.length > 0 && (
+                <div className="mb-6">
+                  <span className="inline-block px-3 py-1 text-xs font-bold bg-primary/10 text-primary rounded-full mb-3">
+                    Adults
+                  </span>
+                  <div className="flex flex-wrap justify-center gap-4">
+                    {adultMembers.map((member) => (
+                      <div key={member.id} className="flex flex-col items-center" data-testid={`family-member-${member.id}`}>
+                        <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-gray-200 bg-gray-100">
+                          {member.photo ? (
+                            <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-2xl bg-gradient-to-br from-primary/20 to-primary/40">
+                              {member.name.charAt(0)}
+                            </div>
+                          )}
+                        </div>
+                        <p className="mt-2 text-sm font-bold text-gray-900">{member.name}</p>
+                        <p className="text-xs text-primary font-medium">{member.role}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {kidMembers.length > 0 && (
+                <div>
+                  <span className="inline-block px-3 py-1 text-xs font-bold bg-secondary/20 text-secondary-foreground rounded-full mb-3">
+                    Kids
+                  </span>
+                  <div className="flex flex-wrap justify-center gap-4">
+                    {kidMembers.map((member) => (
+                      <div key={member.id} className="flex flex-col items-center" data-testid={`family-member-${member.id}`}>
+                        <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-gray-200 bg-gray-100">
+                          {member.photo ? (
+                            <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-2xl bg-gradient-to-br from-secondary/20 to-secondary/40">
+                              {member.name.charAt(0)}
+                            </div>
+                          )}
+                        </div>
+                        <p className="mt-2 text-sm font-bold text-gray-900">{member.name}</p>
+                        <p className="text-xs text-secondary font-medium">{member.role}</p>
+                        {member.ageGroup && (
+                          <p className="text-xs text-gray-400">{member.ageGroup}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Enhanced Profile Info */}
+          <div className="mt-8 w-full max-w-md space-y-4">
+            {currentUser?.familyValues && currentUser.familyValues.length > 0 && (
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Heart className="h-4 w-4 text-rose-500" />
+                  <h4 className="font-bold text-sm text-gray-900">Family Values</h4>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {currentUser.familyValues.map((value) => (
+                    <span key={value} className="px-2.5 py-1 bg-rose-50 text-rose-700 text-xs rounded-full font-medium">
+                      {value}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {currentUser?.languages && currentUser.languages.length > 0 && (
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Globe className="h-4 w-4 text-blue-500" />
+                  <h4 className="font-bold text-sm text-gray-900">Languages</h4>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {currentUser.languages.map((lang) => (
+                    <span key={lang} className="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs rounded-full font-medium">
+                      {lang}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(currentUser?.familyMotto || currentUser?.favoriteTraditions || currentUser?.dreamVacation || currentUser?.pets) && (
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-3">
+                {currentUser?.familyMotto && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Quote className="h-4 w-4 text-purple-500" />
+                      <h4 className="font-bold text-sm text-gray-900">Our Motto</h4>
+                    </div>
+                    <p className="text-sm text-gray-600 italic">"{currentUser.familyMotto}"</p>
+                  </div>
+                )}
+                
+                {currentUser?.favoriteTraditions && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Star className="h-4 w-4 text-amber-500" />
+                      <h4 className="font-bold text-sm text-gray-900">Favorite Traditions</h4>
+                    </div>
+                    <p className="text-sm text-gray-600">{currentUser.favoriteTraditions}</p>
+                  </div>
+                )}
+                
+                {currentUser?.dreamVacation && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Plane className="h-4 w-4 text-teal-500" />
+                      <h4 className="font-bold text-sm text-gray-900">Dream Vacation</h4>
+                    </div>
+                    <p className="text-sm text-gray-600">{currentUser.dreamVacation}</p>
+                  </div>
+                )}
+                
+                {currentUser?.pets && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-base">🐾</span>
+                      <h4 className="font-bold text-sm text-gray-900">Pets</h4>
+                    </div>
+                    <p className="text-sm text-gray-600">{currentUser.pets}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -455,6 +829,101 @@ export default function Profile() {
           </>
         )}
       </div>
+
+      {showAddMemberModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto animate-slide-up">
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+              <h2 className="font-heading text-xl font-bold">Add Family Member</h2>
+              <button
+                onClick={() => {
+                  setShowAddMemberModal(false);
+                  setNewMember({ name: "", role: "", ageGroup: "", isAdult: true, photo: "" });
+                }}
+                className="p-2 rounded-full bg-gray-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div className="flex justify-center">
+                <ImageUpload
+                  currentImage={newMember.photo}
+                  onImageChange={(url) => setNewMember({ ...newMember, photo: url })}
+                  size="md"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Name</label>
+                <input
+                  type="text"
+                  value={newMember.name}
+                  onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                  className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
+                  placeholder="e.g., Emma"
+                  data-testid="input-member-name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Role</label>
+                <div className="flex flex-wrap gap-2">
+                  {FAMILY_ROLES.map((role) => (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => {
+                        const isAdultRole = ["Mom", "Dad", "Grandma", "Grandpa", "Aunt", "Uncle", "Other Adult"].includes(role);
+                        setNewMember({ ...newMember, role, isAdult: isAdultRole });
+                      }}
+                      style={{
+                        backgroundColor: newMember.role === role ? '#14b8a6' : '#f3f4f6',
+                        color: newMember.role === role ? 'white' : '#6b7280',
+                      }}
+                      className="rounded-full px-4 py-2 text-sm font-bold transition-all"
+                      data-testid={`button-role-${role.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      {role}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Age Group</label>
+                <div className="flex flex-wrap gap-2">
+                  {AGE_GROUPS.map((age) => (
+                    <button
+                      key={age}
+                      type="button"
+                      onClick={() => setNewMember({ ...newMember, ageGroup: age })}
+                      style={{
+                        backgroundColor: newMember.ageGroup === age ? '#14b8a6' : '#f3f4f6',
+                        color: newMember.ageGroup === age ? 'white' : '#6b7280',
+                      }}
+                      className="rounded-full px-4 py-2 text-sm font-bold transition-all"
+                      data-testid={`button-age-${age.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      {age}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={() => addMemberMutation.mutate()}
+                disabled={!newMember.name || !newMember.role || addMemberMutation.isPending}
+                className="w-full py-4 bg-primary text-white font-bold rounded-xl disabled:opacity-50"
+                data-testid="button-submit-member"
+              >
+                {addMemberMutation.isPending ? "Adding..." : "Add Family Member"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

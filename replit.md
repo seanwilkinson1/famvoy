@@ -45,6 +45,29 @@ Preferred communication style: Simple, everyday language.
 - **Rich Messages in Pods**: Support for text, image, and experience-sharing in chat.
 - **Authentication**: Implemented with Clerk Auth for user authentication and social login.
 - **Object Storage**: Migrated photo uploads to Replit Object Storage (Google Cloud Storage) for persistence.
+- **Enhanced Family Profiles**: Rich family profiles with team-style member display, family values, languages, pets, motto, traditions, and dream vacation destinations.
+
+### Enhanced Family Profiles
+**Database Tables**:
+- `familyMembers`: Stores individual family members with fields: `id`, `userId` (FK to users), `name`, `role` (Mom/Dad/Son/Daughter/etc), `photo`, `ageGroup`, `isAdult`, `createdAt`
+- `users` enhanced with: `familyValues` (array), `languages` (array), `pets`, `familyMotto`, `favoriteTraditions`, `dreamVacation`
+
+**Family Member Roles**: Mom, Dad, Daughter, Son, Grandma, Grandpa, Aunt, Uncle, Other, Other Adult (defined in `client/src/lib/constants.ts`)
+**Age Groups**: Infant (0-1), Toddler (1-3), Preschool (3-5), Elementary (5-10), Tween (10-13), Teen (13-18), Adult (18+)
+**Family Values**: Adventure, Education, Nature, Creativity, Sports, Music, Travel, Community, Faith, Health, Cultural Heritage
+**Languages**: English, Spanish, French, Mandarin, German, Italian, Portuguese, Japanese, Korean, Arabic, Hindi, ASL, Other
+
+**API Endpoints**:
+- `GET /api/family-members`: Get current user's family members
+- `GET /api/users/:userId/family-members`: Get any user's family members
+- `POST /api/family-members`: Create new family member
+- `DELETE /api/family-members/:id`: Delete family member
+
+**UI Features**:
+- Team-style family member grid with circular photos grouped by Adults/Kids
+- Edit mode with selectable preset values for family values and languages
+- Add/delete family members with photo upload support
+- Display of motto, traditions, pets, and dream vacation in profile view
 
 ## External Dependencies
 

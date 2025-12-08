@@ -48,6 +48,7 @@ export const familyMembers = pgTable("family_members", {
   ageGroup: text("age_group"),
   isAdult: boolean("is_adult").default(true),
   sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const experiences = pgTable("experiences", {
