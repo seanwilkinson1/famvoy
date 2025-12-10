@@ -651,15 +651,36 @@ export const api = {
       if (!res.ok) throw new Error("Failed to delete trip");
     },
 
-    generate: async (tripId: number): Promise<any> => {
+    generate: async (tripId: number, preferences?: { budgetMin?: number; budgetMax?: number; pace?: string; kidsAgeGroups?: string[]; tripInterests?: string[] }): Promise<any> => {
       const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/generate`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(preferences || {}),
       });
       if (!res.ok) {
         const error = await res.json().catch(() => ({ error: "Failed to generate itinerary" }));
         throw new Error(error.error || "Failed to generate itinerary");
       }
       return res.json();
+    },
+
+    updatePreferences: async (tripId: number, preferences: { budgetMin?: number; budgetMax?: number; pace?: string; kidsAgeGroups?: string[]; tripInterests?: string[] }): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/preferences`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(preferences),
+      });
+      if (!res.ok) throw new Error("Failed to update preferences");
+      return res.json();
+    },
+
+    reorderItems: async (tripId: number, items: { id: number; dayNumber: number; sortOrder: number }[]): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/reorder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items }),
+      });
+      if (!res.ok) throw new Error("Failed to reorder items");
     },
 
     regenerateDay: async (tripId: number, dayNumber: number): Promise<any> => {

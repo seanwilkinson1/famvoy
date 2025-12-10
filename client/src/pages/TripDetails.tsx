@@ -1,5 +1,5 @@
 import { useRoute, useLocation } from "wouter";
-import { ChevronLeft, MapPin, Calendar, Sparkles, Loader2, RefreshCw, Plus, Trash2, Edit2, X, Clock, Utensils, BedDouble, Car, Ticket, Check, ShoppingCart, CreditCard, DollarSign, ExternalLink, Star, Share2 } from "lucide-react";
+import { ChevronLeft, MapPin, Calendar, Sparkles, Loader2, RefreshCw, Plus, Trash2, Edit2, X, Clock, Utensils, BedDouble, Car, Ticket, Check, ShoppingCart, CreditCard, DollarSign, ExternalLink, Star, Share2, GripVertical, Settings2 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,6 +11,19 @@ import { useAuth } from "@clerk/clerk-react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+const PACE_OPTIONS = [
+  { value: "relaxed", label: "Relaxed", description: "Fewer activities, more downtime" },
+  { value: "moderate", label: "Moderate", description: "Balanced mix" },
+  { value: "active", label: "Active", description: "Action-packed" },
+];
+
+const KIDS_AGE_GROUPS = ["Infant (0-1)", "Toddler (1-3)", "Preschool (3-5)", "Elementary (5-10)", "Tween (10-13)", "Teen (13-18)"];
+
+const TRIP_INTERESTS = ["Beach & Water", "Adventure & Outdoors", "Cultural & History", "Theme Parks", "Nature & Wildlife", "Food & Dining", "Relaxation & Spa", "Shopping", "Sports", "Arts & Crafts"];
 
 const ITEM_TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
   ACTIVITY: { icon: Ticket, color: "text-primary", bg: "bg-primary/10" },
@@ -83,6 +96,42 @@ const MARKER_COLORS: Record<string, string> = {
   TRANSPORT: '#6b7280',
 };
 
+interface DraggableItemWrapperProps {
+  id: number;
+  disabled: boolean;
+  children: React.ReactNode;
+}
+
+function DraggableItemWrapper({ id, disabled, children }: DraggableItemWrapperProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  if (disabled) {
+    return <>{children}</>;
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className={cn(isDragging && "z-50 shadow-xl")}>
+      <div className="relative group">
+        <button
+          {...attributes}
+          {...listeners}
+          className="absolute -left-1 top-3 cursor-grab active:cursor-grabbing touch-none opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white rounded-full p-1 shadow-sm"
+          data-testid={`drag-handle-${id}`}
+        >
+          <GripVertical className="h-4 w-4 text-gray-400" />
+        </button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function TripDetails() {
   const [match, params] = useRoute("/trip/:id");
   const [, setLocation] = useLocation();
@@ -90,6 +139,7 @@ export default function TripDetails() {
   const [regeneratingDay, setRegeneratingDay] = useState<number | null>(null);
   const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [showExperiencePicker, setShowExperiencePicker] = useState(false);
+  const [showPreferencesModal, setShowPreferencesModal] = useState(false);
   const [addItemDayNumber, setAddItemDayNumber] = useState(1);
   const [editingItem, setEditingItem] = useState<TripItem | null>(null);
   const [itemForm, setItemForm] = useState({
@@ -99,8 +149,20 @@ export default function TripDetails() {
     itemType: "ACTIVITY",
     experienceId: null as number | null,
   });
+  const [preferences, setPreferences] = useState({
+    budgetMin: undefined as number | undefined,
+    budgetMax: undefined as number | undefined,
+    pace: "moderate" as string,
+    kidsAgeGroups: [] as string[],
+    tripInterests: [] as string[],
+  });
   const [bookingItem, setBookingItem] = useState<TripItem | null>(null);
   const queryClient = useQueryClient();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
   
   const { isSignedIn } = useAuth();
   
@@ -126,9 +188,10 @@ export default function TripDetails() {
   });
 
   const generateMutation = useMutation({
-    mutationFn: () => api.trips.generate(tripId),
+    mutationFn: (prefs?: typeof preferences) => api.trips.generate(tripId, prefs),
     onMutate: () => {
       setIsGenerating(true);
+      setShowPreferencesModal(false);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trip", tripId] });
@@ -139,6 +202,17 @@ export default function TripDetails() {
     },
     onSettled: () => {
       setIsGenerating(false);
+    },
+  });
+
+  const reorderMutation = useMutation({
+    mutationFn: (items: { id: number; dayNumber: number; sortOrder: number }[]) => 
+      api.trips.reorderItems(tripId, items),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["trip", tripId] });
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to reorder items");
     },
   });
 
@@ -161,6 +235,24 @@ export default function TripDetails() {
 
   const resetItemForm = () => {
     setItemForm({ time: "09:00 AM", title: "", description: "", itemType: "ACTIVITY", experienceId: null });
+  };
+
+  const handleDragEnd = (event: DragEndEvent, dayNumber: number, dayItems: TripItem[]) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = dayItems.findIndex(item => item.id === active.id);
+    const newIndex = dayItems.findIndex(item => item.id === over.id);
+
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const newItems = arrayMove(dayItems, oldIndex, newIndex);
+      const reorderData = newItems.map((item, index) => ({
+        id: item.id,
+        dayNumber,
+        sortOrder: index,
+      }));
+      reorderMutation.mutate(reorderData);
+    }
   };
 
   const addItemMutation = useMutation({
@@ -329,7 +421,7 @@ export default function TripDetails() {
             </button>
           </div>
           <button
-            onClick={() => generateMutation.mutate()}
+            onClick={() => setShowPreferencesModal(true)}
             disabled={isGenerating}
             className={cn(
               "flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold transition-all",
@@ -502,7 +594,7 @@ export default function TripDetails() {
               Let AI create a personalized {numDays}-day plan based on your pod's interests
             </p>
             <button
-              onClick={() => generateMutation.mutate()}
+              onClick={() => setShowPreferencesModal(true)}
               className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-bold text-white"
               data-testid="button-generate-empty"
             >
@@ -578,6 +670,12 @@ export default function TripDetails() {
                     )}
                   </div>
 
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={(event) => handleDragEnd(event, dayNumber, dayItems)}
+                  >
+                    <SortableContext items={dayItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
                   <div className="ml-4 pl-4 border-l-2 border-gray-200 space-y-3">
                     {dayItems.map((item) => {
                       const config = ITEM_TYPE_CONFIG[item.itemType] || ITEM_TYPE_CONFIG.ACTIVITY;
@@ -586,8 +684,8 @@ export default function TripDetails() {
                       const hasLockedOption = item.lockedOption;
                       
                       return (
+                        <DraggableItemWrapper key={item.id} id={item.id} disabled={isConfirmed}>
                         <div
-                          key={item.id}
                           className={cn(
                             "relative bg-white rounded-xl border shadow-sm overflow-hidden",
                             hasLockedOption ? "border-green-200" : "border-gray-100"
@@ -700,6 +798,7 @@ export default function TripDetails() {
                             </div>
                           </div>
                         </div>
+                        </DraggableItemWrapper>
                       );
                     })}
 
@@ -709,6 +808,8 @@ export default function TripDetails() {
                       </div>
                     )}
                   </div>
+                    </SortableContext>
+                  </DndContext>
                 </div>
               );
             })}
@@ -860,6 +961,165 @@ export default function TripDetails() {
           podTripId={trip.id}
           onClose={() => setBookingItem(null)}
         />
+      )}
+
+      {showPreferencesModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100 sticky top-0 bg-white">
+              <div>
+                <h3 className="font-heading text-lg font-bold">Trip Preferences</h3>
+                <p className="text-sm text-gray-500">Help AI create a better itinerary</p>
+              </div>
+              <button 
+                onClick={() => setShowPreferencesModal(false)}
+                className="rounded-full bg-gray-100 p-2"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-5">
+              <div>
+                <label className="text-sm font-bold text-gray-700 mb-2 block">
+                  Budget Range (total trip)
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="number"
+                      placeholder="Min"
+                      className="w-full rounded-xl border border-gray-200 pl-8 pr-3 py-3 text-sm focus:border-primary focus:outline-none"
+                      value={preferences.budgetMin || ""}
+                      onChange={(e) => setPreferences(p => ({ ...p, budgetMin: e.target.value ? parseInt(e.target.value) : undefined }))}
+                      data-testid="input-budget-min"
+                    />
+                  </div>
+                  <span className="text-gray-400">to</span>
+                  <div className="flex-1 relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="number"
+                      placeholder="Max"
+                      className="w-full rounded-xl border border-gray-200 pl-8 pr-3 py-3 text-sm focus:border-primary focus:outline-none"
+                      value={preferences.budgetMax || ""}
+                      onChange={(e) => setPreferences(p => ({ ...p, budgetMax: e.target.value ? parseInt(e.target.value) : undefined }))}
+                      data-testid="input-budget-max"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-bold text-gray-700 mb-2 block">
+                  Trip Pace
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {PACE_OPTIONS.map(option => (
+                    <button
+                      key={option.value}
+                      onClick={() => setPreferences(p => ({ ...p, pace: option.value }))}
+                      className={cn(
+                        "p-3 rounded-xl border-2 text-center transition-all",
+                        preferences.pace === option.value
+                          ? "border-primary bg-primary/5"
+                          : "border-gray-100 hover:border-gray-200"
+                      )}
+                      data-testid={`button-pace-${option.value}`}
+                    >
+                      <span className={cn(
+                        "text-sm font-bold block",
+                        preferences.pace === option.value ? "text-primary" : "text-charcoal"
+                      )}>
+                        {option.label}
+                      </span>
+                      <span className="text-xs text-gray-500">{option.description}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-bold text-gray-700 mb-2 block">
+                  Kids Age Groups
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {KIDS_AGE_GROUPS.map(age => (
+                    <button
+                      key={age}
+                      onClick={() => {
+                        setPreferences(p => ({
+                          ...p,
+                          kidsAgeGroups: p.kidsAgeGroups.includes(age)
+                            ? p.kidsAgeGroups.filter(a => a !== age)
+                            : [...p.kidsAgeGroups, age]
+                        }));
+                      }}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-sm transition-all",
+                        preferences.kidsAgeGroups.includes(age)
+                          ? "bg-primary text-white"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      )}
+                      data-testid={`button-age-${age.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`}
+                    >
+                      {age}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-bold text-gray-700 mb-2 block">
+                  Trip Interests
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {TRIP_INTERESTS.map(interest => (
+                    <button
+                      key={interest}
+                      onClick={() => {
+                        setPreferences(p => ({
+                          ...p,
+                          tripInterests: p.tripInterests.includes(interest)
+                            ? p.tripInterests.filter(i => i !== interest)
+                            : [...p.tripInterests, interest]
+                        }));
+                      }}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-sm transition-all",
+                        preferences.tripInterests.includes(interest)
+                          ? "bg-accent text-white"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      )}
+                      data-testid={`button-interest-${interest.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`}
+                    >
+                      {interest}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => generateMutation.mutate(undefined)}
+                  className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50"
+                  data-testid="button-skip-preferences"
+                >
+                  Skip
+                </button>
+                <button
+                  onClick={() => generateMutation.mutate(preferences)}
+                  disabled={generateMutation.isPending}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 py-3 text-sm font-bold text-white flex items-center justify-center gap-2"
+                  data-testid="button-generate-with-preferences"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Generate
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

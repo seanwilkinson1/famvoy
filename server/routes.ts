@@ -1763,6 +1763,54 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/trips/:id/preferences", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.id);
+      if (isNaN(tripId)) {
+        return res.status(400).json({ error: "Invalid trip ID" });
+      }
+
+      const { budgetMin, budgetMax, pace, kidsAgeGroups, tripInterests } = req.body;
+      
+      const updatedTrip = await storage.updateTrip(tripId, {
+        budgetMin: budgetMin || null,
+        budgetMax: budgetMax || null,
+        pace: pace || null,
+        kidsAgeGroups: kidsAgeGroups || null,
+        tripInterests: tripInterests || null,
+      });
+      
+      res.json(updatedTrip);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/trips/:id/reorder", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.id);
+      if (isNaN(tripId)) {
+        return res.status(400).json({ error: "Invalid trip ID" });
+      }
+
+      const { items } = req.body;
+      if (!Array.isArray(items)) {
+        return res.status(400).json({ error: "Items must be an array" });
+      }
+
+      for (const item of items) {
+        await storage.updateTripItem(item.id, {
+          dayNumber: item.dayNumber,
+          sortOrder: item.sortOrder,
+        });
+      }
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/trips/:id/generate", requireAuth(), async (req, res) => {
     try {
       const tripId = parseInt(req.params.id);
@@ -1773,6 +1821,18 @@ export async function registerRoutes(
       const { userId: clerkUserId } = getAuth(req);
       if (!clerkUserId) {
         return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { budgetMin, budgetMax, pace, kidsAgeGroups, tripInterests } = req.body;
+      
+      if (budgetMin !== undefined || budgetMax !== undefined || pace || kidsAgeGroups || tripInterests) {
+        await storage.updateTrip(tripId, {
+          budgetMin: budgetMin || null,
+          budgetMax: budgetMax || null,
+          pace: pace || null,
+          kidsAgeGroups: kidsAgeGroups || null,
+          tripInterests: tripInterests || null,
+        });
       }
 
       const trip = await storage.getTripById(tripId);
@@ -1808,6 +1868,26 @@ export async function registerRoutes(
       const endDate = new Date(trip.endDate);
       const numDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
+      const budgetSection = (trip.budgetMin || trip.budgetMax) 
+        ? `Budget: ${trip.budgetMin ? `$${trip.budgetMin}` : 'flexible'} - ${trip.budgetMax ? `$${trip.budgetMax}` : 'flexible'} total for the trip`
+        : '';
+      
+      const paceSection = trip.pace 
+        ? `Pace preference: ${trip.pace} (${trip.pace === 'relaxed' ? 'fewer activities, more downtime' : trip.pace === 'moderate' ? 'balanced mix of activities and rest' : 'action-packed with many activities'})`
+        : '';
+      
+      const kidsSection = trip.kidsAgeGroups?.length 
+        ? `Children's age groups to plan for: ${trip.kidsAgeGroups.join(', ')}`
+        : '';
+      
+      const interestsSection = trip.tripInterests?.length 
+        ? `Trip interests/themes to prioritize: ${trip.tripInterests.join(', ')}`
+        : '';
+
+      const preferencesBlock = [budgetSection, paceSection, kidsSection, interestsSection]
+        .filter(Boolean)
+        .join('\n');
+
       const openai = new OpenAI({
         baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
         apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -1815,6 +1895,7 @@ export async function registerRoutes(
 
       const prompt = `You are a family trip planner AI. Create a detailed ${numDays}-day itinerary for a family trip to ${trip.destination} from ${trip.startDate} to ${trip.endDate}.
 
+${preferencesBlock ? `TRIP PREFERENCES (prioritize these):\n${preferencesBlock}\n` : ''}
 Family profiles in this trip:
 ${JSON.stringify(familyProfiles, null, 2)}
 
@@ -1822,7 +1903,7 @@ ${podExperiencesList.length > 0 ? `The families have saved these experiences to 
 ${JSON.stringify(podExperiencesList, null, 2)}` : ''}
 
 Generate a structured JSON response with:
-1. "summary": A 2-3 sentence personalized overview explaining how the itinerary caters to all families' interests and children's ages
+1. "summary": A 2-3 sentence personalized overview explaining how the itinerary caters to the specified preferences, interests, and children's ages
 2. "days": An array of day objects, each containing:
    - "dayNumber": The day number (1, 2, 3, etc.)
    - "dayTitle": A catchy thematic title for that day (e.g., "Tropical Arrival and Beach Exploration")
@@ -1835,11 +1916,12 @@ Generate a structured JSON response with:
      ${podExperiencesList.length > 0 ? '- "experienceId": If this activity matches a saved pod experience, include its ID' : ''}
 
 Guidelines:
-- Include 4-6 activities per day
+- Include 4-6 activities per day (fewer if pace is "relaxed", more if pace is "active")
 - Balance activities with rest time (especially for younger children)
 - Include meals at appropriate times
-- Consider each family's interests when planning
-- Make activities age-appropriate for all children mentioned
+- PRIORITIZE activities matching the specified trip interests
+- Make activities age-appropriate for the specified children's age groups
+- Keep activity costs within the specified budget range
 - Include a mix of activity types
 - Start each day with morning activities and end with evening/downtime
 
