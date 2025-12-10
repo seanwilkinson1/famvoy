@@ -1,5 +1,5 @@
 import { useRoute, useLocation } from "wouter";
-import { ChevronLeft, MapPin, Calendar, Sparkles, Loader2, RefreshCw, Plus, Trash2, Edit2, X, Clock, Utensils, BedDouble, Car, Ticket, Check, ShoppingCart, CreditCard } from "lucide-react";
+import { ChevronLeft, MapPin, Calendar, Sparkles, Loader2, RefreshCw, Plus, Trash2, Edit2, X, Clock, Utensils, BedDouble, Car, Ticket, Check, ShoppingCart, CreditCard, DollarSign, ExternalLink, Star, Share2 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -8,6 +8,9 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { BookingModal } from "@/components/shared/BookingModal";
 import { useAuth } from "@clerk/clerk-react";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 const ITEM_TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
   ACTIVITY: { icon: Ticket, color: "text-primary", bg: "bg-primary/10" },
@@ -15,6 +18,19 @@ const ITEM_TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string;
   STAY: { icon: BedDouble, color: "text-blue-500", bg: "bg-blue-50" },
   TRANSPORT: { icon: Car, color: "text-gray-500", bg: "bg-gray-100" },
 };
+
+interface LockedBookingOption {
+  id: number;
+  title: string;
+  description: string | null;
+  priceEstimate: string | null;
+  rating: string | null;
+  reviewCount: number | null;
+  image: string | null;
+  bookingUrl: string | null;
+  address: string | null;
+  provider: string | null;
+}
 
 interface TripItem {
   id: number;
@@ -27,6 +43,13 @@ interface TripItem {
   itemType: string;
   sortOrder: number;
   experienceId: number | null;
+  lockedOption?: LockedBookingOption | null;
+}
+
+interface CostSummary {
+  min: number;
+  max: number;
+  formatted: string;
 }
 
 interface Trip {
@@ -41,7 +64,24 @@ interface Trip {
   createdByUserId: number;
   createdAt: string;
   items: TripItem[];
+  costSummary?: CostSummary;
 }
+
+const createMarkerIcon = (color: string) => {
+  return L.divIcon({
+    className: 'custom-marker',
+    html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+};
+
+const MARKER_COLORS: Record<string, string> = {
+  ACTIVITY: '#4ECDC4',
+  MEAL: '#f97316',
+  STAY: '#3b82f6',
+  TRANSPORT: '#6b7280',
+};
 
 export default function TripDetails() {
   const [match, params] = useRoute("/trip/:id");
@@ -374,17 +414,82 @@ export default function TripDetails() {
         )}
 
         {trip.status === "confirmed" && (
-          <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl">
-            <div className="flex items-center gap-3 text-white">
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                <Check className="h-6 w-6" />
-              </div>
-              <div>
-                <h3 className="font-bold text-lg">Trip Confirmed!</h3>
-                <p className="text-sm opacity-90">Your bookings are all set</p>
+          <>
+            <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 text-white">
+                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                    <Check className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">Trip Confirmed!</h3>
+                    <p className="text-sm opacity-90">All your bookings are ready</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.share?.({
+                      title: trip.name,
+                      text: `Check out my trip to ${trip.destination}!`,
+                      url: window.location.href,
+                    }).catch(() => {
+                      navigator.clipboard.writeText(window.location.href);
+                      toast.success("Link copied to clipboard!");
+                    });
+                  }}
+                  className="shrink-0 bg-white/20 text-white p-2.5 rounded-xl hover:bg-white/30 transition-colors"
+                  data-testid="button-share-trip"
+                >
+                  <Share2 className="h-5 w-5" />
+                </button>
               </div>
             </div>
-          </div>
+
+            {trip.costSummary && (
+              <div className="mx-4 mt-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Estimated Total Cost</p>
+                    <p className="text-2xl font-bold text-charcoal">{trip.costSummary.formatted}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-green-600" />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  Based on your selected booking options. Actual prices may vary.
+                </p>
+              </div>
+            )}
+
+            <div className="mx-4 mt-4 h-48 rounded-2xl overflow-hidden border border-gray-200">
+              <MapContainer
+                center={[9.9764, -85.6717]}
+                zoom={10}
+                style={{ height: '100%', width: '100%' }}
+                scrollWheelZoom={false}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {trip.items.filter(item => item.lockedOption?.address).map((item, idx) => (
+                  <Marker 
+                    key={item.id}
+                    position={[9.9764 + (idx * 0.02), -85.6717 + (idx * 0.015)]}
+                    icon={createMarkerIcon(MARKER_COLORS[item.itemType] || '#4ECDC4')}
+                  >
+                    <Popup>
+                      <div className="text-sm">
+                        <p className="font-bold">{item.lockedOption?.title || item.title}</p>
+                        <p className="text-gray-500">{item.time} - Day {item.dayNumber}</p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+            </div>
+          </>
         )}
 
         {trip.items.length === 0 && !isGenerating && (
@@ -443,87 +548,153 @@ export default function TripDetails() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setAddItemDayNumber(dayNumber);
-                          setShowAddItemModal(true);
-                        }}
-                        className="rounded-full bg-gray-100 p-2 hover:bg-gray-200"
-                        data-testid={`button-add-item-day-${dayNumber}`}
-                      >
-                        <Plus className="h-4 w-4 text-gray-600" />
-                      </button>
-                      <button
-                        onClick={() => regenerateDayMutation.mutate(dayNumber)}
-                        disabled={isRegenerating}
-                        className="rounded-full bg-purple-50 p-2 hover:bg-purple-100"
-                        data-testid={`button-regenerate-day-${dayNumber}`}
-                      >
-                        {isRegenerating ? (
-                          <Loader2 className="h-4 w-4 text-purple-500 animate-spin" />
-                        ) : (
-                          <RefreshCw className="h-4 w-4 text-purple-500" />
-                        )}
-                      </button>
-                    </div>
+                    {trip.status !== "confirmed" && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setAddItemDayNumber(dayNumber);
+                            setShowAddItemModal(true);
+                          }}
+                          className="rounded-full bg-gray-100 p-2 hover:bg-gray-200"
+                          data-testid={`button-add-item-day-${dayNumber}`}
+                        >
+                          <Plus className="h-4 w-4 text-gray-600" />
+                        </button>
+                        <button
+                          onClick={() => regenerateDayMutation.mutate(dayNumber)}
+                          disabled={isRegenerating}
+                          className="rounded-full bg-purple-50 p-2 hover:bg-purple-100"
+                          data-testid={`button-regenerate-day-${dayNumber}`}
+                        >
+                          {isRegenerating ? (
+                            <Loader2 className="h-4 w-4 text-purple-500 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4 text-purple-500" />
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="ml-4 pl-4 border-l-2 border-gray-200 space-y-3">
                     {dayItems.map((item) => {
                       const config = ITEM_TYPE_CONFIG[item.itemType] || ITEM_TYPE_CONFIG.ACTIVITY;
                       const Icon = config.icon;
+                      const isConfirmed = trip.status === "confirmed";
+                      const hasLockedOption = item.lockedOption;
                       
                       return (
                         <div
                           key={item.id}
-                          className="relative bg-white rounded-xl border border-gray-100 p-3 shadow-sm"
+                          className={cn(
+                            "relative bg-white rounded-xl border shadow-sm overflow-hidden",
+                            hasLockedOption ? "border-green-200" : "border-gray-100"
+                          )}
                           data-testid={`item-${item.id}`}
                         >
                           <div className="absolute -left-6 top-4 w-3 h-3 rounded-full bg-white border-2 border-gray-300" />
                           
-                          <div className="flex items-start gap-3">
-                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", config.bg)}>
-                              <Icon className={cn("h-5 w-5", config.color)} />
+                          {hasLockedOption && hasLockedOption.image && (
+                            <div className="h-24 bg-gradient-to-br from-primary/10 to-primary/5 relative overflow-hidden">
+                              <img
+                                src={hasLockedOption.image}
+                                alt={hasLockedOption.title}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-0.5">
-                                <Clock className="h-3 w-3 text-gray-400" />
-                                <span className="text-xs text-gray-500">{item.time}</span>
-                                <span className={cn(
-                                  "text-xs px-2 py-0.5 rounded-full font-medium",
-                                  config.bg, config.color
-                                )}>
-                                  {item.itemType}
-                                </span>
+                          )}
+                          
+                          <div className="p-3">
+                            <div className="flex items-start gap-3">
+                              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", config.bg)}>
+                                <Icon className={cn("h-5 w-5", config.color)} />
                               </div>
-                              <h4 className="font-bold text-charcoal">{item.title}</h4>
-                              {item.description && (
-                                <p className="text-sm text-gray-500 mt-1 line-clamp-2">{item.description}</p>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                  <Clock className="h-3 w-3 text-gray-400" />
+                                  <span className="text-xs text-gray-500">{item.time}</span>
+                                  <span className={cn(
+                                    "text-xs px-2 py-0.5 rounded-full font-medium",
+                                    config.bg, config.color
+                                  )}>
+                                    {item.itemType}
+                                  </span>
+                                  {hasLockedOption && (
+                                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                      Booked
+                                    </span>
+                                  )}
+                                </div>
+                                <h4 className="font-bold text-charcoal">
+                                  {hasLockedOption ? hasLockedOption.title : item.title}
+                                </h4>
+                                {(hasLockedOption?.description || item.description) && (
+                                  <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                                    {hasLockedOption?.description || item.description}
+                                  </p>
+                                )}
+                                
+                                {hasLockedOption && (
+                                  <div className="flex flex-wrap items-center gap-3 mt-2 text-sm">
+                                    {hasLockedOption.priceEstimate && (
+                                      <span className="flex items-center gap-1 text-green-600 font-medium">
+                                        <DollarSign className="h-3.5 w-3.5" />
+                                        {hasLockedOption.priceEstimate}
+                                      </span>
+                                    )}
+                                    {hasLockedOption.rating && (
+                                      <span className="flex items-center gap-1 text-gray-600">
+                                        <Star className="h-3.5 w-3.5 text-yellow-500" />
+                                        {hasLockedOption.rating}
+                                      </span>
+                                    )}
+                                    {hasLockedOption.provider && (
+                                      <span className="text-gray-400 text-xs">{hasLockedOption.provider}</span>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                {hasLockedOption?.bookingUrl && (
+                                  <a
+                                    href={hasLockedOption.bookingUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-primary text-sm mt-2 hover:underline"
+                                    data-testid={`link-book-${item.id}`}
+                                  >
+                                    View booking
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                )}
+                              </div>
+                              {!isConfirmed && (
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    onClick={() => setBookingItem(item)}
+                                    className="rounded-full p-1.5 hover:bg-primary/10"
+                                    data-testid={`button-book-item-${item.id}`}
+                                  >
+                                    <CreditCard className="h-3.5 w-3.5 text-primary" />
+                                  </button>
+                                  <button
+                                    onClick={() => openEditModal(item)}
+                                    className="rounded-full p-1.5 hover:bg-gray-100"
+                                    data-testid={`button-edit-item-${item.id}`}
+                                  >
+                                    <Edit2 className="h-3.5 w-3.5 text-gray-400" />
+                                  </button>
+                                  <button
+                                    onClick={() => deleteItemMutation.mutate(item.id)}
+                                    className="rounded-full p-1.5 hover:bg-red-50"
+                                    data-testid={`button-delete-item-${item.id}`}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                                  </button>
+                                </div>
                               )}
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                onClick={() => setBookingItem(item)}
-                                className="rounded-full p-1.5 hover:bg-primary/10"
-                                data-testid={`button-book-item-${item.id}`}
-                              >
-                                <CreditCard className="h-3.5 w-3.5 text-primary" />
-                              </button>
-                              <button
-                                onClick={() => openEditModal(item)}
-                                className="rounded-full p-1.5 hover:bg-gray-100"
-                                data-testid={`button-edit-item-${item.id}`}
-                              >
-                                <Edit2 className="h-3.5 w-3.5 text-gray-400" />
-                              </button>
-                              <button
-                                onClick={() => deleteItemMutation.mutate(item.id)}
-                                className="rounded-full p-1.5 hover:bg-red-50"
-                                data-testid={`button-delete-item-${item.id}`}
-                              >
-                                <Trash2 className="h-3.5 w-3.5 text-red-400" />
-                              </button>
                             </div>
                           </div>
                         </div>
