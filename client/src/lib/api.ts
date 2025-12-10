@@ -708,4 +708,105 @@ export const api = {
       if (!res.ok) throw new Error("Failed to clear items");
     },
   },
+
+  booking: {
+    getOptions: async (tripItemId?: number): Promise<any[]> => {
+      const url = tripItemId 
+        ? `${API_BASE}/booking-options?tripItemId=${tripItemId}`
+        : `${API_BASE}/booking-options`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch booking options");
+      return res.json();
+    },
+
+    getOptionById: async (id: number): Promise<any> => {
+      const res = await fetch(`${API_BASE}/booking-options/${id}`);
+      if (!res.ok) throw new Error("Failed to fetch booking option");
+      return res.json();
+    },
+
+    createOption: async (data: any): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/booking-options`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create booking option");
+      return res.json();
+    },
+  },
+
+  cart: {
+    get: async (): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/cart`);
+      if (!res.ok) throw new Error("Failed to fetch cart");
+      return res.json();
+    },
+
+    addItem: async (data: { bookingOptionId: number; quantity?: number; guestCount?: number; selectedDate?: string; podTripId?: number }): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/cart/items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to add to cart");
+      return res.json();
+    },
+
+    updateItem: async (itemId: number, data: { quantity?: number; guestCount?: number }): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/cart/items/${itemId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update cart item");
+      return res.json();
+    },
+
+    removeItem: async (itemId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/cart/items/${itemId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to remove from cart");
+    },
+
+    checkout: async (): Promise<{ url: string; orderId: number }> => {
+      const res = await fetchWithAuth(`${API_BASE}/checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error("Failed to create checkout session");
+      return res.json();
+    },
+  },
+
+  orders: {
+    getAll: async (): Promise<any[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/orders`);
+      if (!res.ok) throw new Error("Failed to fetch orders");
+      return res.json();
+    },
+
+    getById: async (id: number): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/orders/${id}`);
+      if (!res.ok) throw new Error("Failed to fetch order");
+      return res.json();
+    },
+
+    complete: async (id: number): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/orders/${id}/complete`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to complete order");
+      return res.json();
+    },
+  },
+
+  stripe: {
+    getConfig: async (): Promise<{ publishableKey: string }> => {
+      const res = await fetch(`${API_BASE}/stripe/config`);
+      if (!res.ok) throw new Error("Failed to get Stripe config");
+      return res.json();
+    },
+  },
 };

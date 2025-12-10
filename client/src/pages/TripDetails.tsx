@@ -1,11 +1,13 @@
 import { useRoute, useLocation } from "wouter";
-import { ChevronLeft, MapPin, Calendar, Sparkles, Loader2, RefreshCw, Plus, Trash2, Edit2, X, Clock, Utensils, BedDouble, Car, Ticket, Check } from "lucide-react";
+import { ChevronLeft, MapPin, Calendar, Sparkles, Loader2, RefreshCw, Plus, Trash2, Edit2, X, Clock, Utensils, BedDouble, Car, Ticket, Check, ShoppingCart, CreditCard } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { BookingModal } from "@/components/shared/BookingModal";
+import { useAuth } from "@clerk/clerk-react";
 
 const ITEM_TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
   ACTIVITY: { icon: Ticket, color: "text-primary", bg: "bg-primary/10" },
@@ -56,7 +58,18 @@ export default function TripDetails() {
     itemType: "ACTIVITY",
     experienceId: null as number | null,
   });
+  const [bookingItem, setBookingItem] = useState<TripItem | null>(null);
   const queryClient = useQueryClient();
+  
+  const { isSignedIn } = useAuth();
+  
+  const { data: cart } = useQuery({
+    queryKey: ["cart"],
+    queryFn: () => api.cart.get(),
+    enabled: !!isSignedIn,
+  });
+  
+  const cartItemCount = cart?.items?.length || 0;
   const tripId = params?.id ? parseInt(params.id) : 0;
 
   const { data: trip, isLoading } = useQuery<Trip>({
@@ -253,13 +266,27 @@ export default function TripDetails() {
     <div className="flex h-screen flex-col bg-background">
       <div className="border-b border-gray-100 bg-white px-6 pt-14 pb-4 shadow-sm z-10">
         <div className="flex items-center justify-between mb-3">
-          <button 
-            onClick={() => setLocation(`/pod/${trip.podId}`)} 
-            className="rounded-full bg-gray-100 p-2 active:scale-90"
-            data-testid="button-back"
-          >
-            <ChevronLeft className="h-6 w-6 text-gray-700" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setLocation(`/pod/${trip.podId}`)} 
+              className="rounded-full bg-gray-100 p-2 active:scale-90"
+              data-testid="button-back"
+            >
+              <ChevronLeft className="h-6 w-6 text-gray-700" />
+            </button>
+            <button
+              onClick={() => setLocation("/cart")}
+              className="relative rounded-full bg-gray-100 p-2 active:scale-90"
+              data-testid="button-cart"
+            >
+              <ShoppingCart className="h-5 w-5 text-gray-700" />
+              {cartItemCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-xs font-bold rounded-full flex items-center justify-center">
+                  {cartItemCount}
+                </span>
+              )}
+            </button>
+          </div>
           <button
             onClick={() => generateMutation.mutate()}
             disabled={isGenerating}
@@ -424,6 +451,13 @@ export default function TripDetails() {
                               )}
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                onClick={() => setBookingItem(item)}
+                                className="rounded-full p-1.5 hover:bg-primary/10"
+                                data-testid={`button-book-item-${item.id}`}
+                              >
+                                <CreditCard className="h-3.5 w-3.5 text-primary" />
+                              </button>
                               <button
                                 onClick={() => openEditModal(item)}
                                 className="rounded-full p-1.5 hover:bg-gray-100"
@@ -592,6 +626,15 @@ export default function TripDetails() {
             </div>
           </div>
         </div>
+      )}
+
+      {bookingItem && (
+        <BookingModal
+          tripItemId={bookingItem.id}
+          tripItemTitle={bookingItem.title}
+          podTripId={trip.id}
+          onClose={() => setBookingItem(null)}
+        />
       )}
     </div>
   );
