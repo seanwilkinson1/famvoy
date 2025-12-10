@@ -46,6 +46,37 @@ Preferred communication style: Simple, everyday language.
 - **Authentication**: Implemented with Clerk Auth for user authentication and social login.
 - **Object Storage**: Migrated photo uploads to Replit Object Storage (Google Cloud Storage) for persistence.
 - **Enhanced Family Profiles**: Rich family profiles with team-style member display, family values, languages, pets, motto, traditions, and dream vacation destinations.
+- **Booking & Checkout System**: Manually-curated booking options with Stripe checkout for trip itinerary purchases.
+
+### Booking & Checkout System
+**Database Tables**:
+- `booking_options`: Curated bookable items (hotels, activities, restaurants) with pricing, linked to trip items or experiences
+- `carts`: User shopping carts, optionally tied to a pod trip
+- `cart_items`: Items in cart with quantity, guest count, selected date, and price snapshot
+- `orders`: Completed orders with Stripe checkout session tracking
+- `order_items`: Individual items in an order with confirmation codes
+
+**Stripe Integration**:
+- Uses `stripe-replit-sync` for automatic schema management and webhook handling
+- Stripe client credentials fetched via Replit connection API (`/extensions/stripe/proxy`)
+- Managed webhook automatically registered at `/api/stripe/webhook/{token}`
+- Checkout sessions created with line items from cart, redirecting to success/cancel pages
+
+**API Endpoints**:
+- `GET /api/booking-options`: List all active booking options (filter by `?tripItemId=`)
+- `POST /api/booking-options`: Create booking option (admin)
+- `GET /api/cart`: Get current user's cart with items
+- `POST /api/cart/items`: Add item to cart
+- `DELETE /api/cart/items/:id`: Remove item from cart
+- `POST /api/checkout`: Create Stripe checkout session and order
+- `GET /api/orders`: List user's orders
+- `POST /api/orders/:id/complete`: Finalize order after payment
+- `GET /api/stripe/config`: Get Stripe publishable key
+
+**Files**:
+- `server/stripeClient.ts`: Stripe client initialization with Replit connection
+- `server/webhookHandlers.ts`: Webhook event handlers for Stripe events
+- `server/index.ts`: Stripe schema initialization and webhook route registration
 
 ### Enhanced Family Profiles
 **Database Tables**:

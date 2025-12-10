@@ -5,7 +5,8 @@ import multer from "multer";
 import express from "express";
 import { clerkMiddleware, getAuth, requireAuth, clerkClient } from "@clerk/express";
 import { storage } from "./storage";
-import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema, insertFamilyMemberSchema } from "@shared/schema";
+import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema, insertFamilyMemberSchema, insertBookingOptionSchema, insertCartItemSchema } from "@shared/schema";
+import { z } from "zod";
 import { fromError } from "zod-validation-error";
 import OpenAI from "openai";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -1934,6 +1935,295 @@ Return ONLY valid JSON.`;
       res.json(updatedTrip);
     } catch (error: any) {
       console.error("Day regeneration error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============ BOOKING ROUTES ============
+  
+  // Get all booking options (or by trip item)
+  app.get('/api/booking-options', async (req, res) => {
+    try {
+      const tripItemId = req.query.tripItemId ? parseInt(req.query.tripItemId as string) : undefined;
+      const options = await storage.getBookingOptions(tripItemId);
+      res.json(options);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get single booking option
+  app.get('/api/booking-options/:id', async (req, res) => {
+    try {
+      const option = await storage.getBookingOptionById(parseInt(req.params.id));
+      if (!option) {
+        return res.status(404).json({ error: "Booking option not found" });
+      }
+      res.json(option);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create booking option (admin)
+  app.post('/api/booking-options', requireAuth(), async (req, res) => {
+    try {
+      const result = insertBookingOptionSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: fromError(result.error).toString() });
+      }
+      const option = await storage.createBookingOption(result.data);
+      res.json(option);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update booking option
+  app.patch('/api/booking-options/:id', requireAuth(), async (req, res) => {
+    try {
+      const option = await storage.updateBookingOption(parseInt(req.params.id), req.body);
+      res.json(option);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete booking option
+  app.delete('/api/booking-options/:id', requireAuth(), async (req, res) => {
+    try {
+      await storage.deleteBookingOption(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get user's cart
+  app.get('/api/cart', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const cart = await storage.getCartByUser(user.id);
+      res.json(cart || { items: [] });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Add to cart
+  app.post('/api/cart/items', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { bookingOptionId, quantity, guestCount, selectedDate, podTripId } = req.body;
+      
+      const bookingOption = await storage.getBookingOptionById(bookingOptionId);
+      if (!bookingOption) {
+        return res.status(404).json({ error: "Booking option not found" });
+      }
+
+      const cart = await storage.getOrCreateCart(user.id, podTripId);
+      
+      const cartItem = await storage.addToCart({
+        cartId: cart.id,
+        bookingOptionId,
+        quantity: quantity || 1,
+        guestCount: guestCount || 1,
+        selectedDate,
+        priceSnapshot: bookingOption.priceInCents,
+      });
+
+      res.json(cartItem);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update cart item
+  app.patch('/api/cart/items/:id', requireAuth(), async (req, res) => {
+    try {
+      const item = await storage.updateCartItem(parseInt(req.params.id), req.body);
+      res.json(item);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Remove from cart
+  app.delete('/api/cart/items/:id', requireAuth(), async (req, res) => {
+    try {
+      await storage.removeFromCart(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create checkout session
+  app.post('/api/checkout', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const cart = await storage.getCartByUser(user.id);
+      if (!cart || cart.items.length === 0) {
+        return res.status(400).json({ error: "Cart is empty" });
+      }
+
+      const { getUncachableStripeClient } = await import('./stripeClient');
+      const stripe = await getUncachableStripeClient();
+
+      const lineItems = cart.items.map(item => ({
+        price_data: {
+          currency: item.bookingOption.currency,
+          product_data: {
+            name: item.bookingOption.name,
+            description: item.bookingOption.description || undefined,
+            images: item.bookingOption.image ? [item.bookingOption.image] : undefined,
+          },
+          unit_amount: item.priceSnapshot,
+        },
+        quantity: item.quantity * item.guestCount,
+      }));
+
+      const totalInCents = cart.items.reduce((sum, item) => 
+        sum + (item.priceSnapshot * item.quantity * item.guestCount), 0);
+
+      const order = await storage.createOrder({
+        userId: user.id,
+        cartId: cart.id,
+        podTripId: cart.podTripId,
+        totalInCents,
+        currency: 'usd',
+        status: 'pending',
+      });
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: lineItems,
+        mode: 'payment',
+        success_url: `${req.protocol}://${req.get('host')}/checkout/success?order=${order.id}`,
+        cancel_url: `${req.protocol}://${req.get('host')}/checkout/cancel`,
+        metadata: {
+          orderId: order.id.toString(),
+          userId: user.id.toString(),
+        },
+      });
+
+      await storage.updateOrder(order.id, { stripeCheckoutSessionId: session.id });
+
+      res.json({ url: session.url, orderId: order.id });
+    } catch (error: any) {
+      console.error("Checkout error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get user's orders
+  app.get('/api/orders', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const orders = await storage.getOrdersByUser(user.id);
+      res.json(orders);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get single order
+  app.get('/api/orders/:id', requireAuth(), async (req, res) => {
+    try {
+      const order = await storage.getOrderById(parseInt(req.params.id));
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      res.json(order);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get orders for a pod trip
+  app.get('/api/pods/:podId/trips/:tripId/orders', requireAuth(), async (req, res) => {
+    try {
+      const orders = await storage.getOrdersByPodTrip(parseInt(req.params.tripId));
+      res.json(orders);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Complete order (called after successful Stripe payment)
+  app.post('/api/orders/:id/complete', requireAuth(), async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const order = await storage.getOrderById(orderId);
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+
+      const cart = await storage.getCartByUser(order.userId);
+      if (cart) {
+        const orderItemsData = cart.items.map(item => ({
+          orderId,
+          bookingOptionId: item.bookingOptionId,
+          quantity: item.quantity,
+          guestCount: item.guestCount,
+          selectedDate: item.selectedDate,
+          priceInCents: item.priceSnapshot,
+          status: 'confirmed' as const,
+          confirmationCode: `CONF-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+        }));
+
+        await storage.createOrderItems(orderItemsData);
+        await storage.clearCart(cart.id);
+      }
+
+      const updatedOrder = await storage.updateOrder(orderId, {
+        status: 'completed',
+        completedAt: new Date(),
+      });
+
+      res.json(updatedOrder);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Stripe publishable key endpoint
+  app.get('/api/stripe/config', async (req, res) => {
+    try {
+      const { getStripePublishableKey } = await import('./stripeClient');
+      const publishableKey = await getStripePublishableKey();
+      res.json({ publishableKey });
+    } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });

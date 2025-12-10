@@ -33,6 +33,16 @@ import {
   type InsertTripItem,
   type FamilyMember,
   type InsertFamilyMember,
+  type BookingOption,
+  type InsertBookingOption,
+  type Cart,
+  type InsertCart,
+  type CartItem,
+  type InsertCartItem,
+  type Order,
+  type InsertOrder,
+  type OrderItem,
+  type InsertOrderItem,
   users,
   experiences,
   pods,
@@ -53,6 +63,11 @@ import {
   podTrips,
   tripItems,
   familyMembers,
+  bookingOptions,
+  carts,
+  cartItems,
+  orders,
+  orderItems,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ne, notInArray, ilike, isNotNull } from "drizzle-orm";
@@ -177,6 +192,26 @@ export interface IStorage {
   createFamilyMember(data: InsertFamilyMember): Promise<FamilyMember>;
   updateFamilyMember(memberId: number, data: Partial<FamilyMember>): Promise<FamilyMember>;
   deleteFamilyMember(memberId: number): Promise<void>;
+  
+  getBookingOptions(tripItemId?: number): Promise<BookingOption[]>;
+  getBookingOptionById(id: number): Promise<BookingOption | undefined>;
+  createBookingOption(data: InsertBookingOption): Promise<BookingOption>;
+  updateBookingOption(id: number, data: Partial<BookingOption>): Promise<BookingOption>;
+  deleteBookingOption(id: number): Promise<void>;
+  
+  getCartByUser(userId: number): Promise<(Cart & { items: (CartItem & { bookingOption: BookingOption })[] }) | undefined>;
+  getOrCreateCart(userId: number, podTripId?: number): Promise<Cart>;
+  addToCart(data: InsertCartItem): Promise<CartItem>;
+  updateCartItem(itemId: number, data: Partial<CartItem>): Promise<CartItem>;
+  removeFromCart(itemId: number): Promise<void>;
+  clearCart(cartId: number): Promise<void>;
+  
+  createOrder(data: InsertOrder): Promise<Order>;
+  getOrderById(id: number): Promise<(Order & { items: (OrderItem & { bookingOption: BookingOption })[] }) | undefined>;
+  getOrdersByUser(userId: number): Promise<Order[]>;
+  getOrdersByPodTrip(podTripId: number): Promise<(Order & { user: User })[]>;
+  updateOrder(id: number, data: Partial<Order>): Promise<Order>;
+  createOrderItems(items: InsertOrderItem[]): Promise<OrderItem[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1117,6 +1152,138 @@ export class DatabaseStorage implements IStorage {
 
   async deleteFamilyMember(memberId: number): Promise<void> {
     await db.delete(familyMembers).where(eq(familyMembers.id, memberId));
+  }
+
+  async getBookingOptions(tripItemId?: number): Promise<BookingOption[]> {
+    if (tripItemId) {
+      return db.select().from(bookingOptions)
+        .where(and(eq(bookingOptions.tripItemId, tripItemId), eq(bookingOptions.isActive, true)))
+        .orderBy(bookingOptions.priceInCents);
+    }
+    return db.select().from(bookingOptions)
+      .where(eq(bookingOptions.isActive, true))
+      .orderBy(desc(bookingOptions.createdAt));
+  }
+
+  async getBookingOptionById(id: number): Promise<BookingOption | undefined> {
+    const [option] = await db.select().from(bookingOptions).where(eq(bookingOptions.id, id));
+    return option || undefined;
+  }
+
+  async createBookingOption(data: InsertBookingOption): Promise<BookingOption> {
+    const [option] = await db.insert(bookingOptions).values(data).returning();
+    return option;
+  }
+
+  async updateBookingOption(id: number, data: Partial<BookingOption>): Promise<BookingOption> {
+    const [option] = await db.update(bookingOptions).set(data).where(eq(bookingOptions.id, id)).returning();
+    return option;
+  }
+
+  async deleteBookingOption(id: number): Promise<void> {
+    await db.update(bookingOptions).set({ isActive: false }).where(eq(bookingOptions.id, id));
+  }
+
+  async getCartByUser(userId: number): Promise<(Cart & { items: (CartItem & { bookingOption: BookingOption })[] }) | undefined> {
+    const [cart] = await db.select().from(carts)
+      .where(and(eq(carts.userId, userId), eq(carts.status, 'active')));
+    
+    if (!cart) return undefined;
+
+    const items = await db.select({
+      cartItem: cartItems,
+      bookingOption: bookingOptions
+    }).from(cartItems)
+      .innerJoin(bookingOptions, eq(cartItems.bookingOptionId, bookingOptions.id))
+      .where(eq(cartItems.cartId, cart.id));
+
+    return {
+      ...cart,
+      items: items.map(i => ({ ...i.cartItem, bookingOption: i.bookingOption }))
+    };
+  }
+
+  async getOrCreateCart(userId: number, podTripId?: number): Promise<Cart> {
+    const existingCart = await db.select().from(carts)
+      .where(and(eq(carts.userId, userId), eq(carts.status, 'active')));
+    
+    if (existingCart.length > 0) return existingCart[0];
+
+    const [cart] = await db.insert(carts).values({
+      userId,
+      podTripId,
+      status: 'active'
+    }).returning();
+    return cart;
+  }
+
+  async addToCart(data: InsertCartItem): Promise<CartItem> {
+    const [item] = await db.insert(cartItems).values(data).returning();
+    return item;
+  }
+
+  async updateCartItem(itemId: number, data: Partial<CartItem>): Promise<CartItem> {
+    const [item] = await db.update(cartItems).set(data).where(eq(cartItems.id, itemId)).returning();
+    return item;
+  }
+
+  async removeFromCart(itemId: number): Promise<void> {
+    await db.delete(cartItems).where(eq(cartItems.id, itemId));
+  }
+
+  async clearCart(cartId: number): Promise<void> {
+    await db.delete(cartItems).where(eq(cartItems.cartId, cartId));
+    await db.update(carts).set({ status: 'completed' }).where(eq(carts.id, cartId));
+  }
+
+  async createOrder(data: InsertOrder): Promise<Order> {
+    const [order] = await db.insert(orders).values(data).returning();
+    return order;
+  }
+
+  async getOrderById(id: number): Promise<(Order & { items: (OrderItem & { bookingOption: BookingOption })[] }) | undefined> {
+    const [order] = await db.select().from(orders).where(eq(orders.id, id));
+    if (!order) return undefined;
+
+    const items = await db.select({
+      orderItem: orderItems,
+      bookingOption: bookingOptions
+    }).from(orderItems)
+      .innerJoin(bookingOptions, eq(orderItems.bookingOptionId, bookingOptions.id))
+      .where(eq(orderItems.orderId, id));
+
+    return {
+      ...order,
+      items: items.map(i => ({ ...i.orderItem, bookingOption: i.bookingOption }))
+    };
+  }
+
+  async getOrdersByUser(userId: number): Promise<Order[]> {
+    return db.select().from(orders)
+      .where(eq(orders.userId, userId))
+      .orderBy(desc(orders.createdAt));
+  }
+
+  async getOrdersByPodTrip(podTripId: number): Promise<(Order & { user: User })[]> {
+    const result = await db.select({
+      order: orders,
+      user: users
+    }).from(orders)
+      .innerJoin(users, eq(orders.userId, users.id))
+      .where(eq(orders.podTripId, podTripId))
+      .orderBy(desc(orders.createdAt));
+
+    return result.map(r => ({ ...r.order, user: r.user }));
+  }
+
+  async updateOrder(id: number, data: Partial<Order>): Promise<Order> {
+    const [order] = await db.update(orders).set(data).where(eq(orders.id, id)).returning();
+    return order;
+  }
+
+  async createOrderItems(items: InsertOrderItem[]): Promise<OrderItem[]> {
+    if (items.length === 0) return [];
+    return db.insert(orderItems).values(items).returning();
   }
 }
 

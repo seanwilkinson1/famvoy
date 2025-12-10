@@ -229,6 +229,72 @@ export const tripItems = pgTable("trip_items", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const bookingOptions = pgTable("booking_options", {
+  id: serial("id").primaryKey(),
+  tripItemId: integer("trip_item_id").references(() => tripItems.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").notNull(),
+  priceInCents: integer("price_in_cents").notNull(),
+  currency: text("currency").default("usd").notNull(),
+  image: text("image"),
+  locationName: text("location_name"),
+  duration: text("duration"),
+  maxGuests: integer("max_guests"),
+  isActive: boolean("is_active").default(true).notNull(),
+  stripePriceId: text("stripe_price_id"),
+  stripeProductId: text("stripe_product_id"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const carts = pgTable("carts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  podTripId: integer("pod_trip_id").references(() => podTrips.id),
+  status: text("status").default("active").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const cartItems = pgTable("cart_items", {
+  id: serial("id").primaryKey(),
+  cartId: integer("cart_id").notNull().references(() => carts.id),
+  bookingOptionId: integer("booking_option_id").notNull().references(() => bookingOptions.id),
+  quantity: integer("quantity").default(1).notNull(),
+  guestCount: integer("guest_count").default(1).notNull(),
+  selectedDate: text("selected_date"),
+  priceSnapshot: integer("price_snapshot").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const orders = pgTable("orders", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  cartId: integer("cart_id").references(() => carts.id),
+  podTripId: integer("pod_trip_id").references(() => podTrips.id),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  stripeCheckoutSessionId: text("stripe_checkout_session_id"),
+  totalInCents: integer("total_in_cents").notNull(),
+  currency: text("currency").default("usd").notNull(),
+  status: text("status").default("pending").notNull(),
+  confirmationData: jsonb("confirmation_data"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const orderItems = pgTable("order_items", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").notNull().references(() => orders.id),
+  bookingOptionId: integer("booking_option_id").notNull().references(() => bookingOptions.id),
+  quantity: integer("quantity").notNull(),
+  guestCount: integer("guest_count").notNull(),
+  selectedDate: text("selected_date"),
+  priceInCents: integer("price_in_cents").notNull(),
+  status: text("status").default("confirmed").notNull(),
+  confirmationCode: text("confirmation_code"),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({ id: true });
 export const insertExperienceSchema = createInsertSchema(experiences).omit({ id: true, createdAt: true });
@@ -248,6 +314,11 @@ export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({ id: t
 export const insertExperienceCheckinSchema = createInsertSchema(experienceCheckins).omit({ id: true, createdAt: true });
 export const insertPodTripSchema = createInsertSchema(podTrips).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTripItemSchema = createInsertSchema(tripItems).omit({ id: true, createdAt: true });
+export const insertBookingOptionSchema = createInsertSchema(bookingOptions).omit({ id: true, createdAt: true });
+export const insertCartSchema = createInsertSchema(carts).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCartItemSchema = createInsertSchema(cartItems).omit({ id: true, createdAt: true });
+export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true });
+export const insertOrderItemSchema = createInsertSchema(orderItems).omit({ id: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -321,3 +392,18 @@ export type InsertPodTrip = z.infer<typeof insertPodTripSchema>;
 
 export type TripItem = typeof tripItems.$inferSelect;
 export type InsertTripItem = z.infer<typeof insertTripItemSchema>;
+
+export type BookingOption = typeof bookingOptions.$inferSelect;
+export type InsertBookingOption = z.infer<typeof insertBookingOptionSchema>;
+
+export type Cart = typeof carts.$inferSelect;
+export type InsertCart = z.infer<typeof insertCartSchema>;
+
+export type CartItem = typeof cartItems.$inferSelect;
+export type InsertCartItem = z.infer<typeof insertCartItemSchema>;
+
+export type Order = typeof orders.$inferSelect;
+export type InsertOrder = z.infer<typeof insertOrderSchema>;
+
+export type OrderItem = typeof orderItems.$inferSelect;
+export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
