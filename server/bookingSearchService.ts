@@ -53,6 +53,18 @@ function generateBookingUrl(itemType: string, title: string, destination: string
   return urls[itemType] || `https://www.tripadvisor.com/Search?q=${encodedQuery}`;
 }
 
+function getPlaceholderImage(itemType: string, index: number): string {
+  const imageIds: Record<string, number[]> = {
+    STAY: [164, 1048, 1076],
+    MEAL: [292, 312, 429],
+    ACTIVITY: [433, 685, 871],
+    TRANSPORT: [195, 416, 519],
+  };
+  const ids = imageIds[itemType] || imageIds.ACTIVITY;
+  const imageId = ids[index % ids.length];
+  return `https://picsum.photos/id/${imageId}/400/300`;
+}
+
 export async function searchBookingOptions(
   tripItem: TripItem,
   destination: string,
@@ -114,13 +126,13 @@ Make the options realistic and varied. Include real-sounding business names that
       throw new Error("Invalid response format");
     }
 
-    return options.slice(0, 3).map((opt: any) => ({
+    return options.slice(0, 3).map((opt: any, index: number) => ({
       title: opt.title || "Unknown",
       description: opt.description || "",
       priceEstimate: opt.priceEstimate || opt.price || "Price varies",
       rating: opt.rating || "4.0",
       reviewCount: opt.reviewCount || Math.floor(Math.random() * 500) + 50,
-      image: `https://source.unsplash.com/400x300/?${encodeURIComponent(opt.imageSearch || tripItem.itemType)}`,
+      image: getPlaceholderImage(tripItem.itemType, index),
       bookingUrl: generateBookingUrl(tripItem.itemType, opt.title, destination),
       address: opt.address || destination,
       provider: provider,
@@ -147,7 +159,7 @@ function generateFallbackOptions(tripItem: TripItem, destination: string): Booki
     priceEstimate: opt.price,
     rating: opt.rating,
     reviewCount: Math.floor(Math.random() * 800) + 100,
-    image: `https://source.unsplash.com/400x300/?${encodeURIComponent(tripItem.itemType.toLowerCase())}`,
+    image: getPlaceholderImage(tripItem.itemType, index),
     bookingUrl: generateBookingUrl(tripItem.itemType, baseTitle, destination),
     address: destination,
     provider: provider,

@@ -324,15 +324,18 @@ export default function TripConfirmWizard() {
                         )}
                         data-testid={`option-card-${option.id}`}
                       >
-                        {option.image && (
-                          <div className="h-32 bg-gray-100">
+                        <div className="h-32 bg-gradient-to-br from-primary/20 to-primary/5 relative overflow-hidden">
+                          {option.image && (
                             <img
                               src={option.image}
                               alt={option.title}
                               className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
                             />
-                          </div>
-                        )}
+                          )}
+                        </div>
                         <div className="p-4">
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <h3 className="font-semibold text-gray-900">{option.title}</h3>
