@@ -78,6 +78,47 @@ Preferred communication style: Simple, everyday language.
 - `server/webhookHandlers.ts`: Webhook event handlers for Stripe events
 - `server/index.ts`: Stripe schema initialization and webhook route registration
 
+### Trip Confirmation Wizard
+**Purpose**: Sequential wizard-style flow for converting draft trips to confirmed trips. Users review trip items one-by-one, select from AI-generated booking options, and progress through each item until the full trip is confirmed (similar to Jotform's single-question view).
+
+**Trip Status Lifecycle**: `draft` → `confirming` (wizard in progress) → `confirmed`
+
+**Database Tables**:
+- `tripConfirmationSessions`: Tracks wizard state with `tripId`, `currentItemIndex`, `requestedByUserId`, `isCompleted`
+- `tripItemOptions`: AI-generated booking options per trip item with `tripItemId`, `title`, `description`, `priceEstimate`, `rating`, `bookingUrl`, `imageUrl`, `isLocked`
+- `tripItems` enhanced with: `isConfirmable`, `confirmationState` (pending/locked/skipped), `selectedOptionId`
+- `podTrips` enhanced with: `status` (draft/confirming/confirmed)
+
+**AI Booking Search Service** (`server/bookingSearchService.ts`):
+- Uses OpenAI GPT-4o-mini via Replit AI Integrations (no API key required)
+- Generates 3 realistic booking options per trip item based on type, name, location, and date
+- Options include title, description, estimated price, rating, and booking URLs
+- Falls back to generated options if AI fails
+
+**API Endpoints**:
+- `POST /api/trips/:id/confirm/start`: Start confirmation wizard, sets trip status to "confirming"
+- `GET /api/trips/:id/confirm/session`: Get current wizard state with progress and options
+- `POST /api/trips/:tripId/items/:itemId/options/generate`: Generate/regenerate 3 booking options for an item
+- `POST /api/trips/:tripId/items/:itemId/options/:optionId/lock`: Lock selected option, advance to next item
+- `POST /api/trips/:tripId/items/:itemId/skip`: Skip item, mark as not confirmable
+- `POST /api/trips/:id/confirm/complete`: Complete confirmation, set trip status to "confirmed"
+
+**Authorization**: All confirmation endpoints verify the requester is a member of the trip's pod before allowing any action.
+
+**Frontend** (`client/src/pages/TripConfirmWizard.tsx`):
+- Full-screen wizard UI with progress indicator bar
+- Shows current item details (type, time, notes)
+- Displays 3 option cards with title, price, rating, and selection button
+- Regenerate button to get new options
+- Skip button to bypass items
+- Auto-advance animation between items
+- Completion screen with "Confirm Trip" button
+
+**Trip Details Integration** (`client/src/pages/TripDetails.tsx`):
+- "Confirm Trip" CTA button for draft trips
+- "Continue Confirming" button for trips in progress
+- "Confirmed" badge for completed trips
+
 ### Enhanced Family Profiles
 **Database Tables**:
 - `familyMembers`: Stores individual family members with fields: `id`, `userId` (FK to users), `name`, `role` (Mom/Dad/Son/Daughter/etc), `photo`, `ageGroup`, `isAdult`, `createdAt`
