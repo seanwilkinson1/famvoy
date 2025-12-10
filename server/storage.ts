@@ -43,6 +43,10 @@ import {
   type InsertOrder,
   type OrderItem,
   type InsertOrderItem,
+  type TripConfirmationSession,
+  type InsertTripConfirmationSession,
+  type TripItemOption,
+  type InsertTripItemOption,
   users,
   experiences,
   pods,
@@ -68,6 +72,8 @@ import {
   cartItems,
   orders,
   orderItems,
+  tripConfirmationSessions,
+  tripItemOptions,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ne, notInArray, ilike, isNotNull } from "drizzle-orm";
@@ -212,6 +218,19 @@ export interface IStorage {
   getOrdersByPodTrip(podTripId: number): Promise<(Order & { user: User })[]>;
   updateOrder(id: number, data: Partial<Order>): Promise<Order>;
   createOrderItems(items: InsertOrderItem[]): Promise<OrderItem[]>;
+  
+  getConfirmationSession(tripId: number): Promise<TripConfirmationSession | undefined>;
+  createConfirmationSession(data: InsertTripConfirmationSession): Promise<TripConfirmationSession>;
+  updateConfirmationSession(sessionId: number, data: Partial<TripConfirmationSession>): Promise<TripConfirmationSession>;
+  
+  getTripItemOptions(tripItemId: number, generationId?: string): Promise<TripItemOption[]>;
+  createTripItemOptions(options: InsertTripItemOption[]): Promise<TripItemOption[]>;
+  deleteTripItemOptions(tripItemId: number, generationId?: string): Promise<void>;
+  lockTripItemOption(optionId: number): Promise<TripItemOption>;
+  
+  updateTripStatus(tripId: number, status: string): Promise<PodTrip>;
+  updateTripItemConfirmation(itemId: number, state: string, selectedOptionId?: number): Promise<TripItem>;
+  getConfirmableItems(tripId: number): Promise<TripItem[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1284,6 +1303,93 @@ export class DatabaseStorage implements IStorage {
   async createOrderItems(items: InsertOrderItem[]): Promise<OrderItem[]> {
     if (items.length === 0) return [];
     return db.insert(orderItems).values(items).returning();
+  }
+
+  async getConfirmationSession(tripId: number): Promise<TripConfirmationSession | undefined> {
+    const [session] = await db.select().from(tripConfirmationSessions)
+      .where(eq(tripConfirmationSessions.tripId, tripId));
+    return session || undefined;
+  }
+
+  async createConfirmationSession(data: InsertTripConfirmationSession): Promise<TripConfirmationSession> {
+    const [session] = await db.insert(tripConfirmationSessions).values(data).returning();
+    return session;
+  }
+
+  async updateConfirmationSession(sessionId: number, data: Partial<TripConfirmationSession>): Promise<TripConfirmationSession> {
+    const [session] = await db.update(tripConfirmationSessions)
+      .set(data)
+      .where(eq(tripConfirmationSessions.id, sessionId))
+      .returning();
+    return session;
+  }
+
+  async getTripItemOptions(tripItemId: number, generationId?: string): Promise<TripItemOption[]> {
+    if (generationId) {
+      return db.select().from(tripItemOptions)
+        .where(and(
+          eq(tripItemOptions.tripItemId, tripItemId),
+          eq(tripItemOptions.generationId, generationId)
+        ))
+        .orderBy(tripItemOptions.createdAt);
+    }
+    return db.select().from(tripItemOptions)
+      .where(eq(tripItemOptions.tripItemId, tripItemId))
+      .orderBy(desc(tripItemOptions.createdAt));
+  }
+
+  async createTripItemOptions(options: InsertTripItemOption[]): Promise<TripItemOption[]> {
+    if (options.length === 0) return [];
+    return db.insert(tripItemOptions).values(options).returning();
+  }
+
+  async deleteTripItemOptions(tripItemId: number, generationId?: string): Promise<void> {
+    if (generationId) {
+      await db.delete(tripItemOptions)
+        .where(and(
+          eq(tripItemOptions.tripItemId, tripItemId),
+          eq(tripItemOptions.generationId, generationId)
+        ));
+    } else {
+      await db.delete(tripItemOptions)
+        .where(eq(tripItemOptions.tripItemId, tripItemId));
+    }
+  }
+
+  async lockTripItemOption(optionId: number): Promise<TripItemOption> {
+    const [option] = await db.update(tripItemOptions)
+      .set({ isLocked: true })
+      .where(eq(tripItemOptions.id, optionId))
+      .returning();
+    return option;
+  }
+
+  async updateTripStatus(tripId: number, status: string): Promise<PodTrip> {
+    const [trip] = await db.update(podTrips)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(podTrips.id, tripId))
+      .returning();
+    return trip;
+  }
+
+  async updateTripItemConfirmation(itemId: number, state: string, selectedOptionId?: number): Promise<TripItem> {
+    const [item] = await db.update(tripItems)
+      .set({ 
+        confirmationState: state, 
+        selectedOptionId: selectedOptionId || null 
+      })
+      .where(eq(tripItems.id, itemId))
+      .returning();
+    return item;
+  }
+
+  async getConfirmableItems(tripId: number): Promise<TripItem[]> {
+    return db.select().from(tripItems)
+      .where(and(
+        eq(tripItems.tripId, tripId),
+        eq(tripItems.isConfirmable, true)
+      ))
+      .orderBy(tripItems.dayNumber, tripItems.sortOrder);
   }
 }
 

@@ -19,6 +19,7 @@ import FamilyProfile from "@/pages/FamilyProfile";
 import ExperienceDetails from "@/pages/ExperienceDetails";
 import PodDetails from "@/pages/PodDetails";
 import TripDetails from "@/pages/TripDetails";
+import TripConfirmWizard from "@/pages/TripConfirmWizard";
 import Cart from "@/pages/Cart";
 import CheckoutSuccess from "@/pages/CheckoutSuccess";
 import CheckoutCancel from "@/pages/CheckoutCancel";
@@ -57,6 +58,7 @@ function AuthenticatedRouter() {
         <Route path="/experience/:id" component={ExperienceDetails} />
         <Route path="/pod/:id" component={PodDetails} />
         <Route path="/trip/:id" component={TripDetails} />
+        <Route path="/trip/:id/confirm" component={TripConfirmWizard} />
         <Route path="/family/:id" component={FamilyProfile} />
         <Route path="/cart" component={Cart} />
         <Route path="/checkout/success" component={CheckoutSuccess} />

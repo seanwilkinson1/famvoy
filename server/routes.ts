@@ -1939,6 +1939,354 @@ Return ONLY valid JSON.`;
     }
   });
 
+  // ============ TRIP CONFIRMATION WIZARD ROUTES ============
+  
+  // Start confirmation wizard for a trip
+  app.post("/api/trips/:id/confirm/start", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.id);
+      const { userId: clerkUserId } = getAuth(req);
+      
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      const userId = user.id;
+
+      const trip = await storage.getTripById(tripId);
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+
+      // Authorization check: ensure user is a member of the trip's pod
+      const isMember = await storage.isPodMember(trip.podId, userId);
+      if (!isMember) {
+        return res.status(403).json({ error: "You don't have access to this trip" });
+      }
+
+      // Check if trip is in draft status
+      if (trip.status !== "draft") {
+        return res.status(400).json({ error: "Trip is already being confirmed or is confirmed" });
+      }
+
+      // Update trip status to confirming
+      await storage.updateTripStatus(tripId, "confirming");
+
+      // Create or get confirmation session
+      let session = await storage.getConfirmationSession(tripId);
+      if (!session) {
+        session = await storage.createConfirmationSession({
+          tripId,
+          currentItemIndex: 0,
+          requestedByUserId: userId,
+        });
+      }
+
+      // Get confirmable items
+      const items = await storage.getConfirmableItems(tripId);
+      
+      // Get options for current item if available
+      const currentItem = items.length > 0 ? items[session.currentItemIndex] || null : null;
+      let currentOptions: any[] = [];
+      if (currentItem) {
+        currentOptions = await storage.getTripItemOptions(currentItem.id) || [];
+      }
+
+      // Calculate safe progress (guard against division by zero)
+      const totalItems = items.length;
+      const currentIndex = session.currentItemIndex;
+      const progress = {
+        current: totalItems > 0 ? currentIndex + 1 : 0,
+        total: totalItems,
+        percentage: totalItems > 0 ? Math.round((currentIndex / totalItems) * 100) : 0,
+      };
+
+      res.json({
+        session,
+        items,
+        currentItem,
+        currentOptions,
+        trip: { ...trip, status: "confirming" },
+        totalItems,
+        progress,
+      });
+    } catch (error: any) {
+      console.error("Start confirmation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get confirmation session state
+  app.get("/api/trips/:id/confirm/session", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.id);
+      const { userId: clerkUserId } = getAuth(req);
+      
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      const trip = await storage.getTripById(tripId);
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+
+      // Authorization check
+      const isMember = await storage.isPodMember(trip.podId, user.id);
+      if (!isMember) {
+        return res.status(403).json({ error: "You don't have access to this trip" });
+      }
+
+      const session = await storage.getConfirmationSession(tripId);
+      if (!session) {
+        return res.status(404).json({ error: "No active confirmation session" });
+      }
+
+      const items = await storage.getConfirmableItems(tripId);
+      
+      // Get options for current item if available
+      const currentItem = items.length > 0 ? items[session.currentItemIndex] || null : null;
+      let currentOptions: any[] = [];
+      if (currentItem) {
+        currentOptions = await storage.getTripItemOptions(currentItem.id) || [];
+      }
+
+      // Calculate safe progress (guard against division by zero)
+      const totalItems = items.length;
+      const currentIndex = session.currentItemIndex;
+      const progress = {
+        current: totalItems > 0 ? currentIndex + 1 : 0,
+        total: totalItems,
+        percentage: totalItems > 0 ? Math.round((currentIndex / totalItems) * 100) : 0,
+      };
+
+      res.json({
+        session,
+        items,
+        currentItem,
+        currentOptions,
+        trip,
+        totalItems,
+        progress,
+      });
+    } catch (error: any) {
+      console.error("Get session error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Generate/regenerate options for a trip item
+  app.post("/api/trips/:tripId/items/:itemId/options/generate", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.tripId);
+      const itemId = parseInt(req.params.itemId);
+      const { userId: clerkUserId } = getAuth(req);
+      
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      const trip = await storage.getTripById(tripId);
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+
+      // Authorization check
+      const isMember = await storage.isPodMember(trip.podId, user.id);
+      if (!isMember) {
+        return res.status(403).json({ error: "You don't have access to this trip" });
+      }
+
+      const item = trip.items.find(i => i.id === itemId);
+      if (!item) {
+        return res.status(404).json({ error: "Trip item not found" });
+      }
+
+      // Import the booking search service dynamically
+      const { generateAndSaveOptions } = await import("./bookingSearchService");
+      
+      const result = await generateAndSaveOptions(item, trip.destination, {
+        startDate: trip.startDate,
+        endDate: trip.endDate,
+      });
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Generate options error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Lock an option for a trip item
+  app.post("/api/trips/:tripId/items/:itemId/options/:optionId/lock", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.tripId);
+      const itemId = parseInt(req.params.itemId);
+      const optionId = parseInt(req.params.optionId);
+      const { userId: clerkUserId } = getAuth(req);
+      
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      const trip = await storage.getTripById(tripId);
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+
+      // Authorization check
+      const isMember = await storage.isPodMember(trip.podId, user.id);
+      if (!isMember) {
+        return res.status(403).json({ error: "You don't have access to this trip" });
+      }
+
+      // Lock the option
+      const lockedOption = await storage.lockTripItemOption(optionId);
+      
+      // Update the trip item confirmation state
+      await storage.updateTripItemConfirmation(itemId, "locked", optionId);
+
+      // Advance to next item
+      const session = await storage.getConfirmationSession(tripId);
+      if (session) {
+        const items = await storage.getConfirmableItems(tripId);
+        const nextIndex = session.currentItemIndex + 1;
+        
+        if (nextIndex < items.length) {
+          await storage.updateConfirmationSession(session.id, {
+            currentItemIndex: nextIndex,
+          });
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        lockedOption,
+        message: "Option locked successfully"
+      });
+    } catch (error: any) {
+      console.error("Lock option error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Skip an item (mark as not confirmable)
+  app.post("/api/trips/:tripId/items/:itemId/skip", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.tripId);
+      const itemId = parseInt(req.params.itemId);
+      const { userId: clerkUserId } = getAuth(req);
+      
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      const trip = await storage.getTripById(tripId);
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+
+      // Authorization check
+      const isMember = await storage.isPodMember(trip.podId, user.id);
+      if (!isMember) {
+        return res.status(403).json({ error: "You don't have access to this trip" });
+      }
+
+      // Update the trip item confirmation state to skipped
+      await storage.updateTripItemConfirmation(itemId, "skipped");
+
+      // Advance to next item
+      const session = await storage.getConfirmationSession(tripId);
+      if (session) {
+        const items = await storage.getConfirmableItems(tripId);
+        const nextIndex = session.currentItemIndex + 1;
+        
+        if (nextIndex < items.length) {
+          await storage.updateConfirmationSession(session.id, {
+            currentItemIndex: nextIndex,
+          });
+        }
+      }
+
+      res.json({ success: true, message: "Item skipped" });
+    } catch (error: any) {
+      console.error("Skip item error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Complete the confirmation process
+  app.post("/api/trips/:id/confirm/complete", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.id);
+      const { userId: clerkUserId } = getAuth(req);
+      
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      const trip = await storage.getTripById(tripId);
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+
+      // Authorization check
+      const isMember = await storage.isPodMember(trip.podId, user.id);
+      if (!isMember) {
+        return res.status(403).json({ error: "You don't have access to this trip" });
+      }
+
+      // Update trip status to confirmed
+      const updatedTrip = await storage.updateTripStatus(tripId, "confirmed");
+
+      // Mark session as completed
+      const session = await storage.getConfirmationSession(tripId);
+      if (session) {
+        await storage.updateConfirmationSession(session.id, {
+          completedAt: new Date(),
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        trip: updatedTrip,
+        message: "Trip confirmed successfully!" 
+      });
+    } catch (error: any) {
+      console.error("Complete confirmation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============ BOOKING ROUTES ============
   
   // Get all booking options (or by trip item)

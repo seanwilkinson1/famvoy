@@ -37,6 +37,7 @@ interface Trip {
   startDate: string;
   endDate: string;
   aiSummary: string | null;
+  status: string;
   createdByUserId: number;
   createdAt: string;
   items: TripItem[];
@@ -332,6 +333,57 @@ export default function TripDetails() {
               <span className="text-sm font-bold text-purple-700">AI Summary</span>
             </div>
             <p className="text-sm text-purple-900/80 leading-relaxed">{trip.aiSummary}</p>
+          </div>
+        )}
+
+        {trip.items.length > 0 && trip.status === "draft" && (
+          <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-primary to-primary/80 rounded-2xl">
+            <div className="flex items-center justify-between">
+              <div className="text-white">
+                <h3 className="font-bold text-lg">Ready to book?</h3>
+                <p className="text-sm opacity-90">Convert your draft into a confirmed trip with real bookings</p>
+              </div>
+              <button
+                onClick={() => setLocation(`/trip/${tripId}/confirm`)}
+                className="shrink-0 bg-white text-primary px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-gray-50 transition-colors"
+                data-testid="button-start-confirming"
+              >
+                <Check className="h-4 w-4" />
+                Confirm Trip
+              </button>
+            </div>
+          </div>
+        )}
+
+        {trip.status === "confirming" && (
+          <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-2xl">
+            <div className="flex items-center justify-between">
+              <div className="text-white">
+                <h3 className="font-bold text-lg">Confirmation in progress</h3>
+                <p className="text-sm opacity-90">Continue choosing your booking options</p>
+              </div>
+              <button
+                onClick={() => setLocation(`/trip/${tripId}/confirm`)}
+                className="shrink-0 bg-white text-orange-600 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-gray-50 transition-colors"
+                data-testid="button-continue-confirming"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        )}
+
+        {trip.status === "confirmed" && (
+          <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl">
+            <div className="flex items-center gap-3 text-white">
+              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                <Check className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg">Trip Confirmed!</h3>
+                <p className="text-sm opacity-90">Your bookings are all set</p>
+              </div>
+            </div>
           </div>
         )}
 

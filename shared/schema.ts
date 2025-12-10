@@ -210,6 +210,7 @@ export const podTrips = pgTable("pod_trips", {
   startDate: text("start_date").notNull(),
   endDate: text("end_date").notNull(),
   aiSummary: text("ai_summary"),
+  status: text("status").default("draft").notNull(),
   createdByUserId: integer("created_by_user_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -226,7 +227,38 @@ export const tripItems = pgTable("trip_items", {
   itemType: text("item_type").notNull(),
   sortOrder: integer("sort_order").notNull(),
   experienceId: integer("experience_id").references(() => experiences.id),
+  isConfirmable: boolean("is_confirmable").default(true),
+  confirmationState: text("confirmation_state").default("pending"),
+  selectedOptionId: integer("selected_option_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const tripConfirmationSessions = pgTable("trip_confirmation_sessions", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => podTrips.id),
+  currentItemIndex: integer("current_item_index").default(0).notNull(),
+  requestedByUserId: integer("requested_by_user_id").notNull().references(() => users.id),
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const tripItemOptions = pgTable("trip_item_options", {
+  id: serial("id").primaryKey(),
+  tripItemId: integer("trip_item_id").notNull().references(() => tripItems.id),
+  generationId: text("generation_id").notNull(),
+  provider: text("provider"),
+  title: text("title").notNull(),
+  description: text("description"),
+  priceEstimate: text("price_estimate"),
+  rating: text("rating"),
+  reviewCount: integer("review_count"),
+  image: text("image"),
+  bookingUrl: text("booking_url"),
+  address: text("address"),
+  metadata: jsonb("metadata"),
+  isLocked: boolean("is_locked").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"),
 });
 
 export const bookingOptions = pgTable("booking_options", {
@@ -314,6 +346,8 @@ export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({ id: t
 export const insertExperienceCheckinSchema = createInsertSchema(experienceCheckins).omit({ id: true, createdAt: true });
 export const insertPodTripSchema = createInsertSchema(podTrips).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTripItemSchema = createInsertSchema(tripItems).omit({ id: true, createdAt: true });
+export const insertTripConfirmationSessionSchema = createInsertSchema(tripConfirmationSessions).omit({ id: true, startedAt: true });
+export const insertTripItemOptionSchema = createInsertSchema(tripItemOptions).omit({ id: true, createdAt: true });
 export const insertBookingOptionSchema = createInsertSchema(bookingOptions).omit({ id: true, createdAt: true });
 export const insertCartSchema = createInsertSchema(carts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertCartItemSchema = createInsertSchema(cartItems).omit({ id: true, createdAt: true });
@@ -392,6 +426,12 @@ export type InsertPodTrip = z.infer<typeof insertPodTripSchema>;
 
 export type TripItem = typeof tripItems.$inferSelect;
 export type InsertTripItem = z.infer<typeof insertTripItemSchema>;
+
+export type TripConfirmationSession = typeof tripConfirmationSessions.$inferSelect;
+export type InsertTripConfirmationSession = z.infer<typeof insertTripConfirmationSessionSchema>;
+
+export type TripItemOption = typeof tripItemOptions.$inferSelect;
+export type InsertTripItemOption = z.infer<typeof insertTripItemOptionSchema>;
 
 export type BookingOption = typeof bookingOptions.$inferSelect;
 export type InsertBookingOption = z.infer<typeof insertBookingOptionSchema>;
