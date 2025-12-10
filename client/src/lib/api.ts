@@ -137,6 +137,12 @@ export const api = {
       return res.json();
     },
     
+    getMyTrips: async (): Promise<any[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/users/me/trips`);
+      if (!res.ok) throw new Error("Failed to fetch trips");
+      return res.json();
+    },
+    
     getExperiences: async (userId: number): Promise<Experience[]> => {
       const res = await fetch(`${API_BASE}/users/${userId}/experiences`);
       if (!res.ok) throw new Error("Failed to fetch user experiences");

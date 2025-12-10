@@ -33,7 +33,7 @@ const INTEREST_OPTIONS = [
 ];
 
 export default function Profile() {
-  const [activeTab, setActiveTab] = useState<"experiences" | "saved" | "completed" | "pods" | "badges">("experiences");
+  const [activeTab, setActiveTab] = useState<"experiences" | "saved" | "completed" | "pods" | "trips">("experiences");
   const [isEditing, setIsEditing] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [newMember, setNewMember] = useState({
@@ -173,6 +173,12 @@ export default function Profile() {
   const { data: userBadges = [] } = useQuery({
     queryKey: ["userBadges", currentUser?.id],
     queryFn: () => currentUser ? api.badges.getByUser(currentUser.id) : [],
+    enabled: !!currentUser,
+  });
+
+  const { data: userTrips = [] } = useQuery({
+    queryKey: ["userTrips", currentUser?.id],
+    queryFn: api.users.getMyTrips,
     enabled: !!currentUser,
   });
 
@@ -667,7 +673,7 @@ export default function Profile() {
           { id: "saved", label: "Saved" },
           { id: "completed", label: "Done" },
           { id: "pods", label: "Pods" },
-          { id: "badges", label: "Badges" },
+          { id: "trips", label: "Trips" },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -786,38 +792,57 @@ export default function Profile() {
           </>
         )}
 
-        {activeTab === "badges" && (
+        {activeTab === "trips" && (
           <>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-amber-500" />
-                <span className="font-bold text-gray-900">{userBadges.length} Badges Earned</span>
+                <Plane className="h-5 w-5 text-primary" />
+                <span className="font-bold text-gray-900">{userTrips.length} Trips</span>
               </div>
             </div>
-            {userBadges.length === 0 ? (
+            {userTrips.length === 0 ? (
               <div className="py-8 text-center">
-                <Award className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                <p className="text-sm text-gray-400">No badges earned yet</p>
-                <p className="text-xs text-gray-400 mt-1">Complete activities to earn achievements!</p>
+                <Plane className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-sm text-gray-400">No trips planned yet</p>
+                <p className="text-xs text-gray-400 mt-1">Join a pod and start planning your first trip!</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {userBadges.map((badge: any) => (
+              <div className="space-y-3">
+                {userTrips.map((trip: any) => (
                   <div 
-                    key={badge.id}
-                    className="rounded-xl bg-white p-4 shadow-sm border border-gray-100"
-                    data-testid={`badge-card-${badge.id}`}
+                    key={trip.id}
+                    className="rounded-xl bg-white p-4 shadow-sm border border-gray-100 cursor-pointer"
+                    onClick={() => setLocation(`/trip/${trip.id}`)}
+                    data-testid={`trip-card-${trip.id}`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="text-3xl">
-                        {BADGE_ICONS[badge.name] || "🏅"}
+                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                        <Plane className="h-6 w-6 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm text-gray-900 line-clamp-1">{badge.name}</p>
-                        <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">{badge.description}</p>
-                        {badge.earnedAt && (
-                          <p className="text-[10px] text-primary font-medium mt-1">
-                            Earned {new Date(badge.earnedAt).toLocaleDateString()}
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <h4 className="font-bold text-gray-900 line-clamp-1">{trip.name}</h4>
+                          <span className={cn(
+                            "text-xs px-2 py-0.5 rounded-full font-medium shrink-0",
+                            trip.status === "confirmed" 
+                              ? "bg-green-100 text-green-700" 
+                              : trip.status === "confirming"
+                              ? "bg-orange-100 text-orange-700"
+                              : "bg-gray-100 text-gray-600"
+                          )}>
+                            {trip.status === "confirmed" ? "Confirmed" : trip.status === "confirming" ? "In Progress" : "Draft"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm text-gray-500">
+                          <MapPin className="h-3 w-3" />
+                          <span>{trip.destination}</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {new Date(trip.startDate).toLocaleDateString()} - {new Date(trip.endDate).toLocaleDateString()}
+                        </p>
+                        {trip.pod && (
+                          <p className="text-xs text-primary mt-1 font-medium">
+                            {trip.pod.name}
                           </p>
                         )}
                       </div>

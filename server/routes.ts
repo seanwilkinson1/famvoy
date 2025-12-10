@@ -230,6 +230,24 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/users/me/trips', requireAuth(), async (req, res) => {
+    try {
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const trips = await storage.getTripsByUser(user.id);
+      res.json(trips);
+    } catch (error) {
+      console.error("Error fetching user trips:", error);
+      res.status(500).json({ message: "Failed to fetch trips" });
+    }
+  });
+
   app.get("/api/experiences", async (req, res) => {
     try {
       const allExperiences = await storage.getExperiences();

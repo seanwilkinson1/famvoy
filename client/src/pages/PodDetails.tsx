@@ -811,7 +811,19 @@ export default function PodDetails() {
                         <Plane className="h-6 w-6 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-heading font-bold text-charcoal truncate">{trip.name}</h4>
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <h4 className="font-heading font-bold text-charcoal truncate">{trip.name}</h4>
+                          <span className={cn(
+                            "text-xs px-2 py-0.5 rounded-full font-medium shrink-0",
+                            trip.status === "confirmed" 
+                              ? "bg-green-100 text-green-700" 
+                              : trip.status === "confirming"
+                              ? "bg-orange-100 text-orange-700"
+                              : "bg-gray-100 text-gray-600"
+                          )}>
+                            {trip.status === "confirmed" ? "Confirmed" : trip.status === "confirming" ? "In Progress" : "Draft"}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-1 text-sm text-gray-500 mt-0.5">
                           <MapPin className="h-3.5 w-3.5" />
                           <span className="truncate">{trip.destination}</span>

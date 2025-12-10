@@ -76,7 +76,7 @@ import {
   tripItemOptions,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or, ne, notInArray, ilike, isNotNull } from "drizzle-orm";
+import { eq, desc, and, or, ne, notInArray, ilike, isNotNull, inArray } from "drizzle-orm";
 
 function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 3959;
@@ -183,6 +183,7 @@ export interface IStorage {
   hasUserCheckedIn(userId: number, experienceId: number): Promise<boolean>;
   
   getTripsByPod(podId: number): Promise<(PodTrip & { creator: User; itemCount: number })[]>;
+  getTripsByUser(userId: number): Promise<(PodTrip & { creator: User; itemCount: number; pod: Pod })[]>;
   getTripById(tripId: number): Promise<(PodTrip & { items: TripItem[] }) | undefined>;
   createTrip(data: InsertPodTrip): Promise<PodTrip>;
   updateTrip(tripId: number, data: Partial<PodTrip>): Promise<PodTrip>;
@@ -1079,6 +1080,32 @@ export class DatabaseStorage implements IStorage {
       return {
         ...r.pod_trips,
         creator: r.users!,
+        itemCount: items.length,
+      };
+    }));
+    
+    return tripsWithCounts;
+  }
+
+  async getTripsByUser(userId: number): Promise<(PodTrip & { creator: User; itemCount: number; pod: Pod })[]> {
+    const userPods = await this.getPodsByUser(userId);
+    const podIds = userPods.map(p => p.id);
+    
+    if (podIds.length === 0) return [];
+    
+    const results = await db.select()
+      .from(podTrips)
+      .leftJoin(users, eq(podTrips.createdByUserId, users.id))
+      .leftJoin(pods, eq(podTrips.podId, pods.id))
+      .where(inArray(podTrips.podId, podIds))
+      .orderBy(desc(podTrips.createdAt));
+    
+    const tripsWithCounts = await Promise.all(results.map(async (r) => {
+      const items = await db.select().from(tripItems).where(eq(tripItems.tripId, r.pod_trips.id));
+      return {
+        ...r.pod_trips,
+        creator: r.users!,
+        pod: r.pods!,
         itemCount: items.length,
       };
     }));
