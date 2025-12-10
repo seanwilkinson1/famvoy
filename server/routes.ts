@@ -2165,17 +2165,13 @@ Return ONLY valid JSON.`;
       // Update the trip item confirmation state
       await storage.updateTripItemConfirmation(itemId, "locked", optionId);
 
-      // Advance to next item
+      // Advance to next item (always advance, even past last item to trigger completion)
       const session = await storage.getConfirmationSession(tripId);
       if (session) {
-        const items = await storage.getConfirmableItems(tripId);
         const nextIndex = session.currentItemIndex + 1;
-        
-        if (nextIndex < items.length) {
-          await storage.updateConfirmationSession(session.id, {
-            currentItemIndex: nextIndex,
-          });
-        }
+        await storage.updateConfirmationSession(session.id, {
+          currentItemIndex: nextIndex,
+        });
       }
 
       res.json({ 
