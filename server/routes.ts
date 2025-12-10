@@ -1517,6 +1517,50 @@ export async function registerRoutes(
       if (!trip) {
         return res.status(404).json({ error: "Trip not found" });
       }
+      
+      // For confirmed trips, include locked booking options
+      if (trip.status === "confirmed") {
+        const itemsWithOptions = await Promise.all(
+          trip.items.map(async (item) => {
+            if (item.selectedOptionId) {
+              const options = await storage.getTripItemOptions(item.id);
+              const lockedOption = options.find(opt => opt.id === item.selectedOptionId);
+              return { ...item, lockedOption: lockedOption || null };
+            }
+            return { ...item, lockedOption: null };
+          })
+        );
+        
+        // Calculate total estimated cost
+        let totalMinCost = 0;
+        let totalMaxCost = 0;
+        itemsWithOptions.forEach(item => {
+          if (item.lockedOption?.priceEstimate) {
+            const priceStr = item.lockedOption.priceEstimate;
+            const matches = priceStr.match(/\$?(\d+)(?:-(\d+))?/);
+            if (matches) {
+              const min = parseInt(matches[1]) || 0;
+              const max = parseInt(matches[2]) || min;
+              totalMinCost += min;
+              totalMaxCost += max;
+            }
+          }
+        });
+        
+        res.json({
+          ...trip,
+          items: itemsWithOptions,
+          costSummary: {
+            min: totalMinCost,
+            max: totalMaxCost,
+            formatted: totalMinCost === totalMaxCost 
+              ? `$${totalMinCost}`
+              : `$${totalMinCost} - $${totalMaxCost}`
+          }
+        });
+        return;
+      }
+      
       res.json(trip);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
