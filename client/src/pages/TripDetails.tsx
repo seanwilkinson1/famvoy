@@ -427,15 +427,28 @@ export default function TripDetails() {
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    navigator.share?.({
-                      title: trip.name,
-                      text: `Check out my trip to ${trip.destination}!`,
-                      url: window.location.href,
-                    }).catch(() => {
-                      navigator.clipboard.writeText(window.location.href);
-                      toast.success("Link copied to clipboard!");
-                    });
+                  onClick={async () => {
+                    try {
+                      if (navigator.share) {
+                        await navigator.share({
+                          title: trip.name,
+                          text: `Check out my trip to ${trip.destination}!`,
+                          url: window.location.href,
+                        });
+                      } else {
+                        await navigator.clipboard.writeText(window.location.href);
+                        toast.success("Link copied to clipboard!");
+                      }
+                    } catch (err) {
+                      if ((err as Error).name !== 'AbortError') {
+                        try {
+                          await navigator.clipboard.writeText(window.location.href);
+                          toast.success("Link copied to clipboard!");
+                        } catch {
+                          toast.error("Failed to share");
+                        }
+                      }
+                    }
                   }}
                   className="shrink-0 bg-white/20 text-white p-2.5 rounded-xl hover:bg-white/30 transition-colors"
                   data-testid="button-share-trip"
@@ -462,32 +475,21 @@ export default function TripDetails() {
               </div>
             )}
 
-            <div className="mx-4 mt-4 h-48 rounded-2xl overflow-hidden border border-gray-200">
-              <MapContainer
-                center={[9.9764, -85.6717]}
-                zoom={10}
-                style={{ height: '100%', width: '100%' }}
-                scrollWheelZoom={false}
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                {trip.items.filter(item => item.lockedOption?.address).map((item, idx) => (
-                  <Marker 
-                    key={item.id}
-                    position={[9.9764 + (idx * 0.02), -85.6717 + (idx * 0.015)]}
-                    icon={createMarkerIcon(MARKER_COLORS[item.itemType] || '#4ECDC4')}
-                  >
-                    <Popup>
-                      <div className="text-sm">
-                        <p className="font-bold">{item.lockedOption?.title || item.title}</p>
-                        <p className="text-gray-500">{item.time} - Day {item.dayNumber}</p>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
+            <div className="mx-4 mt-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <MapPin className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-charcoal">{trip.destination}</h4>
+                  <p className="text-sm text-gray-500">
+                    {trip.items.length} activities across {numDays} days
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-3">
+                Booking locations will be shown on the map once address data is available from your booking providers.
+              </p>
             </div>
           </>
         )}
