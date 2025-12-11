@@ -1099,24 +1099,24 @@ export default function TripDetails() {
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => generateMutation.mutate(undefined)}
-                  className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50"
-                  data-testid="button-skip-preferences"
-                >
-                  Skip
-                </button>
-                <button
-                  onClick={() => generateMutation.mutate(preferences)}
-                  disabled={generateMutation.isPending}
-                  className="flex-1 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 py-3 text-sm font-bold text-white flex items-center justify-center gap-2"
-                  data-testid="button-generate-with-preferences"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Generate
-                </button>
-              </div>
+            </div>
+            <div className="sticky bottom-0 bg-white p-4 pt-2 border-t border-gray-100 flex gap-3">
+              <button
+                onClick={() => generateMutation.mutate(undefined)}
+                className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50"
+                data-testid="button-skip-preferences"
+              >
+                Skip
+              </button>
+              <button
+                onClick={() => generateMutation.mutate(preferences)}
+                disabled={generateMutation.isPending}
+                className="flex-1 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 py-3 text-sm font-bold text-white flex items-center justify-center gap-2"
+                data-testid="button-generate-with-preferences"
+              >
+                <Sparkles className="h-4 w-4" />
+                Generate
+              </button>
             </div>
           </div>
         </div>
