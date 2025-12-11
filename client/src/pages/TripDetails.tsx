@@ -964,9 +964,9 @@ export default function TripDetails() {
       )}
 
       {showPreferencesModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100 sticky top-0 bg-white">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 pb-24">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100 shrink-0">
               <div>
                 <h3 className="font-heading text-lg font-bold">Trip Preferences</h3>
                 <p className="text-sm text-gray-500">Help AI create a better itinerary</p>
@@ -978,7 +978,7 @@ export default function TripDetails() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="p-4 space-y-5">
+            <div className="p-4 space-y-5 overflow-y-auto flex-1">
               <div>
                 <label className="text-sm font-bold text-gray-700 mb-2 block">
                   Budget Range (total trip)
@@ -1100,7 +1100,7 @@ export default function TripDetails() {
               </div>
 
             </div>
-            <div className="sticky bottom-0 bg-white p-4 pt-2 border-t border-gray-100 flex gap-3">
+            <div className="shrink-0 bg-white p-4 pt-2 border-t border-gray-100 flex gap-3">
               <button
                 onClick={() => generateMutation.mutate(undefined)}
                 className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50"
