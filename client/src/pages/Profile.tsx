@@ -700,7 +700,7 @@ export default function Profile() {
                 No experiences shared yet.
               </div>
             ) : (
-              formattedUserExperiences.map((exp) => (
+              [...formattedUserExperiences].reverse().map((exp) => (
                 <ExperienceCard key={exp.id} experience={exp} />
               ))
             )}
@@ -714,7 +714,7 @@ export default function Profile() {
                 No saved experiences yet.
               </div>
             ) : (
-              formattedSavedExperiences.map((exp) => (
+              [...formattedSavedExperiences].reverse().map((exp) => (
                 <ExperienceCard key={exp.id} experience={exp} />
               ))
             )}
@@ -737,7 +737,7 @@ export default function Profile() {
               </div>
             ) : (
               <div className="space-y-4">
-                {userCheckins.map((checkin: any) => (
+                {[...userCheckins].reverse().map((checkin: any) => (
                   <div 
                     key={checkin.id}
                     className="rounded-2xl bg-white p-4 shadow-sm border border-gray-100 cursor-pointer"
