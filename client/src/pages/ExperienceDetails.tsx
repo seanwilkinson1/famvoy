@@ -290,7 +290,7 @@ export default function ExperienceDetails() {
             </div>
           </div>
           {user && (
-            hasCheckedIn ? (
+            hasCheckedIn || isCreator ? (
               <div className="flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1.5 text-xs font-bold text-green-700">
                 <CheckCircle className="h-4 w-4" />
                 Done!
