@@ -166,7 +166,7 @@ export default function ExperienceDetails() {
           onClick={() => openGallery(0)}
           data-testid="button-open-gallery"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
         
         {/* Top Nav */}
         <div className="absolute top-0 left-0 right-0 p-6 pt-14 flex justify-between items-center">
