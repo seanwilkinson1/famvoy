@@ -3,7 +3,8 @@ import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { ChevronLeft, Heart, Clock, DollarSign, Users, MapPin, Share2, Navigation, Plus, X, FolderPlus, Camera, Star, CheckCircle, Loader2, Trash2 } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
+import useEmblaCarousel from "embla-carousel-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatExperience, type ExperienceWithCreator } from "@/lib/types";
@@ -33,7 +34,10 @@ export default function ExperienceDetails() {
   const [checkinReview, setCheckinReview] = useState("");
   const [checkinRating, setCheckinRating] = useState(0);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
   const checkinPhotoRef = useRef<HTMLInputElement>(null);
+  const [emblaRef, emblaApi] = useEmblaCarousel({ startIndex: galleryStartIndex });
   const { user } = useClerkAuth();
   const queryClient = useQueryClient();
   const experienceId = params?.id ? parseInt(params.id) : 0;
@@ -133,9 +137,20 @@ export default function ExperienceDetails() {
     },
   });
 
+  const openGallery = useCallback((index: number = 0) => {
+    setGalleryStartIndex(index);
+    setShowGallery(true);
+    setTimeout(() => emblaApi?.scrollTo(index), 0);
+  }, [emblaApi]);
+
   if (!match || !experience) return null;
   
   const isCreator = user?.id === experience.userId;
+
+  const galleryImages = [
+    experience.image,
+    ...checkins.filter((c: any) => c.photoUrl).map((c: any) => c.photoUrl)
+  ];
 
   const similar = allExperiences.filter((e) => e.id !== experience.id);
   const formattedSimilar = similar.map(exp => formatExperience(exp as any));
@@ -147,7 +162,9 @@ export default function ExperienceDetails() {
         <img
           src={experience.image}
           alt={experience.title}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover cursor-pointer"
+          onClick={() => openGallery(0)}
+          data-testid="button-open-gallery"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         
@@ -647,6 +664,67 @@ export default function ExperienceDetails() {
                 {deleteMutation.isPending ? "Deleting..." : "Delete"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Gallery Modal */}
+      {showGallery && (
+        <div 
+          className="fixed inset-0 z-[300] bg-black flex flex-col"
+          onClick={() => setShowGallery(false)}
+        >
+          <div className="absolute top-0 left-0 right-0 p-4 pt-14 flex justify-between items-center z-10">
+            <button 
+              onClick={() => setShowGallery(false)}
+              className="rounded-full bg-white/20 backdrop-blur-md p-2 text-white"
+              data-testid="button-close-gallery"
+            >
+              <X className="h-6 w-6" />
+            </button>
+            <span className="text-white text-sm font-medium">
+              {galleryImages.length} photos
+            </span>
+          </div>
+          
+          <div 
+            className="flex-1 overflow-hidden" 
+            ref={emblaRef}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex h-full">
+              {galleryImages.map((img, index) => (
+                <div 
+                  key={index} 
+                  className="flex-[0_0_100%] min-w-0 flex items-center justify-center p-4"
+                >
+                  <img
+                    src={img}
+                    alt={`Photo ${index + 1}`}
+                    className="max-h-full max-w-full object-contain rounded-lg"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-1.5">
+            {galleryImages.map((_, index) => (
+              <button
+                key={index}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  emblaApi?.scrollTo(index);
+                }}
+                className={cn(
+                  "w-2 h-2 rounded-full transition-all",
+                  emblaApi?.selectedScrollSnap() === index 
+                    ? "bg-white w-4" 
+                    : "bg-white/40"
+                )}
+                data-testid={`gallery-dot-${index}`}
+              />
+            ))}
           </div>
         </div>
       )}
