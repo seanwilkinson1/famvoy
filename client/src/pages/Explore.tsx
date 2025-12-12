@@ -84,6 +84,7 @@ export default function Explore() {
   const { data: experiences = [], isLoading: loadingExperiences } = useQuery({
     queryKey: ["experiences"],
     queryFn: api.experiences.getAll,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const { data: searchResults = [] } = useQuery({
