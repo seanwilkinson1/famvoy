@@ -65,6 +65,15 @@ interface CostSummary {
   formatted: string;
 }
 
+interface TripDestination {
+  id: number;
+  tripId: number;
+  destination: string;
+  startDate: string;
+  endDate: string;
+  sortOrder: number;
+}
+
 interface Trip {
   id: number;
   podId: number;
@@ -157,6 +166,7 @@ export default function TripDetails() {
     tripInterests: [] as string[],
   });
   const [bookingItem, setBookingItem] = useState<TripItem | null>(null);
+  const [newDestination, setNewDestination] = useState({ destination: "", startDate: "", endDate: "" });
   const queryClient = useQueryClient();
 
   const sensors = useSensors(
@@ -185,6 +195,36 @@ export default function TripDetails() {
     queryKey: ["podExperiences", trip?.podId],
     queryFn: () => trip?.podId ? api.pods.getExperiences(trip.podId) : [],
     enabled: !!trip?.podId,
+  });
+
+  const { data: destinations = [] } = useQuery<TripDestination[]>({
+    queryKey: ["tripDestinations", tripId],
+    queryFn: () => api.trips.getDestinations(tripId),
+    enabled: !!match && tripId > 0,
+  });
+
+  const addDestinationMutation = useMutation({
+    mutationFn: (data: { destination: string; startDate: string; endDate: string; sortOrder?: number }) =>
+      api.trips.addDestination(tripId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tripDestinations", tripId] });
+      setNewDestination({ destination: "", startDate: "", endDate: "" });
+      toast.success("Destination added!");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const deleteDestinationMutation = useMutation({
+    mutationFn: (destId: number) => api.trips.deleteDestination(tripId, destId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tripDestinations", tripId] });
+      toast.success("Destination removed");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
   });
 
   const generateMutation = useMutation({
@@ -979,6 +1019,98 @@ export default function TripDetails() {
               </button>
             </div>
             <div className="p-4 space-y-5 overflow-y-auto flex-1">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-bold text-gray-700">
+                    Destinations
+                  </label>
+                  {destinations.length === 0 && (
+                    <span className="text-xs text-gray-500">Add stops for your trip</span>
+                  )}
+                </div>
+                
+                {destinations.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {destinations.map((dest, idx) => (
+                      <div 
+                        key={dest.id} 
+                        className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl"
+                        data-testid={`destination-${dest.id}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-gray-400">{idx + 1}</span>
+                            <span className="font-medium text-sm truncate">{dest.destination}</span>
+                          </div>
+                          <div className="flex items-center gap-1 mt-0.5 text-xs text-gray-500">
+                            <Calendar className="h-3 w-3" />
+                            <span>{format(new Date(dest.startDate), "MMM d")} - {format(new Date(dest.endDate), "MMM d")}</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => deleteDestinationMutation.mutate(dest.id)}
+                          className="p-1.5 rounded-full hover:bg-gray-200 transition-colors"
+                          data-testid={`delete-destination-${dest.id}`}
+                        >
+                          <X className="h-4 w-4 text-gray-400" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="space-y-2 p-3 border border-dashed border-gray-200 rounded-xl bg-white">
+                  <input
+                    type="text"
+                    placeholder="Add destination (e.g., Paris, France)"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    value={newDestination.destination}
+                    onChange={(e) => setNewDestination(d => ({ ...d, destination: e.target.value }))}
+                    data-testid="input-new-destination"
+                  />
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-xs text-gray-500 mb-1 block">Start</label>
+                      <input
+                        type="date"
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                        value={newDestination.startDate}
+                        onChange={(e) => setNewDestination(d => ({ ...d, startDate: e.target.value }))}
+                        data-testid="input-new-destination-start"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-gray-500 mb-1 block">End</label>
+                      <input
+                        type="date"
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                        value={newDestination.endDate}
+                        onChange={(e) => setNewDestination(d => ({ ...d, endDate: e.target.value }))}
+                        data-testid="input-new-destination-end"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (newDestination.destination && newDestination.startDate && newDestination.endDate) {
+                        addDestinationMutation.mutate({
+                          ...newDestination,
+                          sortOrder: destinations.length,
+                        });
+                      }
+                    }}
+                    disabled={!newDestination.destination || !newDestination.startDate || !newDestination.endDate || addDestinationMutation.isPending}
+                    className="w-full rounded-lg bg-gray-100 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50 flex items-center justify-center gap-1"
+                    data-testid="button-add-destination"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Destination
+                  </button>
+                </div>
+              </div>
+
+              <div className="h-px bg-gray-100" />
+
               <div>
                 <label className="text-sm font-bold text-gray-700 mb-2 block">
                   Budget Range (total trip)
