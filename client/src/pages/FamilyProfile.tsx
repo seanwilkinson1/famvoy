@@ -1,9 +1,11 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
-import { ArrowLeft, MapPin, Users, Heart, MessageCircle, Sparkles, UserPlus, UserCheck } from "lucide-react";
-import { useParams, useLocation } from "wouter";
+import { ArrowLeft, MapPin, Users, Heart, MessageCircle, Sparkles, UserPlus, UserCheck, CheckCircle2, Plane } from "lucide-react";
+import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format } from "date-fns";
 
 export default function FamilyProfile() {
   const { id } = useParams<{ id: string }>();
@@ -55,6 +57,18 @@ export default function FamilyProfile() {
   const { data: familyExperiences = [] } = useQuery({
     queryKey: ["familyExperiences", userId],
     queryFn: () => api.users.getExperiences(userId),
+    enabled: userId > 0,
+  });
+
+  const { data: checkins = [] } = useQuery({
+    queryKey: ["userCheckins", userId],
+    queryFn: () => api.users.getCheckins(userId),
+    enabled: userId > 0,
+  });
+
+  const { data: confirmedTrips = [] } = useQuery({
+    queryKey: ["userConfirmedTrips", userId],
+    queryFn: () => api.users.getConfirmedTrips(userId),
     enabled: userId > 0,
   });
 
@@ -215,23 +229,109 @@ export default function FamilyProfile() {
         )}
       </div>
 
-      {/* Experiences Section */}
+      {/* Content Tabs */}
       <div className="mt-8 px-6">
-        <h2 className="font-heading text-lg font-bold text-gray-900 mb-4">
-          Shared Experiences
-        </h2>
-        
-        {formattedExperiences.length === 0 ? (
-          <div className="text-center py-8 text-gray-400">
-            No experiences shared yet
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {formattedExperiences.map((exp) => (
-              <ExperienceCard key={exp.id} experience={exp} />
-            ))}
-          </div>
-        )}
+        <Tabs defaultValue="posts" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="posts" data-testid="tab-posts">
+              Posts
+            </TabsTrigger>
+            <TabsTrigger value="done" data-testid="tab-done">
+              <CheckCircle2 className="h-4 w-4 mr-1" />
+              Done
+            </TabsTrigger>
+            <TabsTrigger value="trips" data-testid="tab-trips">
+              <Plane className="h-4 w-4 mr-1" />
+              Trips
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="posts" className="mt-4">
+            {formattedExperiences.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                No experiences shared yet
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {formattedExperiences.map((exp) => (
+                  <ExperienceCard key={exp.id} experience={exp} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="done" className="mt-4">
+            {checkins.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <CheckCircle2 className="mx-auto h-10 w-10 text-gray-300 mb-2" />
+                No check-ins yet
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {checkins.map((checkin: any) => (
+                  <Link key={checkin.id} href={`/experience/${checkin.experience?.id}`}>
+                    <div className="rounded-xl bg-white p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
+                          <CheckCircle2 className="h-6 w-6 text-green-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 truncate">{checkin.experience?.title}</p>
+                          <p className="text-sm text-gray-500">
+                            {checkin.createdAt ? format(new Date(checkin.createdAt), 'MMM d, yyyy') : 'Recently'}
+                          </p>
+                        </div>
+                      </div>
+                      {checkin.note && (
+                        <p className="mt-2 text-sm text-gray-600">{checkin.note}</p>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="trips" className="mt-4">
+            {confirmedTrips.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <Plane className="mx-auto h-10 w-10 text-gray-300 mb-2" />
+                No confirmed trips yet
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {confirmedTrips.map((trip: any) => (
+                  <Link key={trip.id} href={`/trip/${trip.id}`}>
+                    <div className="rounded-xl bg-white p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                          <Plane className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 truncate">{trip.name}</p>
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            {trip.startDate && (
+                              <span>{format(new Date(trip.startDate), 'MMM d')} - {trip.endDate ? format(new Date(trip.endDate), 'MMM d, yyyy') : '?'}</span>
+                            )}
+                            <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">
+                              Confirmed
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      {trip.destination && (
+                        <div className="mt-2 flex items-center gap-1 text-sm text-gray-600">
+                          <MapPin className="h-4 w-4" />
+                          {trip.destination}
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Stats */}

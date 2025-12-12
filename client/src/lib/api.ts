@@ -178,6 +178,26 @@ export const api = {
       if (!res.ok) throw new Error("Failed to fetch family members");
       return res.json();
     },
+    
+    getCheckins: async (userId: number): Promise<any[]> => {
+      const res = await fetch(`${API_BASE}/users/${userId}/checkins`);
+      if (!res.ok) throw new Error("Failed to fetch user check-ins");
+      return res.json();
+    },
+    
+    getConfirmedTrips: async (userId: number): Promise<any[]> => {
+      const res = await fetch(`${API_BASE}/users/${userId}/confirmed-trips`);
+      if (!res.ok) throw new Error("Failed to fetch confirmed trips");
+      return res.json();
+    },
+  },
+  
+  following: {
+    getExperiences: async (): Promise<(Experience & { creator: User })[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/following/experiences`);
+      if (!res.ok) throw new Error("Failed to fetch following experiences");
+      return res.json();
+    },
   },
   
   familyMembers: {
