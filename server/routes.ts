@@ -1210,6 +1210,36 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/following/experiences", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      const experiences = await storage.getExperiencesFromFollowing(user.id);
+      res.json(experiences);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/users/:id/confirmed-trips", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+      const trips = await storage.getConfirmedTripsByUser(userId);
+      res.json(trips);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/pods/:id/albums", async (req, res) => {
     try {
       const podId = parseInt(req.params.id);

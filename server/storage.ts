@@ -158,6 +158,8 @@ export interface IStorage {
   getFollowers(userId: number): Promise<User[]>;
   getFollowing(userId: number): Promise<User[]>;
   getFollowCounts(userId: number): Promise<{ followers: number; following: number }>;
+  getExperiencesFromFollowing(userId: number): Promise<(Experience & { creator: User })[]>;
+  getConfirmedTripsByUser(userId: number): Promise<(PodTrip & { creator: User; itemCount: number; pod: Pod })[]>;
   
   getPodExperiences(podId: number): Promise<(Experience & { creator: { id: number; name: string | null; avatar: string | null } | null })[]>;
   addExperienceToPod(podId: number, experienceId: number, userId: number): Promise<void>;
@@ -843,6 +845,51 @@ export class DatabaseStorage implements IStorage {
     const followers = await db.select().from(follows).where(eq(follows.followingId, userId));
     const following = await db.select().from(follows).where(eq(follows.followerId, userId));
     return { followers: followers.length, following: following.length };
+  }
+
+  async getExperiencesFromFollowing(userId: number): Promise<(Experience & { creator: User })[]> {
+    const followingUsers = await db
+      .select({ id: follows.followingId })
+      .from(follows)
+      .where(eq(follows.followerId, userId));
+    
+    if (followingUsers.length === 0) return [];
+    
+    const followingIds = followingUsers.map(f => f.id);
+    
+    const result = await db
+      .select({ experience: experiences, creator: users })
+      .from(experiences)
+      .innerJoin(users, eq(experiences.userId, users.id))
+      .where(inArray(experiences.userId, followingIds))
+      .orderBy(desc(experiences.createdAt));
+    
+    return result.map(r => ({
+      ...r.experience,
+      creator: r.creator,
+    }));
+  }
+
+  async getConfirmedTripsByUser(userId: number): Promise<(PodTrip & { creator: User; itemCount: number; pod: Pod })[]> {
+    const trips = await db
+      .select()
+      .from(podTrips)
+      .innerJoin(users, eq(podTrips.createdByUserId, users.id))
+      .innerJoin(pods, eq(podTrips.podId, pods.id))
+      .where(and(eq(podTrips.createdByUserId, userId), eq(podTrips.status, "confirmed")))
+      .orderBy(desc(podTrips.createdAt));
+    
+    const result = await Promise.all(trips.map(async (t) => {
+      const items = await db.select().from(tripItems).where(eq(tripItems.tripId, t.pod_trips.id));
+      return {
+        ...t.pod_trips,
+        creator: t.users,
+        pod: t.pods,
+        itemCount: items.length,
+      };
+    }));
+    
+    return result;
   }
 
   async getPodExperiences(podId: number): Promise<(Experience & { creator: { id: number; name: string | null; avatar: string | null } | null })[]> {
