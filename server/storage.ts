@@ -789,12 +789,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getExperienceRating(experienceId: number): Promise<{ average: number; count: number }> {
-    const expComments = await db
-      .select({ rating: comments.rating })
-      .from(comments)
-      .where(and(eq(comments.experienceId, experienceId), isNotNull(comments.rating)));
+    const checkins = await db
+      .select({ rating: experienceCheckins.rating })
+      .from(experienceCheckins)
+      .where(and(eq(experienceCheckins.experienceId, experienceId), isNotNull(experienceCheckins.rating)));
     
-    const ratings = expComments.filter(c => c.rating !== null).map(c => c.rating as number);
+    const ratings = checkins.filter(c => c.rating !== null).map(c => c.rating as number);
     if (ratings.length === 0) {
       return { average: 0, count: 0 };
     }
