@@ -221,9 +221,20 @@ export const podTrips = pgTable("pod_trips", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const tripDestinations = pgTable("trip_destinations", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => podTrips.id),
+  destination: text("destination").notNull(),
+  startDate: text("start_date").notNull(),
+  endDate: text("end_date").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const tripItems = pgTable("trip_items", {
   id: serial("id").primaryKey(),
   tripId: integer("trip_id").notNull().references(() => podTrips.id),
+  destinationId: integer("destination_id").references(() => tripDestinations.id),
   dayNumber: integer("day_number").notNull(),
   dayTitle: text("day_title"),
   time: text("time").notNull(),
@@ -350,6 +361,7 @@ export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true });
 export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({ id: true, earnedAt: true });
 export const insertExperienceCheckinSchema = createInsertSchema(experienceCheckins).omit({ id: true, createdAt: true });
 export const insertPodTripSchema = createInsertSchema(podTrips).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertTripDestinationSchema = createInsertSchema(tripDestinations).omit({ id: true, createdAt: true });
 export const insertTripItemSchema = createInsertSchema(tripItems).omit({ id: true, createdAt: true });
 export const insertTripConfirmationSessionSchema = createInsertSchema(tripConfirmationSessions).omit({ id: true, startedAt: true });
 export const insertTripItemOptionSchema = createInsertSchema(tripItemOptions).omit({ id: true, createdAt: true });
@@ -428,6 +440,9 @@ export type InsertExperienceCheckin = z.infer<typeof insertExperienceCheckinSche
 
 export type PodTrip = typeof podTrips.$inferSelect;
 export type InsertPodTrip = z.infer<typeof insertPodTripSchema>;
+
+export type TripDestination = typeof tripDestinations.$inferSelect;
+export type InsertTripDestination = z.infer<typeof insertTripDestinationSchema>;
 
 export type TripItem = typeof tripItems.$inferSelect;
 export type InsertTripItem = z.infer<typeof insertTripItemSchema>;
