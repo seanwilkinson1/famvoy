@@ -56,7 +56,7 @@ export default function Landing() {
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <SignUpButton mode="modal">
-                <Button size="lg" className="w-full sm:w-auto bg-warm-teal hover:bg-warm-teal/90 text-white rounded-full px-8 py-6 text-lg shadow-lg shadow-warm-teal/20" data-testid="button-get-started">
+                <Button size="lg" className="w-full sm:w-auto bg-gradient-to-r from-[#4ECDC4] to-[#45B7AA] hover:from-[#45B7AA] hover:to-[#3EA89C] text-white font-bold rounded-full px-8 py-6 text-lg shadow-xl shadow-[#4ECDC4]/30 border-0" data-testid="button-get-started">
                   Get Started Free
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
