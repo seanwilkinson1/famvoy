@@ -2,7 +2,7 @@ import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { FamilySwipeCard, SwipeButtons } from "@/components/shared/FamilySwipeCard";
 import { MatchModal } from "@/components/shared/MatchModal";
 import { ExploreMap } from "@/components/shared/ExploreMap";
-import { Search, Navigation, Map, Users, Compass, X, ChevronDown, MessageCircle, MapPin, Filter, SlidersHorizontal, Locate } from "lucide-react";
+import { Search, Navigation, Map, Users, Compass, X, ChevronDown, MessageCircle, MapPin, Filter, SlidersHorizontal, Locate, Clock, DollarSign, Star, CheckCircle2, ArrowRight } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -62,6 +62,7 @@ export default function Explore() {
   const [ageFilter, setAgeFilter] = useState("All Ages");
   const [costFilter, setCostFilter] = useState("Any Cost");
   const [maxDistance, setMaxDistance] = useState(50);
+  const [previewExperience, setPreviewExperience] = useState<Experience | null>(null);
   
   const { location: userLocation } = useUserLocation();
   const queryClient = useQueryClient();
@@ -238,6 +239,7 @@ export default function Explore() {
               <ExploreMap
                 experiences={filteredExperiences}
                 userLocation={userLocation}
+                onExperienceClick={(exp) => setPreviewExperience(exp)}
               />
             </div>
 
@@ -724,6 +726,83 @@ export default function Explore() {
       </AnimatePresence>
 
       {/* Match Modal */}
+      {/* Experience Preview Modal */}
+      <AnimatePresence>
+        {previewExperience && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center"
+            onClick={() => setPreviewExperience(null)}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="bg-white rounded-t-3xl w-full max-w-lg overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative">
+                <img
+                  src={previewExperience.image || 'https://images.unsplash.com/photo-1609220136736-443140cffec6?w=800'}
+                  alt={previewExperience.title}
+                  className="w-full h-48 object-cover"
+                />
+                <button
+                  onClick={() => setPreviewExperience(null)}
+                  className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full p-2"
+                  data-testid="button-close-preview"
+                >
+                  <X className="h-5 w-5 text-gray-700" />
+                </button>
+              </div>
+              
+              <div className="p-5">
+                <h2 className="text-xl font-bold text-gray-900 mb-2">{previewExperience.title}</h2>
+                
+                <div className="flex items-center gap-1 text-gray-500 text-sm mb-3">
+                  <MapPin className="h-4 w-4" />
+                  <span>{previewExperience.locationName}</span>
+                </div>
+                
+                <div className="flex flex-wrap gap-3 mb-4">
+                  <div className="flex items-center gap-1.5 bg-gray-100 rounded-full px-3 py-1.5 text-sm">
+                    <Clock className="h-4 w-4 text-gray-500" />
+                    <span>{previewExperience.duration}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-gray-100 rounded-full px-3 py-1.5 text-sm">
+                    <DollarSign className="h-4 w-4 text-gray-500" />
+                    <span>{previewExperience.cost}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-gray-100 rounded-full px-3 py-1.5 text-sm">
+                    <Users className="h-4 w-4 text-gray-500" />
+                    <span>{previewExperience.ages}</span>
+                  </div>
+                </div>
+                
+                {previewExperience.description && (
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">{previewExperience.description}</p>
+                )}
+                
+                <button
+                  onClick={() => {
+                    setPreviewExperience(null);
+                    setLocation(`/experience/${previewExperience.id}`);
+                  }}
+                  className="w-full bg-primary text-white rounded-full py-3 font-semibold flex items-center justify-center gap-2"
+                  data-testid="button-view-details"
+                >
+                  View Details
+                  <ArrowRight className="h-5 w-5" />
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <MatchModal
         isOpen={showMatch}
         onClose={() => setShowMatch(false)}
