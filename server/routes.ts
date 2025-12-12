@@ -1763,6 +1763,68 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/trips/:id/destinations", async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.id);
+      if (isNaN(tripId)) {
+        return res.status(400).json({ error: "Invalid trip ID" });
+      }
+      const destinations = await storage.getTripDestinations(tripId);
+      res.json(destinations);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/trips/:id/destinations", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.id);
+      if (isNaN(tripId)) {
+        return res.status(400).json({ error: "Invalid trip ID" });
+      }
+      const { destination, startDate, endDate, sortOrder } = req.body;
+      if (!destination || !startDate || !endDate) {
+        return res.status(400).json({ error: "Destination, start date, and end date are required" });
+      }
+      const dest = await storage.createTripDestination({
+        tripId,
+        destination,
+        startDate,
+        endDate,
+        sortOrder: sortOrder ?? 0,
+      });
+      res.json(dest);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/trips/:id/destinations/:destId", requireAuth(), async (req, res) => {
+    try {
+      const destId = parseInt(req.params.destId);
+      if (isNaN(destId)) {
+        return res.status(400).json({ error: "Invalid destination ID" });
+      }
+      const dest = await storage.updateTripDestination(destId, req.body);
+      res.json(dest);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/trips/:id/destinations/:destId", requireAuth(), async (req, res) => {
+    try {
+      const destId = parseInt(req.params.destId);
+      if (isNaN(destId)) {
+        return res.status(400).json({ error: "Invalid destination ID" });
+      }
+      await storage.deleteTripDestination(destId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.patch("/api/trips/:id/preferences", requireAuth(), async (req, res) => {
     try {
       const tripId = parseInt(req.params.id);
