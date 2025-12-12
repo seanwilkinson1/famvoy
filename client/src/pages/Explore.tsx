@@ -569,11 +569,19 @@ export default function Explore() {
                           className="flex items-center gap-4 flex-1 cursor-pointer"
                           onClick={() => setLocation(`/family/${family.id}`)}
                         >
-                          <img
-                            src={family.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400'}
-                            alt={family.name || 'Family'}
-                            className="h-14 w-14 rounded-full object-cover ring-2 ring-primary/10"
-                          />
+                          {(family.profileImageUrl || family.avatar) ? (
+                            <img
+                              src={family.profileImageUrl || family.avatar || ''}
+                              alt={family.name || 'Family'}
+                              className="h-14 w-14 rounded-full object-cover ring-2 ring-primary/10"
+                            />
+                          ) : (
+                            <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center ring-2 ring-primary/10">
+                              <span className="text-white text-xl font-bold">
+                                {(family.name || 'F').charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
                           <div className="flex-1 min-w-0">
                             <h3 className="font-heading font-bold text-gray-900 truncate">{family.name || 'Family'}</h3>
                             <p className="text-sm text-gray-500 truncate">{family.location || 'Location not set'}</p>
@@ -675,11 +683,19 @@ export default function Explore() {
                       className="flex items-center gap-4 flex-1 cursor-pointer"
                       onClick={() => setLocation(`/family/${family.id}`)}
                     >
-                      <img
-                        src={family.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400'}
-                        alt={family.name || 'Family'}
-                        className="h-16 w-16 rounded-full object-cover ring-2 ring-primary/20"
-                      />
+                      {(family.profileImageUrl || family.avatar) ? (
+                        <img
+                          src={family.profileImageUrl || family.avatar || ''}
+                          alt={family.name || 'Family'}
+                          className="h-16 w-16 rounded-full object-cover ring-2 ring-primary/20"
+                        />
+                      ) : (
+                        <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center ring-2 ring-primary/20">
+                          <span className="text-white text-2xl font-bold">
+                            {(family.name || 'F').charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex-1">
                         <h3 className="font-heading font-bold text-gray-900">{family.name || 'Family'}</h3>
                         <p className="text-sm text-gray-500">{family.location || 'Location not set'}</p>

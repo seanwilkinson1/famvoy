@@ -42,11 +42,22 @@ export function FamilySwipeCard({ family, onSwipe, isTop = false }: FamilySwipeC
       <div className="relative h-full w-full overflow-hidden rounded-3xl bg-white shadow-2xl">
         {/* Background Image */}
         <div className="absolute inset-0">
-          <img
-            src={family.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400'}
-            alt={family.name || 'Family'}
-            className="h-full w-full object-cover"
-          />
+          {(family.profileImageUrl || family.avatar) ? (
+            <img
+              src={family.profileImageUrl || family.avatar || ''}
+              alt={family.name || 'Family'}
+              className="h-full w-full object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+              }}
+            />
+          ) : null}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary to-accent flex items-center justify-center -z-10">
+            <span className="text-white text-6xl font-bold opacity-80">
+              {(family.name || 'F').charAt(0).toUpperCase()}
+            </span>
+          </div>
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         </div>
 
