@@ -129,9 +129,6 @@ export function ExploreMap({
             key={exp.id}
             position={[exp.locationLat, exp.locationLng]}
             icon={experienceIcon}
-            eventHandlers={{
-              click: () => handleExperienceClick(exp),
-            }}
           >
             <Popup>
               <div 
