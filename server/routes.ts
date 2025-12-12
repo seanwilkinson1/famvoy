@@ -1938,6 +1938,9 @@ export async function registerRoutes(
       }
 
       const podExperiences = await storage.getPodExperiences(trip.podId);
+      
+      // Fetch trip destinations for multi-destination trips
+      const tripDestinations = await storage.getTripDestinations(tripId);
 
       const familyProfiles = pod.members.map(m => ({
         name: m.name,
@@ -1975,8 +1978,20 @@ export async function registerRoutes(
       const interestsSection = trip.tripInterests?.length 
         ? `Trip interests/themes to prioritize: ${trip.tripInterests.join(', ')}`
         : '';
+      
+      // Build destinations section for multi-destination trips
+      const destinationsSection = tripDestinations.length > 0
+        ? `DESTINATIONS (plan activities for each destination on the specified dates):\n${tripDestinations.map((d, i) => 
+            `${i + 1}. ${d.destination} (${d.startDate} to ${d.endDate})`
+          ).join('\n')}`
+        : '';
+      
+      // Determine destination text for the prompt
+      const destinationText = tripDestinations.length > 0
+        ? tripDestinations.map(d => d.destination).join(', then ')
+        : trip.destination;
 
-      const preferencesBlock = [budgetSection, paceSection, kidsSection, interestsSection]
+      const preferencesBlock = [budgetSection, paceSection, kidsSection, interestsSection, destinationsSection]
         .filter(Boolean)
         .join('\n');
 
@@ -1985,7 +2000,7 @@ export async function registerRoutes(
         apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
       });
 
-      const prompt = `You are a family trip planner AI. Create a detailed ${numDays}-day itinerary for a family trip to ${trip.destination} from ${trip.startDate} to ${trip.endDate}.
+      const prompt = `You are a family trip planner AI. Create a detailed ${numDays}-day itinerary for a family trip to ${destinationText} from ${trip.startDate} to ${trip.endDate}.
 
 ${preferencesBlock ? `TRIP PREFERENCES (prioritize these):\n${preferencesBlock}\n` : ''}
 Family profiles in this trip:
@@ -2016,6 +2031,7 @@ Guidelines:
 - Keep activity costs within the specified budget range
 - Include a mix of activity types
 - Start each day with morning activities and end with evening/downtime
+${tripDestinations.length > 0 ? `- IMPORTANT: Plan activities in the CORRECT destination based on the dates specified. Each day's activities should be in the destination the family is visiting on that date. Include a "location" field in each item with the destination name.` : ''}
 
 Return ONLY valid JSON, no markdown or explanations.`;
 
