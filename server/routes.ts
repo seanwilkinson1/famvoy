@@ -254,14 +254,21 @@ export async function registerRoutes(
       
       const experiencesWithCreators = await Promise.all(
         allExperiences.map(async (exp) => {
-          const creator = await storage.getUser(exp.userId);
+          const [creator, ratingData, checkinCount] = await Promise.all([
+            storage.getUser(exp.userId),
+            storage.getExperienceRating(exp.id),
+            storage.getCheckinCount(exp.id),
+          ]);
           return {
             ...exp,
             creator: creator ? {
               id: creator.id,
               name: creator.name,
               avatar: creator.avatar,
-            } : null
+            } : null,
+            rating: ratingData.average,
+            ratingCount: ratingData.count,
+            checkinCount,
           };
         })
       );

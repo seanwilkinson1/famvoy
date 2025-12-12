@@ -1,4 +1,4 @@
-import { Heart, Clock, DollarSign, Users, MapPin } from "lucide-react";
+import { Heart, Clock, DollarSign, Users, MapPin, Star, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Link } from "wouter";
@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 import type { ExperienceWithFamily } from "@/lib/types";
 
 interface ExperienceCardProps {
-  experience: ExperienceWithFamily & { distance?: number };
+  experience: ExperienceWithFamily & { distance?: number; rating?: number; ratingCount?: number; checkinCount?: number };
   className?: string;
   horizontal?: boolean;
 }
@@ -109,13 +109,29 @@ export function ExperienceCard({ experience, className, horizontal = false }: Ex
           </div>
 
           {/* Family Row */}
-          <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
-            <img
-              src={experience.familyAvatar || experience.image}
-              alt={experience.family || "Family"}
-              className="h-6 w-6 rounded-full object-cover ring-1 ring-gray-100"
-            />
-            <span className="text-xs font-medium text-gray-600">Shared by {experience.family || "Family"}</span>
+          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+            <div className="flex items-center gap-2">
+              <img
+                src={experience.familyAvatar || experience.image}
+                alt={experience.family || "Family"}
+                className="h-6 w-6 rounded-full object-cover ring-1 ring-gray-100"
+              />
+              <span className="text-xs font-medium text-gray-600">Shared by {experience.family || "Family"}</span>
+            </div>
+            <div className="flex items-center gap-3 text-xs font-medium text-gray-500">
+              {experience.rating !== undefined && experience.rating > 0 && (
+                <div className="flex items-center gap-1" data-testid={`rating-${experience.id}`}>
+                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                  <span>{experience.rating.toFixed(1)}</span>
+                </div>
+              )}
+              {experience.checkinCount !== undefined && experience.checkinCount > 0 && (
+                <div className="flex items-center gap-1" data-testid={`checkin-count-${experience.id}`}>
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                  <span>{experience.checkinCount}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
