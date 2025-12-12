@@ -31,6 +31,8 @@ import {
   type InsertPodTrip,
   type TripItem,
   type InsertTripItem,
+  type TripDestination,
+  type InsertTripDestination,
   type FamilyMember,
   type InsertFamilyMember,
   type BookingOption,
@@ -65,6 +67,7 @@ import {
   userBadges,
   experienceCheckins,
   podTrips,
+  tripDestinations,
   tripItems,
   familyMembers,
   bookingOptions,
@@ -194,6 +197,12 @@ export interface IStorage {
   deleteTripItem(itemId: number): Promise<void>;
   bulkCreateTripItems(items: InsertTripItem[]): Promise<TripItem[]>;
   clearTripItems(tripId: number): Promise<void>;
+  
+  getTripDestinations(tripId: number): Promise<TripDestination[]>;
+  createTripDestination(data: InsertTripDestination): Promise<TripDestination>;
+  updateTripDestination(destId: number, data: Partial<TripDestination>): Promise<TripDestination>;
+  deleteTripDestination(destId: number): Promise<void>;
+  clearTripDestinations(tripId: number): Promise<void>;
   
   getFamilyMembers(userId: number): Promise<FamilyMember[]>;
   createFamilyMember(data: InsertFamilyMember): Promise<FamilyMember>;
@@ -1174,6 +1183,34 @@ export class DatabaseStorage implements IStorage {
 
   async clearTripItems(tripId: number): Promise<void> {
     await db.delete(tripItems).where(eq(tripItems.tripId, tripId));
+  }
+
+  async getTripDestinations(tripId: number): Promise<TripDestination[]> {
+    return db.select()
+      .from(tripDestinations)
+      .where(eq(tripDestinations.tripId, tripId))
+      .orderBy(tripDestinations.sortOrder);
+  }
+
+  async createTripDestination(data: InsertTripDestination): Promise<TripDestination> {
+    const [dest] = await db.insert(tripDestinations).values(data).returning();
+    return dest;
+  }
+
+  async updateTripDestination(destId: number, data: Partial<TripDestination>): Promise<TripDestination> {
+    const [dest] = await db.update(tripDestinations)
+      .set(data)
+      .where(eq(tripDestinations.id, destId))
+      .returning();
+    return dest;
+  }
+
+  async deleteTripDestination(destId: number): Promise<void> {
+    await db.delete(tripDestinations).where(eq(tripDestinations.id, destId));
+  }
+
+  async clearTripDestinations(tripId: number): Promise<void> {
+    await db.delete(tripDestinations).where(eq(tripDestinations.tripId, tripId));
   }
 
   async getFamilyMembers(userId: number): Promise<FamilyMember[]> {
