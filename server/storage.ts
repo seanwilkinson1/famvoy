@@ -151,6 +151,8 @@ export interface IStorage {
   createComment(data: InsertComment): Promise<Comment>;
   deleteComment(commentId: number, userId: number): Promise<void>;
   getExperienceRating(experienceId: number): Promise<{ average: number; count: number }>;
+  getBatchExperienceRatings(experienceIds: number[]): Promise<Map<number, { average: number; count: number }>>;
+  getBatchCheckinCounts(experienceIds: number[]): Promise<Map<number, number>>;
   
   followUser(followerId: number, followingId: number): Promise<Follow>;
   unfollowUser(followerId: number, followingId: number): Promise<void>;
@@ -1112,6 +1114,57 @@ export class DatabaseStorage implements IStorage {
       .from(experienceCheckins)
       .where(eq(experienceCheckins.experienceId, experienceId));
     return results.length;
+  }
+
+  async getBatchExperienceRatings(experienceIds: number[]): Promise<Map<number, { average: number; count: number }>> {
+    const result = new Map<number, { average: number; count: number }>();
+    if (experienceIds.length === 0) return result;
+
+    const checkins = await db
+      .select({ experienceId: experienceCheckins.experienceId, rating: experienceCheckins.rating })
+      .from(experienceCheckins)
+      .where(and(inArray(experienceCheckins.experienceId, experienceIds), isNotNull(experienceCheckins.rating)));
+
+    const ratingsByExp = new Map<number, number[]>();
+    for (const c of checkins) {
+      if (c.rating !== null) {
+        if (!ratingsByExp.has(c.experienceId)) {
+          ratingsByExp.set(c.experienceId, []);
+        }
+        ratingsByExp.get(c.experienceId)!.push(c.rating);
+      }
+    }
+
+    for (const id of experienceIds) {
+      const ratings = ratingsByExp.get(id) || [];
+      if (ratings.length === 0) {
+        result.set(id, { average: 0, count: 0 });
+      } else {
+        const sum = ratings.reduce((a, b) => a + b, 0);
+        result.set(id, { average: sum / ratings.length, count: ratings.length });
+      }
+    }
+
+    return result;
+  }
+
+  async getBatchCheckinCounts(experienceIds: number[]): Promise<Map<number, number>> {
+    const result = new Map<number, number>();
+    if (experienceIds.length === 0) return result;
+
+    const checkins = await db
+      .select({ experienceId: experienceCheckins.experienceId })
+      .from(experienceCheckins)
+      .where(inArray(experienceCheckins.experienceId, experienceIds));
+
+    for (const id of experienceIds) {
+      result.set(id, 0);
+    }
+    for (const c of checkins) {
+      result.set(c.experienceId, (result.get(c.experienceId) || 0) + 1);
+    }
+
+    return result;
   }
 
   async hasUserCheckedIn(userId: number, experienceId: number): Promise<boolean> {

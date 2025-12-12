@@ -252,26 +252,33 @@ export async function registerRoutes(
     try {
       const allExperiences = await storage.getExperiences();
       
-      const experiencesWithCreators = await Promise.all(
-        allExperiences.map(async (exp) => {
-          const [creator, ratingData, checkinCount] = await Promise.all([
-            storage.getUser(exp.userId),
-            storage.getExperienceRating(exp.id),
-            storage.getCheckinCount(exp.id),
-          ]);
-          return {
-            ...exp,
-            creator: creator ? {
-              id: creator.id,
-              name: creator.name,
-              avatar: creator.avatar,
-            } : null,
-            rating: ratingData.average,
-            ratingCount: ratingData.count,
-            checkinCount,
-          };
-        })
-      );
+      const experienceIds = allExperiences.map(exp => exp.id);
+      const userIds = [...new Set(allExperiences.map(exp => exp.userId))];
+      
+      const [ratingsMap, checkinsMap, usersResults] = await Promise.all([
+        storage.getBatchExperienceRatings(experienceIds),
+        storage.getBatchCheckinCounts(experienceIds),
+        Promise.all(userIds.map(id => storage.getUser(id))),
+      ]);
+      
+      const usersMap = new Map(usersResults.filter(Boolean).map(u => [u!.id, u!]));
+      
+      const experiencesWithCreators = allExperiences.map(exp => {
+        const creator = usersMap.get(exp.userId);
+        const ratingData = ratingsMap.get(exp.id) || { average: 0, count: 0 };
+        const checkinCount = checkinsMap.get(exp.id) || 0;
+        return {
+          ...exp,
+          creator: creator ? {
+            id: creator.id,
+            name: creator.name,
+            avatar: creator.avatar,
+          } : null,
+          rating: ratingData.average,
+          ratingCount: ratingData.count,
+          checkinCount,
+        };
+      });
       
       res.json(experiencesWithCreators);
     } catch (error: any) {
