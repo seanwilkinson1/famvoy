@@ -247,6 +247,17 @@ export default function TripConfirmWizard() {
             <span className="text-sm text-gray-500">
               {session.progress.current} of {session.progress.total}
             </span>
+            {currentItem && (
+              <button
+                onClick={() => skipItemMutation.mutate(currentItem.id)}
+                disabled={skipItemMutation.isPending}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+                data-testid="button-skip-top"
+              >
+                <SkipForward className="h-4 w-4" />
+                Skip
+              </button>
+            )}
           </div>
           <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
             <motion.div
