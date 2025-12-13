@@ -155,37 +155,43 @@ export default function Profile() {
   const { data: userExperiences = [] } = useQuery({
     queryKey: ["userExperiences", currentUser?.id],
     queryFn: () => currentUser ? api.users.getExperiences(currentUser.id) : [],
-    enabled: !!currentUser,
+    enabled: !!currentUser && activeTab === "experiences",
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: savedExperiences = [] } = useQuery({
     queryKey: ["savedExperiences", currentUser?.id],
     queryFn: () => currentUser ? api.users.getSavedExperiences(currentUser.id) : [],
-    enabled: !!currentUser,
+    enabled: !!currentUser && activeTab === "saved",
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: pods = [] } = useQuery({
     queryKey: ["userPods", currentUser?.id],
     queryFn: () => currentUser ? api.users.getPods(currentUser.id) : [],
-    enabled: !!currentUser,
+    enabled: !!currentUser && activeTab === "pods",
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: userBadges = [] } = useQuery({
     queryKey: ["userBadges", currentUser?.id],
     queryFn: () => currentUser ? api.badges.getByUser(currentUser.id) : [],
     enabled: !!currentUser,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: userTrips = [] } = useQuery({
     queryKey: ["userTrips", currentUser?.id],
     queryFn: api.users.getMyTrips,
-    enabled: !!currentUser,
+    enabled: !!currentUser && activeTab === "trips",
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: userCheckins = [] } = useQuery({
     queryKey: ["userCheckins", currentUser?.id],
     queryFn: () => currentUser ? api.checkins.getByUser(currentUser.id) : [],
-    enabled: !!currentUser,
+    enabled: !!currentUser && activeTab === "completed",
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: familyMembers = [] } = useQuery<FamilyMember[]>({

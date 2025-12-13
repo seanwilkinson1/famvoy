@@ -1184,16 +1184,21 @@ export class DatabaseStorage implements IStorage {
       .where(eq(podTrips.podId, podId))
       .orderBy(desc(podTrips.createdAt));
     
-    const tripsWithCounts = await Promise.all(results.map(async (r) => {
-      const items = await db.select().from(tripItems).where(eq(tripItems.tripId, r.pod_trips.id));
-      return {
-        ...r.pod_trips,
-        creator: r.users!,
-        itemCount: items.length,
-      };
-    }));
+    if (results.length === 0) return [];
     
-    return tripsWithCounts;
+    const tripIds = results.map(r => r.pod_trips.id);
+    const allItems = await db.select().from(tripItems).where(inArray(tripItems.tripId, tripIds));
+    
+    const itemCountMap = new Map<number, number>();
+    for (const item of allItems) {
+      itemCountMap.set(item.tripId, (itemCountMap.get(item.tripId) || 0) + 1);
+    }
+    
+    return results.map(r => ({
+      ...r.pod_trips,
+      creator: r.users!,
+      itemCount: itemCountMap.get(r.pod_trips.id) || 0,
+    }));
   }
 
   async getTripsByUser(userId: number): Promise<(PodTrip & { creator: User; itemCount: number; pod: Pod })[]> {
@@ -1209,17 +1214,22 @@ export class DatabaseStorage implements IStorage {
       .where(inArray(podTrips.podId, podIds))
       .orderBy(desc(podTrips.createdAt));
     
-    const tripsWithCounts = await Promise.all(results.map(async (r) => {
-      const items = await db.select().from(tripItems).where(eq(tripItems.tripId, r.pod_trips.id));
-      return {
-        ...r.pod_trips,
-        creator: r.users!,
-        pod: r.pods!,
-        itemCount: items.length,
-      };
-    }));
+    if (results.length === 0) return [];
     
-    return tripsWithCounts;
+    const tripIds = results.map(r => r.pod_trips.id);
+    const allItems = await db.select().from(tripItems).where(inArray(tripItems.tripId, tripIds));
+    
+    const itemCountMap = new Map<number, number>();
+    for (const item of allItems) {
+      itemCountMap.set(item.tripId, (itemCountMap.get(item.tripId) || 0) + 1);
+    }
+    
+    return results.map(r => ({
+      ...r.pod_trips,
+      creator: r.users!,
+      pod: r.pods!,
+      itemCount: itemCountMap.get(r.pod_trips.id) || 0,
+    }));
   }
 
   async getTripById(tripId: number): Promise<(PodTrip & { items: TripItem[] }) | undefined> {
