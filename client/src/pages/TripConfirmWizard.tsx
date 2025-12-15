@@ -270,7 +270,7 @@ export default function TripConfirmWizard() {
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-6">
+      <div className="max-w-lg mx-auto px-4 py-6 pb-32">
         <AnimatePresence mode="wait">
           {currentItem && (
             <motion.div
