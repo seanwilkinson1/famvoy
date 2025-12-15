@@ -140,7 +140,7 @@ export function PodSettingsModal({
             <div className="h-1.5 w-12 rounded-full bg-gray-200" />
           </div>
 
-          <div className="px-6 pb-8 overflow-y-auto max-h-[calc(85vh-40px)]">
+          <div className="px-6 pb-32 overflow-y-auto max-h-[calc(85vh-40px)]">
             {view === "main" && (
               <>
                 <div className="flex items-center justify-between mb-6">
