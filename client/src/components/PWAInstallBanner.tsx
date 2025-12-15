@@ -63,7 +63,7 @@ export function PWAInstallBanner() {
 
   return (
     <div 
-      className="bg-charcoal text-white px-4 py-3 flex items-center justify-between gap-3"
+      className="bg-gray-800 text-white px-4 py-3 flex items-center justify-between gap-3"
       data-testid="pwa-install-banner"
     >
       <div className="flex items-center gap-3 flex-1 min-w-0">
