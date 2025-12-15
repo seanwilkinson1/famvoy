@@ -8,9 +8,6 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { BookingModal } from "@/components/shared/BookingModal";
 import { useAuth } from "@clerk/clerk-react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -88,22 +85,6 @@ interface Trip {
   items: TripItem[];
   costSummary?: CostSummary;
 }
-
-const createMarkerIcon = (color: string) => {
-  return L.divIcon({
-    className: 'custom-marker',
-    html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-  });
-};
-
-const MARKER_COLORS: Record<string, string> = {
-  ACTIVITY: '#4ECDC4',
-  MEAL: '#f97316',
-  STAY: '#3b82f6',
-  TRANSPORT: '#6b7280',
-};
 
 interface DraggableItemWrapperProps {
   id: number;

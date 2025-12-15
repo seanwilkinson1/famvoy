@@ -5,6 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
+import { GoogleMapsProvider } from "@/components/shared/GoogleMapsProvider";
 import { SignedIn, SignedOut, useAuth } from "@clerk/clerk-react";
 import NotFound from "@/pages/not-found";
 
@@ -48,27 +49,29 @@ function AuthenticatedRouter() {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-md bg-background shadow-2xl overflow-hidden relative flex flex-col">
-      <PWAInstallBanner />
-      <Switch>
-        <Route path="/" component={Home} />
-        <Route path="/explore" component={Explore} />
-        <Route path="/pods" component={Pods} />
-        <Route path="/create" component={Create} />
-        <Route path="/profile" component={Profile} />
-        <Route path="/settings" component={Settings} />
-        <Route path="/experience/:id" component={ExperienceDetails} />
-        <Route path="/pod/:id" component={PodDetails} />
-        <Route path="/trip/:id" component={TripDetails} />
-        <Route path="/trip/:id/confirm" component={TripConfirmWizard} />
-        <Route path="/family/:id" component={FamilyProfile} />
-        <Route path="/cart" component={Cart} />
-        <Route path="/checkout/success" component={CheckoutSuccess} />
-        <Route path="/checkout/cancel" component={CheckoutCancel} />
-        <Route component={NotFound} />
-      </Switch>
-      <BottomNav />
-    </div>
+    <GoogleMapsProvider>
+      <div className="mx-auto min-h-screen max-w-md bg-background shadow-2xl overflow-hidden relative flex flex-col">
+        <PWAInstallBanner />
+        <Switch>
+          <Route path="/" component={Home} />
+          <Route path="/explore" component={Explore} />
+          <Route path="/pods" component={Pods} />
+          <Route path="/create" component={Create} />
+          <Route path="/profile" component={Profile} />
+          <Route path="/settings" component={Settings} />
+          <Route path="/experience/:id" component={ExperienceDetails} />
+          <Route path="/pod/:id" component={PodDetails} />
+          <Route path="/trip/:id" component={TripDetails} />
+          <Route path="/trip/:id/confirm" component={TripConfirmWizard} />
+          <Route path="/family/:id" component={FamilyProfile} />
+          <Route path="/cart" component={Cart} />
+          <Route path="/checkout/success" component={CheckoutSuccess} />
+          <Route path="/checkout/cancel" component={CheckoutCancel} />
+          <Route component={NotFound} />
+        </Switch>
+        <BottomNav />
+      </div>
+    </GoogleMapsProvider>
   );
 }
 

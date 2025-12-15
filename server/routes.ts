@@ -45,6 +45,7 @@ export async function registerRoutes(
   app.get('/api/config', (req, res) => {
     res.json({
       clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+      googleMapsApiKey: process.env.GOOGLE_PLACES_API_KEY,
     });
   });
 

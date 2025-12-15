@@ -9,19 +9,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatExperience, type ExperienceWithCreator } from "@/lib/types";
 import { useClerkAuth } from "@/hooks/useAuth";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import { Icon } from "leaflet";
-import "leaflet/dist/leaflet.css";
 import { toast } from "sonner";
-
-const experienceIcon = new Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+import { ExperienceMap } from "@/components/shared/ExperienceMap";
 
 export default function ExperienceDetails() {
   const [match, params] = useRoute("/experience/:id");
@@ -327,29 +316,11 @@ export default function ExperienceDetails() {
         {/* Map Preview */}
         <div className="mb-8 overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
           <div className="relative h-40 w-full">
-            <MapContainer
-              center={[experience.locationLat, experience.locationLng]}
-              zoom={14}
-              scrollWheelZoom={false}
-              className="h-full w-full z-0"
-              zoomControl={false}
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <Marker 
-                position={[experience.locationLat, experience.locationLng]}
-                icon={experienceIcon}
-              >
-                <Popup>
-                  <div className="text-center">
-                    <p className="font-bold text-sm">{experience.title}</p>
-                    <p className="text-xs text-gray-500">{experience.locationName}</p>
-                  </div>
-                </Popup>
-              </Marker>
-            </MapContainer>
+            <ExperienceMap 
+              lat={experience.locationLat} 
+              lng={experience.locationLng} 
+              title={experience.title}
+            />
           </div>
           <div className="bg-white p-3 flex justify-between items-center">
             <div className="flex items-center gap-2">
