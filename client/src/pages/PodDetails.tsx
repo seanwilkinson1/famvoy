@@ -107,6 +107,17 @@ export default function PodDetails() {
     },
   });
 
+  const deleteTripMutation = useMutation({
+    mutationFn: (tripId: number) => api.trips.delete(tripId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["podTrips", podId] });
+      toast.success("Trip deleted");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
   const createAlbumMutation = useMutation({
     mutationFn: () => api.albums.create(podId, { name: albumName, description: albumDescription || undefined }),
     onSuccess: () => {
@@ -514,16 +525,18 @@ export default function PodDetails() {
               formattedPodExperiences.map((exp) => (
                 <div key={exp.id} className="relative">
                   <ExperienceCard experience={exp} />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeExperienceMutation.mutate(exp.id);
-                    }}
-                    className="absolute top-2 right-2 rounded-full bg-red-500 p-1.5 text-white shadow-md hover:bg-red-600 transition-colors z-10"
-                    data-testid={`button-remove-experience-${exp.id}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  {pod?.creatorId === currentUser?.id && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeExperienceMutation.mutate(exp.id);
+                      }}
+                      className="absolute top-2 right-2 rounded-full bg-red-500 p-1.5 text-white shadow-md hover:bg-red-600 transition-colors z-10"
+                      data-testid={`button-remove-experience-${exp.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               ))
             )}
@@ -800,54 +813,69 @@ export default function PodDetails() {
             ) : (
               <div className="space-y-3">
                 {podTrips.map((trip: any) => (
-                  <button
-                    key={trip.id}
-                    onClick={() => setLocation(`/trip/${trip.id}`)}
-                    className="w-full bg-white rounded-2xl border border-gray-100 p-4 text-left hover:shadow-md transition-shadow"
-                    data-testid={`card-trip-${trip.id}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                        <Plane className="h-6 w-6 text-primary" />
+                  <div key={trip.id} className="relative">
+                    <button
+                      onClick={() => setLocation(`/trip/${trip.id}`)}
+                      className="w-full bg-white rounded-2xl border border-gray-100 p-4 text-left hover:shadow-md transition-shadow"
+                      data-testid={`card-trip-${trip.id}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                          <Plane className="h-6 w-6 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <h4 className="font-heading font-bold text-charcoal truncate">{trip.name}</h4>
+                            <span className={cn(
+                              "text-xs px-2 py-0.5 rounded-full font-medium shrink-0",
+                              trip.status === "confirmed" 
+                                ? "bg-green-100 text-green-700" 
+                                : trip.status === "confirming"
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-gray-100 text-gray-600"
+                            )}>
+                              {trip.status === "confirmed" ? "Confirmed" : trip.status === "confirming" ? "In Progress" : "Draft"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-sm text-gray-500 mt-0.5">
+                            <MapPin className="h-3.5 w-3.5" />
+                            <span className="truncate">{trip.destination}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-gray-400 mt-1">
+                            <Calendar className="h-3 w-3" />
+                            <span>
+                              {format(new Date(trip.startDate), "MMM d")} - {format(new Date(trip.endDate), "MMM d, yyyy")}
+                            </span>
+                          </div>
+                        </div>
+                        {trip.aiSummary && (
+                          <div className="flex items-center gap-1 px-2 py-1 bg-purple-50 rounded-full">
+                            <Sparkles className="h-3 w-3 text-purple-500" />
+                            <span className="text-xs text-purple-600 font-medium">AI</span>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <h4 className="font-heading font-bold text-charcoal truncate">{trip.name}</h4>
-                          <span className={cn(
-                            "text-xs px-2 py-0.5 rounded-full font-medium shrink-0",
-                            trip.status === "confirmed" 
-                              ? "bg-green-100 text-green-700" 
-                              : trip.status === "confirming"
-                              ? "bg-orange-100 text-orange-700"
-                              : "bg-gray-100 text-gray-600"
-                          )}>
-                            {trip.status === "confirmed" ? "Confirmed" : trip.status === "confirming" ? "In Progress" : "Draft"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm text-gray-500 mt-0.5">
-                          <MapPin className="h-3.5 w-3.5" />
-                          <span className="truncate">{trip.destination}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-xs text-gray-400 mt-1">
-                          <Calendar className="h-3 w-3" />
-                          <span>
-                            {format(new Date(trip.startDate), "MMM d")} - {format(new Date(trip.endDate), "MMM d, yyyy")}
-                          </span>
-                        </div>
-                      </div>
-                      {trip.aiSummary && (
-                        <div className="flex items-center gap-1 px-2 py-1 bg-purple-50 rounded-full">
-                          <Sparkles className="h-3 w-3 text-purple-500" />
-                          <span className="text-xs text-purple-600 font-medium">AI</span>
+                      {trip.items && trip.items.length > 0 && (
+                        <div className="mt-3 text-xs text-gray-500">
+                          {trip.items.length} activities planned
                         </div>
                       )}
-                    </div>
-                    {trip.items && trip.items.length > 0 && (
-                      <div className="mt-3 text-xs text-gray-500">
-                        {trip.items.length} activities planned
-                      </div>
+                    </button>
+                    {pod?.creatorId === currentUser?.id && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm("Are you sure you want to delete this trip?")) {
+                            deleteTripMutation.mutate(trip.id);
+                          }
+                        }}
+                        className="absolute top-2 right-2 rounded-full bg-red-500 p-1.5 text-white shadow-md hover:bg-red-600 transition-colors z-10"
+                        data-testid={`button-delete-trip-${trip.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     )}
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
