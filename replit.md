@@ -61,7 +61,7 @@ Preferred communication style: Simple, everyday language.
 - **Pod Photo Albums**: Each pod can create and manage photo albums.
 - **Badge System**: Gamified achievements for user engagement.
 - **Pod Experience Curation**: Pinterest-style boards for pods to curate experiences.
-- **Experience Creation Improvements**: Includes photo upload with preview, Nominatim (OpenStreetMap) location autocomplete, and interactive Leaflet maps.
+- **Experience Creation Improvements**: Includes photo upload with preview, Nominatim (OpenStreetMap) location autocomplete, and interactive Google Maps.
 - **Social Features**: Comments with ratings, social sharing, and a user follow system.
 - **Rich Messages in Pods**: Support for text, image, and experience-sharing in chat.
 - **Authentication**: Implemented with Clerk Auth for user authentication and social login.
@@ -197,7 +197,7 @@ Preferred communication style: Simple, everyday language.
 - **date-fns**: Date formatting and manipulation.
 - **Nominatim (OpenStreetMap)**: Geocoding API for location autocomplete.
 - **OpenAI GPT-4o-mini**: AI model for itinerary generation via Replit AI Integrations.
-- **Leaflet**: Interactive maps for experience locations.
+- **Google Maps JavaScript API**: Interactive maps for experience locations and explore page (via @react-google-maps/api).
 
 ### Object Storage
 - **Replit Object Storage (Google Cloud Storage)**: For persistent photo uploads.
