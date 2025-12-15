@@ -4,6 +4,27 @@ import { ClerkProvider } from "@clerk/clerk-react";
 import App from "./App";
 import "./index.css";
 
+declare global {
+  interface WindowEventMap {
+    beforeinstallprompt: BeforeInstallPromptEvent;
+  }
+  interface BeforeInstallPromptEvent extends Event {
+    readonly platforms: string[];
+    readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+    prompt(): Promise<void>;
+  }
+  interface Window {
+    deferredInstallPrompt: BeforeInstallPromptEvent | null;
+  }
+}
+
+window.deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  window.deferredInstallPrompt = e;
+  window.dispatchEvent(new CustomEvent('pwainstallready'));
+});
+
 function ClerkApp() {
   const [publishableKey, setPublishableKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

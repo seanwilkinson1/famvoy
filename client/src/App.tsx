@@ -4,6 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { SignedIn, SignedOut, useAuth } from "@clerk/clerk-react";
 import NotFound from "@/pages/not-found";
 
@@ -47,7 +48,8 @@ function AuthenticatedRouter() {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-md bg-background shadow-2xl overflow-hidden relative">
+    <div className="mx-auto min-h-screen max-w-md bg-background shadow-2xl overflow-hidden relative flex flex-col">
+      <PWAInstallBanner />
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/explore" component={Explore} />
