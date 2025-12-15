@@ -2,8 +2,9 @@ import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { FamilySwipeCard, SwipeButtons } from "@/components/shared/FamilySwipeCard";
 import { MatchModal } from "@/components/shared/MatchModal";
 import { ExploreMap } from "@/components/shared/ExploreMap";
-import { Search, Navigation, Map, Users, Compass, X, ChevronDown, MessageCircle, MapPin, Filter, SlidersHorizontal, Locate, Clock, DollarSign, Star, CheckCircle2, ArrowRight } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { useGoogleMapsContext } from "@/components/shared/GoogleMapsProvider";
+import { Search, Navigation, Map, Users, Compass, X, ChevronDown, MessageCircle, MapPin, Filter, SlidersHorizontal, Locate, Clock, DollarSign, Star, CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -62,10 +63,67 @@ export default function Explore() {
   const [ageFilter, setAgeFilter] = useState("All Ages");
   const [costFilter, setCostFilter] = useState("Any Cost");
   const [maxDistance, setMaxDistance] = useState(50);
+
+  const [searchLocation, setSearchLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [placePredictions, setPlacePredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
+  const [isSearchingPlaces, setIsSearchingPlaces] = useState(false);
+  const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
+  const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
   
   const { location: userLocation } = useUserLocation();
+  const { isLoaded: mapsLoaded } = useGoogleMapsContext();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (mapsLoaded && !autocompleteServiceRef.current && typeof google !== 'undefined' && google.maps?.places) {
+      autocompleteServiceRef.current = new google.maps.places.AutocompleteService();
+      const mapDiv = document.createElement("div");
+      placesServiceRef.current = new google.maps.places.PlacesService(mapDiv);
+    }
+  }, [mapsLoaded]);
+
+  useEffect(() => {
+    if (!autocompleteServiceRef.current || searchQuery.length < 2) {
+      setPlacePredictions([]);
+      return;
+    }
+
+    setIsSearchingPlaces(true);
+    const timer = setTimeout(() => {
+      autocompleteServiceRef.current?.getPlacePredictions(
+        { input: searchQuery, types: ["(regions)"] },
+        (results, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+            setPlacePredictions(results.slice(0, 3));
+          } else {
+            setPlacePredictions([]);
+          }
+          setIsSearchingPlaces(false);
+        }
+      );
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handlePlaceSelect = (prediction: google.maps.places.AutocompletePrediction) => {
+    if (!placesServiceRef.current) return;
+
+    placesServiceRef.current.getDetails(
+      { placeId: prediction.place_id, fields: ["geometry"] },
+      (place, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+          setSearchLocation({
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+          });
+          setSearchQuery(prediction.description);
+          setPlacePredictions([]);
+        }
+      }
+    );
+  };
 
   const messageMutation = useMutation({
     mutationFn: async (otherUserId: number) => {
@@ -239,6 +297,7 @@ export default function Explore() {
               <ExploreMap
                 experiences={filteredExperiences}
                 userLocation={userLocation}
+                searchLocation={searchLocation}
               />
             </div>
 
@@ -257,18 +316,51 @@ export default function Explore() {
                       type="text"
                       placeholder="Search experiences, places..."
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        if (searchLocation) setSearchLocation(null);
+                      }}
                       className="w-full rounded-2xl bg-white py-4 pl-12 pr-12 text-base shadow-lg outline-none placeholder:text-gray-400"
                       autoFocus
                       data-testid="input-search"
                     />
-                    <button
-                      onClick={() => { setShowSearch(false); setSearchQuery(""); }}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-gray-100 p-1"
-                    >
-                      <X className="h-4 w-4 text-gray-500" />
-                    </button>
+                    {isSearchingPlaces ? (
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                        <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setShowSearch(false); setSearchQuery(""); setSearchLocation(null); }}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-gray-100 p-1"
+                      >
+                        <X className="h-4 w-4 text-gray-500" />
+                      </button>
+                    )}
                   </div>
+
+                  {/* Place Predictions */}
+                  {placePredictions.length > 0 && (
+                    <div className="mt-2 rounded-xl bg-white shadow-lg overflow-hidden">
+                      {placePredictions.map((prediction) => (
+                        <button
+                          key={prediction.place_id}
+                          onClick={() => handlePlaceSelect(prediction)}
+                          className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-start gap-3 border-b border-gray-100 last:border-0"
+                          data-testid={`place-prediction-${prediction.place_id}`}
+                        >
+                          <MapPin className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {prediction.structured_formatting.main_text}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">
+                              {prediction.structured_formatting.secondary_text}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>

@@ -31,6 +31,7 @@ interface ExploreMapProps {
   userLocation?: { lat: number; lng: number } | null;
   onExperienceClick?: (experience: Experience) => void;
   className?: string;
+  searchLocation?: { lat: number; lng: number } | null;
 }
 
 export function ExploreMap({
@@ -38,6 +39,7 @@ export function ExploreMap({
   userLocation,
   onExperienceClick,
   className = "",
+  searchLocation,
 }: ExploreMapProps) {
   const [, setLocation] = useLocation();
   const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
@@ -45,6 +47,18 @@ export function ExploreMap({
   const { isLoaded } = useGoogleMapsContext();
   const lastFitKey = useRef<string>("");
   const initialCenterSet = useRef(false);
+  const lastSearchLocation = useRef<string>("");
+
+  useEffect(() => {
+    if (!map || !searchLocation) return;
+    
+    const searchKey = `${searchLocation.lat},${searchLocation.lng}`;
+    if (searchKey !== lastSearchLocation.current) {
+      map.panTo(searchLocation);
+      map.setZoom(12);
+      lastSearchLocation.current = searchKey;
+    }
+  }, [map, searchLocation]);
 
   useEffect(() => {
     if (!map) return;
