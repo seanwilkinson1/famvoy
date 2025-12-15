@@ -1,0 +1,32 @@
+{
+  "name": "FamVoy - Family Adventures",
+  "short_name": "FamVoy",
+  "description": "Create unforgettable family adventures. Discover kid-friendly experiences, connect with like-minded families, and build memories that last a lifetime.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#4A9B8C",
+  "background_color": "#FAF7F2",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["lifestyle", "social", "travel"],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
