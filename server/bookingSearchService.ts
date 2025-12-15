@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
 import type { TripItem, InsertTripItemOption } from "@shared/schema";
+import { searchPlacesForTripItem } from "./googlePlacesService";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -70,6 +71,25 @@ export async function searchBookingOptions(
   destination: string,
   tripDates: { startDate: string; endDate: string }
 ): Promise<BookingSearchResult[]> {
+  // First, try to get real places from Google Places API
+  try {
+    const googlePlacesResults = await searchPlacesForTripItem(
+      tripItem.title,
+      tripItem.description,
+      tripItem.itemType,
+      destination
+    );
+    
+    if (googlePlacesResults.length > 0) {
+      console.log(`Found ${googlePlacesResults.length} real places from Google Places API`);
+      return googlePlacesResults;
+    }
+  } catch (error) {
+    console.error("Error searching Google Places:", error);
+  }
+
+  // Fall back to AI-generated options if Google Places returns no results
+  console.log("Falling back to AI-generated options");
   const itemTypeLabel = getItemTypeLabel(tripItem.itemType);
   const provider = getProviderByType(tripItem.itemType);
 

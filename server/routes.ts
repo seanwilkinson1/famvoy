@@ -117,6 +117,41 @@ export async function registerRoutes(
     }
   });
 
+  // Google Places photo proxy - hides API key from clients
+  app.get('/api/places/photo', async (req, res) => {
+    try {
+      const { ref, maxwidth } = req.query;
+      if (!ref || typeof ref !== 'string') {
+        return res.status(400).json({ error: 'Missing photo reference' });
+      }
+      
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: 'Google Places API not configured' });
+      }
+      
+      const width = parseInt(maxwidth as string) || 400;
+      const googlePhotoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${width}&photo_reference=${ref}&key=${apiKey}`;
+      
+      const response = await fetch(googlePhotoUrl, { redirect: 'follow' });
+      if (!response.ok) {
+        return res.status(response.status).json({ error: 'Failed to fetch photo' });
+      }
+      
+      const contentType = response.headers.get('content-type');
+      if (contentType) {
+        res.setHeader('Content-Type', contentType);
+      }
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+      
+      const buffer = await response.arrayBuffer();
+      res.send(Buffer.from(buffer));
+    } catch (error) {
+      console.error('Error proxying Google Places photo:', error);
+      res.status(500).json({ error: 'Failed to fetch photo' });
+    }
+  });
+
   app.get('/api/auth/user', requireAuth(), async (req, res) => {
     try {
       const { userId } = getAuth(req);
