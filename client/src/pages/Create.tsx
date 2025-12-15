@@ -309,6 +309,7 @@ export default function Create() {
                   locationLat: place.lat,
                   locationLng: place.lng,
                 });
+                setLocationSearch(place.name);
               }}
               onClear={clearLocation}
               placeholder="Search for a location..."

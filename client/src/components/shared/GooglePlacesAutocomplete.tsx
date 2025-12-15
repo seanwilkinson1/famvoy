@@ -45,7 +45,7 @@ export function GooglePlacesAutocomplete({
   const [isGettingCurrentLocation, setIsGettingCurrentLocation] = useState(false);
 
   useEffect(() => {
-    if (isLoaded && !autocompleteServiceRef.current) {
+    if (isLoaded && !autocompleteServiceRef.current && typeof google !== 'undefined' && google.maps?.places) {
       autocompleteServiceRef.current = new google.maps.places.AutocompleteService();
       const mapDiv = document.createElement("div");
       placesServiceRef.current = new google.maps.places.PlacesService(mapDiv);
@@ -114,19 +114,26 @@ export function GooglePlacesAutocomplete({
 
     placesServiceRef.current.getDetails(request, (place, status) => {
       if (status === google.maps.places.PlacesServiceStatus.OK && place && place.geometry?.location) {
+        const formattedAddress = place.formatted_address || prediction.description;
+        const displayName = prediction.structured_formatting.main_text;
+        const secondaryPart = prediction.structured_formatting.secondary_text?.split(",")[0]?.trim();
+        const displayValue = secondaryPart ? `${displayName}, ${secondaryPart}` : displayName;
+        
         const result: PlaceResult = {
-          name: place.name || prediction.structured_formatting.main_text,
-          address: place.formatted_address || prediction.description,
+          name: displayValue,
+          address: formattedAddress,
           lat: place.geometry.location.lat(),
           lng: place.geometry.location.lng(),
           placeId: prediction.place_id,
         };
         
         onPlaceSelect(result);
-        onChange(prediction.structured_formatting.main_text + (prediction.structured_formatting.secondary_text ? ", " + prediction.structured_formatting.secondary_text.split(",")[0] : ""));
+        onChange(displayValue);
         setPredictions([]);
         setShowPredictions(false);
-        sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+        if (typeof google !== 'undefined' && google.maps?.places) {
+          sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+        }
       }
     });
   };

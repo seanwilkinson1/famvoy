@@ -48,10 +48,13 @@ export function GoogleMapsProvider({ children }: GoogleMapsProviderProps) {
   );
 }
 
+const GOOGLE_MAPS_LIBRARIES: ("places")[] = ["places"];
+
 function GoogleMapsLoaderWrapper({ apiKey, children }: { apiKey: string; children: ReactNode }) {
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: apiKey,
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   return (
