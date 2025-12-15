@@ -1,6 +1,7 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { PodCard } from "@/components/shared/PodCard";
 import { ImageUpload } from "@/components/shared/ImageUpload";
+import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
 import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Trophy, CheckCircle, Star, Heart, Globe, Quote, Plane, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -273,13 +274,13 @@ export default function Profile() {
           
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">Location</label>
-            <input
-              type="text"
+            <GooglePlacesAutocomplete
               value={editForm.location}
-              onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
+              onChange={(value) => setEditForm({ ...editForm, location: value })}
+              onPlaceSelect={(place) => setEditForm({ ...editForm, location: place.name })}
               placeholder="City, State"
-              data-testid="input-edit-location"
+              showCurrentLocation={false}
+              isSelected={false}
             />
           </div>
           

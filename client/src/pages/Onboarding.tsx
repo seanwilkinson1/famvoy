@@ -2,12 +2,13 @@ import { useState } from "react";
 import { useUser, useAuth } from "@clerk/clerk-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Heart, MapPin, Users, Sparkles, ArrowRight, Check } from "lucide-react";
+import { Heart, Users, Sparkles, ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUpload } from "@/components/shared/ImageUpload";
+import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
 
 const INTEREST_OPTIONS = [
   "Hiking", "Food", "Nature", "Art", "Sports", "Music", 
@@ -155,15 +156,14 @@ export default function Onboarding() {
 
                 <div>
                   <Label htmlFor="location" className="text-charcoal">Your City</Label>
-                  <div className="relative mt-1.5">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal/40" />
-                    <Input
-                      id="location"
-                      placeholder="San Francisco, CA"
+                  <div className="mt-1.5">
+                    <GooglePlacesAutocomplete
                       value={formData.location}
-                      onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                      className="pl-10"
-                      data-testid="input-location"
+                      onChange={(value) => setFormData(prev => ({ ...prev, location: value }))}
+                      onPlaceSelect={(place) => setFormData(prev => ({ ...prev, location: place.name }))}
+                      placeholder="San Francisco, CA"
+                      showCurrentLocation={false}
+                      isSelected={false}
                     />
                   </div>
                 </div>
