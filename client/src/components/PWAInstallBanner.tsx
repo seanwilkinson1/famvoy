@@ -63,23 +63,19 @@ export function PWAInstallBanner() {
 
   return (
     <div 
-      className="bg-warm-teal text-white px-4 py-3 flex items-center justify-between gap-3"
+      className="bg-charcoal text-white px-4 py-3 flex items-center justify-between gap-3"
       data-testid="pwa-install-banner"
     >
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <Download className="w-5 h-5 flex-shrink-0" />
         <div className="min-w-0">
           {isIOS ? (
-            <p className="text-sm">
-              <span className="font-medium">Install FamVoy:</span>{' '}
-              <span className="opacity-90">
-                Tap <Share className="w-4 h-4 inline -mt-0.5" /> then "Add to Home Screen"
-              </span>
+            <p className="text-sm font-medium">
+              Install FamVoy: Tap <Share className="w-4 h-4 inline -mt-0.5" /> then "Add to Home Screen"
             </p>
           ) : (
-            <p className="text-sm">
-              <span className="font-medium">Get the app!</span>{' '}
-              <span className="opacity-90">Install FamVoy for quick access</span>
+            <p className="text-sm font-medium">
+              Get the app! Install FamVoy for quick access
             </p>
           )}
         </div>
@@ -89,7 +85,7 @@ export function PWAInstallBanner() {
         {!isIOS && deferredPrompt && (
           <button
             onClick={handleInstall}
-            className="bg-white text-warm-teal px-3 py-1.5 rounded-full text-sm font-medium hover:bg-white/90 transition-colors"
+            className="bg-warm-coral text-white px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-warm-coral/90 transition-colors"
             data-testid="button-install-pwa"
           >
             Install
