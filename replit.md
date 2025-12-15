@@ -35,6 +35,27 @@ Preferred communication style: Simple, everyday language.
 **Build Process**: `npm run dev` for development with HMR, `npm run build` for production bundling of client (Vite) and server (esbuild).
 **Type Safety**: Ensured through shared schema definitions, `tsconfig` paths, and strict TypeScript configuration.
 
+### Google Places Integration
+**Purpose**: Provide real venue data with authentic photos for trip confirmation booking options instead of AI-generated fake data.
+
+**Service** (`server/googlePlacesService.ts`):
+- `searchPlaces()`: Text search for venues by query, location, and item type
+- `getPhotoUrl()`: Returns proxy URLs (e.g., `/api/places/photo?ref=xxx`) to hide API key
+- `searchPlacesForTripItem()`: Combines search with formatted results for booking options
+
+**Photo Proxy** (`server/routes.ts` - `/api/places/photo`):
+- Server-side proxy that fetches Google Places photos
+- Hides API key from clients (security best practice)
+- Caches photos for 24 hours (Cache-Control header)
+- Streams image data directly to client
+
+**Fallback Behavior**:
+- If Google Places returns no results, falls back to AI-generated options
+- Ensures booking confirmation always has options to display
+
+**Environment Variables**:
+- `GOOGLE_PLACES_API_KEY`: Required for real venue search and photos
+
 ### System Features and Implementations
 - **AI-Powered Trip Planning**: Pods can collaboratively plan trips with AI-generated itineraries using OpenAI GPT-4o-mini.
 - **Pod Photo Albums**: Each pod can create and manage photo albums.
