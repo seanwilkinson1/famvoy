@@ -206,10 +206,10 @@ export default function Landing() {
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
             
             <div className="relative z-10">
-              <h2 className="text-3xl md:text-4xl font-outfit font-bold text-white mb-4">
+              <h2 className="text-3xl md:text-4xl font-outfit font-bold text-charcoal mb-4">
                 Ready to start your family adventure?
               </h2>
-              <p className="text-white/80 mb-8 max-w-lg mx-auto">
+              <p className="text-charcoal/70 mb-8 max-w-lg mx-auto">
                 Join thousands of families already discovering amazing experiences together.
               </p>
               <SignUpButton mode="modal">
