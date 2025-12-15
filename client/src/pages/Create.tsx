@@ -1,24 +1,17 @@
-import { useState, useRef, useEffect } from "react";
-import { ChevronLeft, Camera, MapPin, Clock, Info, X, Loader2, Navigation } from "lucide-react";
+import { useState, useRef } from "react";
+import { ChevronLeft, Camera, Clock, Info, X, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-
-interface LocationSuggestion {
-  display_name: string;
-  lat: string;
-  lon: string;
-  place_id: number;
-}
+import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
 
 export default function Create() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const locationInputRef = useRef<HTMLInputElement>(null);
 
   const { data: currentUser } = useQuery({
     queryKey: ["currentUser"],
@@ -41,52 +34,6 @@ export default function Create() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [locationSearch, setLocationSearch] = useState("");
-  const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
-  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [isGettingCurrentLocation, setIsGettingCurrentLocation] = useState(false);
-
-  useEffect(() => {
-    const searchLocation = async () => {
-      if (locationSearch.length < 3) {
-        setLocationSuggestions([]);
-        return;
-      }
-
-      setIsSearchingLocation(true);
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationSearch)}&limit=5`,
-          {
-            headers: {
-              'Accept': 'application/json',
-              'User-Agent': 'FamVoy/1.0 (family experience sharing app)',
-            },
-          }
-        );
-        const data = await response.json();
-        setLocationSuggestions(data);
-        setShowSuggestions(true);
-      } catch (error) {
-        console.error('Failed to search location:', error);
-      } finally {
-        setIsSearchingLocation(false);
-      }
-    };
-
-    const debounceTimer = setTimeout(searchLocation, 300);
-    return () => clearTimeout(debounceTimer);
-  }, [locationSearch]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (locationInputRef.current && !locationInputRef.current.contains(event.target as Node)) {
-        setShowSuggestions(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -115,17 +62,6 @@ export default function Create() {
     }
   };
 
-  const handleSelectLocation = (suggestion: LocationSuggestion) => {
-    setFormData({
-      ...formData,
-      locationName: suggestion.display_name.split(',').slice(0, 2).join(', '),
-      locationLat: parseFloat(suggestion.lat),
-      locationLng: parseFloat(suggestion.lon),
-    });
-    setLocationSearch(suggestion.display_name.split(',').slice(0, 2).join(', '));
-    setShowSuggestions(false);
-  };
-
   const clearLocation = () => {
     setFormData({
       ...formData,
@@ -134,85 +70,6 @@ export default function Create() {
       locationLng: null,
     });
     setLocationSearch("");
-  };
-
-  const handleUseCurrentLocation = async () => {
-    if (!navigator.geolocation) {
-      toast({
-        title: "Not Supported",
-        description: "Location services are not supported by your browser",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsGettingCurrentLocation(true);
-    
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        
-        try {
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
-            {
-              headers: {
-                'Accept': 'application/json',
-                'User-Agent': 'FamVoy/1.0 (family experience sharing app)',
-              },
-            }
-          );
-          const data = await response.json();
-          
-          const locationName = data.display_name 
-            ? data.display_name.split(',').slice(0, 2).join(', ')
-            : `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-          
-          setFormData(prev => ({
-            ...prev,
-            locationName,
-            locationLat: latitude,
-            locationLng: longitude,
-          }));
-          setLocationSearch(locationName);
-          
-          toast({
-            title: "Location Found!",
-            description: locationName,
-            duration: 2000,
-          });
-        } catch (error) {
-          console.error('Failed to reverse geocode:', error);
-          const fallbackName = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-          setFormData(prev => ({
-            ...prev,
-            locationName: fallbackName,
-            locationLat: latitude,
-            locationLng: longitude,
-          }));
-          setLocationSearch(fallbackName);
-        } finally {
-          setIsGettingCurrentLocation(false);
-        }
-      },
-      (error) => {
-        setIsGettingCurrentLocation(false);
-        let message = "Could not get your location";
-        if (error.code === error.PERMISSION_DENIED) {
-          message = "Please allow location access in your browser settings";
-        } else if (error.code === error.POSITION_UNAVAILABLE) {
-          message = "Location information is unavailable";
-        } else if (error.code === error.TIMEOUT) {
-          message = "Location request timed out";
-        }
-        toast({
-          title: "Location Error",
-          description: message,
-          variant: "destructive",
-        });
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-    );
   };
 
   const createMutation = useMutation({
@@ -440,82 +297,24 @@ export default function Create() {
             </div>
           </div>
           
-          <div ref={locationInputRef} className="relative">
-            <div className="mb-2 flex items-center justify-between">
-              <label className="text-sm font-bold text-gray-700">Location</label>
-              <button
-                type="button"
-                onClick={handleUseCurrentLocation}
-                disabled={isGettingCurrentLocation}
-                className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/80 disabled:opacity-50"
-                data-testid="button-use-current-location"
-              >
-                {isGettingCurrentLocation ? (
-                  <>
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Getting location...
-                  </>
-                ) : (
-                  <>
-                    <Navigation className="h-3 w-3" />
-                    Use My Location
-                  </>
-                )}
-              </button>
-            </div>
-            <div className="relative">
-              <MapPin className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search for a location..."
-                className={cn(
-                  "w-full rounded-xl border bg-white py-4 pl-12 pr-10 text-base font-medium placeholder:text-gray-400 focus:border-primary focus:outline-none",
-                  formData.locationLat ? "border-primary bg-primary/5" : "border-gray-200"
-                )}
-                value={locationSearch}
-                onChange={(e) => {
-                  setLocationSearch(e.target.value);
-                  if (formData.locationLat) {
-                    setFormData({ ...formData, locationName: "", locationLat: null, locationLng: null });
-                  }
-                }}
-                onFocus={() => locationSuggestions.length > 0 && setShowSuggestions(true)}
-                data-testid="input-location"
-              />
-              {isSearchingLocation && (
-                <Loader2 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 animate-spin" />
-              )}
-              {formData.locationLat && (
-                <button
-                  onClick={clearLocation}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300"
-                >
-                  <X className="h-3 w-3 text-gray-600" />
-                </button>
-              )}
-            </div>
-            
-            {showSuggestions && locationSuggestions.length > 0 && (
-              <div className="absolute z-50 mt-2 w-full rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden">
-                {locationSuggestions.map((suggestion) => (
-                  <button
-                    key={suggestion.place_id}
-                    onClick={() => handleSelectLocation(suggestion)}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-start gap-3 border-b border-gray-100 last:border-0"
-                  >
-                    <MapPin className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-gray-700 line-clamp-2">{suggestion.display_name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            
-            {formData.locationLat && (
-              <p className="mt-2 text-xs text-primary font-medium flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                Location selected - will appear on maps
-              </p>
-            )}
+          <div>
+            <label className="mb-2 block text-sm font-bold text-gray-700">Location</label>
+            <GooglePlacesAutocomplete
+              value={locationSearch}
+              onChange={setLocationSearch}
+              onPlaceSelect={(place) => {
+                setFormData({
+                  ...formData,
+                  locationName: place.name,
+                  locationLat: place.lat,
+                  locationLng: place.lng,
+                });
+              }}
+              onClear={clearLocation}
+              placeholder="Search for a location..."
+              showCurrentLocation={true}
+              isSelected={!!formData.locationLat}
+            />
           </div>
 
            <div>
