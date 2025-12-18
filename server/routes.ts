@@ -2874,5 +2874,420 @@ Return ONLY valid JSON.`;
     }
   });
 
+  // ==================== CONCIERGE BOOKING ROUTES ====================
+
+  // Create concierge checkout session for a confirmed trip
+  app.post('/api/concierge/checkout', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { tripId, customerNotes } = req.body;
+      if (!tripId) {
+        return res.status(400).json({ error: "Trip ID is required" });
+      }
+
+      const trip = await storage.getTripById(tripId);
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+
+      // Check if already has concierge request
+      const existingRequest = await storage.getConciergeRequestByTrip(tripId);
+      if (existingRequest) {
+        return res.status(400).json({ error: "Concierge request already exists for this trip" });
+      }
+
+      // Get confirmed items with their selected options
+      const confirmableItems = await storage.getConfirmableItems(tripId);
+      const lockedItems = confirmableItems.filter(item => item.confirmationState === 'locked' && item.selectedOptionId);
+
+      if (lockedItems.length === 0) {
+        return res.status(400).json({ error: "No items to book. Please confirm trip items first." });
+      }
+
+      // Calculate estimated total from locked options
+      let totalEstimatedCents = 0;
+      for (const item of lockedItems) {
+        if (item.selectedOptionId) {
+          const options = await storage.getTripItemOptions(item.id);
+          const selectedOption = options.find(o => o.id === item.selectedOptionId);
+          if (selectedOption?.priceEstimate) {
+            // Parse price estimate (e.g., "$150.50" -> 15050 cents, "$1,250" -> 125000 cents)
+            const priceMatch = selectedOption.priceEstimate.match(/[\d,]+\.?\d*/);
+            if (priceMatch) {
+              const priceStr = priceMatch[0].replace(/,/g, '');
+              const priceDollars = parseFloat(priceStr);
+              if (!isNaN(priceDollars)) {
+                totalEstimatedCents += Math.round(priceDollars * 100);
+              }
+            }
+          }
+        }
+      }
+
+      // Minimum $50 booking if we couldn't parse any valid prices
+      if (totalEstimatedCents === 0) {
+        totalEstimatedCents = 5000;
+      }
+
+      // Calculate service fee (15%)
+      const serviceFeePercent = 15;
+      const serviceFeeCents = Math.round(totalEstimatedCents * serviceFeePercent / 100);
+      const totalPaidCents = totalEstimatedCents + serviceFeeCents;
+
+      const { getUncachableStripeClient } = await import('./stripeClient');
+      const stripe = await getUncachableStripeClient();
+
+      // Create Stripe checkout session
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: `Trip Booking: ${trip.name}`,
+                description: `Concierge booking service for ${lockedItems.length} items`,
+              },
+              unit_amount: totalEstimatedCents,
+            },
+            quantity: 1,
+          },
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: 'Concierge Service Fee',
+                description: `${serviceFeePercent}% service fee for personal booking concierge`,
+              },
+              unit_amount: serviceFeeCents,
+            },
+            quantity: 1,
+          },
+        ],
+        mode: 'payment',
+        success_url: `${req.protocol}://${req.get('host')}/concierge/success?tripId=${tripId}`,
+        cancel_url: `${req.protocol}://${req.get('host')}/pods/${trip.podId}/trips/${tripId}`,
+        metadata: {
+          tripId: tripId.toString(),
+          userId: user.id.toString(),
+          type: 'concierge',
+        },
+      });
+
+      // Create concierge request
+      const conciergeRequest = await storage.createConciergeRequest({
+        tripId,
+        userId: user.id,
+        status: 'pending_payment',
+        totalEstimatedCents,
+        serviceFeePercent,
+        serviceFeeCents,
+        totalPaidCents,
+        stripeCheckoutSessionId: session.id,
+        customerNotes: customerNotes || null,
+      });
+
+      // Create concierge request items for each locked item
+      const requestItems = lockedItems.map(item => ({
+        conciergeRequestId: conciergeRequest.id,
+        tripItemId: item.id,
+        selectedOptionId: item.selectedOptionId,
+        status: 'pending' as const,
+        estimatedPriceCents: null,
+      }));
+
+      await storage.createConciergeRequestItems(requestItems);
+
+      res.json({ url: session.url, requestId: conciergeRequest.id });
+    } catch (error: any) {
+      console.error("Concierge checkout error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Complete concierge request after payment
+  app.post('/api/concierge/requests/:id/complete-payment', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const requestId = parseInt(req.params.id);
+      const request = await storage.getConciergeRequestById(requestId);
+      if (!request) {
+        return res.status(404).json({ error: "Request not found" });
+      }
+
+      // Verify the user owns this request
+      if (request.userId !== user.id) {
+        return res.status(403).json({ error: "Not authorized to access this request" });
+      }
+
+      // Already completed, return current state (idempotent)
+      if (request.status !== 'pending_payment') {
+        return res.json(request);
+      }
+
+      const updatedRequest = await storage.updateConciergeRequest(requestId, {
+        status: 'pending',
+      });
+
+      // Update trip status
+      await storage.updateTripStatus(request.tripId, 'booking_in_progress');
+
+      res.json(updatedRequest);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get user's concierge requests
+  app.get('/api/concierge/requests', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const requests = await storage.getConciergeRequestsByUser(user.id);
+      res.json(requests);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get single concierge request
+  app.get('/api/concierge/requests/:id', requireAuth(), async (req, res) => {
+    try {
+      const request = await storage.getConciergeRequestById(parseInt(req.params.id));
+      if (!request) {
+        return res.status(404).json({ error: "Request not found" });
+      }
+      res.json(request);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get concierge request by trip
+  app.get('/api/trips/:tripId/concierge', requireAuth(), async (req, res) => {
+    try {
+      const request = await storage.getConciergeRequestByTrip(parseInt(req.params.tripId));
+      res.json(request || null);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get concierge request items
+  app.get('/api/concierge/requests/:id/items', requireAuth(), async (req, res) => {
+    try {
+      const items = await storage.getConciergeRequestItems(parseInt(req.params.id));
+      res.json(items);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== AGENT ROUTES ====================
+
+  // Check if user is an agent
+  app.get('/api/agent/status', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({ isAgent: user.isAgent || false });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get pending requests for agents
+  app.get('/api/agent/requests/pending', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user || !user.isAgent) {
+        return res.status(403).json({ error: "Not authorized as agent" });
+      }
+
+      const requests = await storage.getPendingConciergeRequests();
+      res.json(requests);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get agent's assigned requests
+  app.get('/api/agent/requests/assigned', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user || !user.isAgent) {
+        return res.status(403).json({ error: "Not authorized as agent" });
+      }
+
+      const requests = await storage.getAgentConciergeRequests(user.id);
+      res.json(requests);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Claim a request (agent assigns themselves)
+  app.post('/api/agent/requests/:id/claim', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user || !user.isAgent) {
+        return res.status(403).json({ error: "Not authorized as agent" });
+      }
+
+      const requestId = parseInt(req.params.id);
+      const request = await storage.getConciergeRequestById(requestId);
+      if (!request) {
+        return res.status(404).json({ error: "Request not found" });
+      }
+
+      if (request.assignedAgentId && request.assignedAgentId !== user.id) {
+        return res.status(400).json({ error: "Request already claimed by another agent" });
+      }
+
+      const updatedRequest = await storage.updateConciergeRequest(requestId, {
+        assignedAgentId: user.id,
+        status: 'in_progress',
+      });
+
+      res.json(updatedRequest);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update request item (agent marks as booked, adds confirmation, etc.)
+  app.patch('/api/agent/requests/:requestId/items/:itemId', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user || !user.isAgent) {
+        return res.status(403).json({ error: "Not authorized as agent" });
+      }
+
+      const { status, confirmationCode, bookingReference, providerName, actualPriceCents, agentNotes } = req.body;
+      
+      const updateData: any = {};
+      if (status) updateData.status = status;
+      if (confirmationCode) updateData.confirmationCode = confirmationCode;
+      if (bookingReference) updateData.bookingReference = bookingReference;
+      if (providerName) updateData.providerName = providerName;
+      if (actualPriceCents !== undefined) updateData.actualPriceCents = actualPriceCents;
+      if (agentNotes) updateData.agentNotes = agentNotes;
+      if (status === 'booked') updateData.bookedAt = new Date();
+
+      const item = await storage.updateConciergeRequestItem(parseInt(req.params.itemId), updateData);
+      res.json(item);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Add agent notes to request
+  app.patch('/api/agent/requests/:id/notes', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user || !user.isAgent) {
+        return res.status(403).json({ error: "Not authorized as agent" });
+      }
+
+      const { agentNotes } = req.body;
+      const request = await storage.updateConciergeRequest(parseInt(req.params.id), { agentNotes });
+      res.json(request);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Complete request (all items booked)
+  app.post('/api/agent/requests/:id/complete', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user || !user.isAgent) {
+        return res.status(403).json({ error: "Not authorized as agent" });
+      }
+
+      const requestId = parseInt(req.params.id);
+      const request = await storage.getConciergeRequestById(requestId);
+      if (!request) {
+        return res.status(404).json({ error: "Request not found" });
+      }
+
+      // Verify all items are booked
+      const items = await storage.getConciergeRequestItems(requestId);
+      const unbookedItems = items.filter(item => item.status !== 'booked' && item.status !== 'skipped');
+      
+      if (unbookedItems.length > 0) {
+        return res.status(400).json({ 
+          error: `${unbookedItems.length} items still pending. Complete all items before marking request as complete.` 
+        });
+      }
+
+      const updatedRequest = await storage.updateConciergeRequest(requestId, {
+        status: 'completed',
+        completedAt: new Date(),
+      });
+
+      // Update trip status
+      await storage.updateTripStatus(request.tripId, 'booked');
+
+      res.json(updatedRequest);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }

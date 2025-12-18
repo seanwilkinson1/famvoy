@@ -49,6 +49,10 @@ import {
   type InsertTripConfirmationSession,
   type TripItemOption,
   type InsertTripItemOption,
+  type ConciergeRequest,
+  type InsertConciergeRequest,
+  type ConciergeRequestItem,
+  type InsertConciergeRequestItem,
   users,
   experiences,
   pods,
@@ -77,6 +81,8 @@ import {
   orderItems,
   tripConfirmationSessions,
   tripItemOptions,
+  conciergeRequests,
+  conciergeRequestItems,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ne, notInArray, ilike, isNotNull, inArray } from "drizzle-orm";
@@ -245,6 +251,20 @@ export interface IStorage {
   updateTripStatus(tripId: number, status: string): Promise<PodTrip>;
   updateTripItemConfirmation(itemId: number, state: string, selectedOptionId?: number): Promise<TripItem>;
   getConfirmableItems(tripId: number): Promise<TripItem[]>;
+  
+  createConciergeRequest(data: InsertConciergeRequest): Promise<ConciergeRequest>;
+  getConciergeRequestById(id: number): Promise<(ConciergeRequest & { items: ConciergeRequestItem[]; trip: PodTrip; user: User }) | undefined>;
+  getConciergeRequestByTrip(tripId: number): Promise<ConciergeRequest | undefined>;
+  getConciergeRequestsByUser(userId: number): Promise<(ConciergeRequest & { trip: PodTrip })[]>;
+  getPendingConciergeRequests(): Promise<(ConciergeRequest & { trip: PodTrip; user: User })[]>;
+  getAgentConciergeRequests(agentId: number): Promise<(ConciergeRequest & { trip: PodTrip; user: User })[]>;
+  updateConciergeRequest(id: number, data: Partial<ConciergeRequest>): Promise<ConciergeRequest>;
+  
+  createConciergeRequestItems(items: InsertConciergeRequestItem[]): Promise<ConciergeRequestItem[]>;
+  getConciergeRequestItems(requestId: number): Promise<(ConciergeRequestItem & { tripItem: TripItem; selectedOption?: TripItemOption })[]>;
+  updateConciergeRequestItem(id: number, data: Partial<ConciergeRequestItem>): Promise<ConciergeRequestItem>;
+  
+  getAgents(): Promise<User[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1564,6 +1584,108 @@ export class DatabaseStorage implements IStorage {
         eq(tripItems.isConfirmable, true)
       ))
       .orderBy(tripItems.dayNumber, tripItems.sortOrder);
+  }
+
+  async createConciergeRequest(data: InsertConciergeRequest): Promise<ConciergeRequest> {
+    const [request] = await db.insert(conciergeRequests).values(data).returning();
+    return request;
+  }
+
+  async getConciergeRequestById(id: number): Promise<(ConciergeRequest & { items: ConciergeRequestItem[]; trip: PodTrip; user: User }) | undefined> {
+    const [result] = await db.select()
+      .from(conciergeRequests)
+      .innerJoin(podTrips, eq(conciergeRequests.tripId, podTrips.id))
+      .innerJoin(users, eq(conciergeRequests.userId, users.id))
+      .where(eq(conciergeRequests.id, id));
+    
+    if (!result) return undefined;
+    
+    const items = await db.select().from(conciergeRequestItems)
+      .where(eq(conciergeRequestItems.conciergeRequestId, id));
+    
+    return { ...result.concierge_requests, items, trip: result.pod_trips, user: result.users };
+  }
+
+  async getConciergeRequestByTrip(tripId: number): Promise<ConciergeRequest | undefined> {
+    const [request] = await db.select().from(conciergeRequests)
+      .where(eq(conciergeRequests.tripId, tripId));
+    return request || undefined;
+  }
+
+  async getConciergeRequestsByUser(userId: number): Promise<(ConciergeRequest & { trip: PodTrip })[]> {
+    const results = await db.select()
+      .from(conciergeRequests)
+      .innerJoin(podTrips, eq(conciergeRequests.tripId, podTrips.id))
+      .where(eq(conciergeRequests.userId, userId))
+      .orderBy(desc(conciergeRequests.createdAt));
+    
+    return results.map(r => ({ ...r.concierge_requests, trip: r.pod_trips }));
+  }
+
+  async getPendingConciergeRequests(): Promise<(ConciergeRequest & { trip: PodTrip; user: User })[]> {
+    const results = await db.select()
+      .from(conciergeRequests)
+      .innerJoin(podTrips, eq(conciergeRequests.tripId, podTrips.id))
+      .innerJoin(users, eq(conciergeRequests.userId, users.id))
+      .where(eq(conciergeRequests.status, 'pending'))
+      .orderBy(conciergeRequests.createdAt);
+    
+    return results.map(r => ({ ...r.concierge_requests, trip: r.pod_trips, user: r.users }));
+  }
+
+  async getAgentConciergeRequests(agentId: number): Promise<(ConciergeRequest & { trip: PodTrip; user: User })[]> {
+    const results = await db.select()
+      .from(conciergeRequests)
+      .innerJoin(podTrips, eq(conciergeRequests.tripId, podTrips.id))
+      .innerJoin(users, eq(conciergeRequests.userId, users.id))
+      .where(eq(conciergeRequests.assignedAgentId, agentId))
+      .orderBy(desc(conciergeRequests.createdAt));
+    
+    return results.map(r => ({ ...r.concierge_requests, trip: r.pod_trips, user: r.users }));
+  }
+
+  async updateConciergeRequest(id: number, data: Partial<ConciergeRequest>): Promise<ConciergeRequest> {
+    const [request] = await db.update(conciergeRequests)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(conciergeRequests.id, id))
+      .returning();
+    return request;
+  }
+
+  async createConciergeRequestItems(items: InsertConciergeRequestItem[]): Promise<ConciergeRequestItem[]> {
+    if (items.length === 0) return [];
+    return db.insert(conciergeRequestItems).values(items).returning();
+  }
+
+  async getConciergeRequestItems(requestId: number): Promise<(ConciergeRequestItem & { tripItem: TripItem; selectedOption?: TripItemOption })[]> {
+    const items = await db.select()
+      .from(conciergeRequestItems)
+      .innerJoin(tripItems, eq(conciergeRequestItems.tripItemId, tripItems.id))
+      .where(eq(conciergeRequestItems.conciergeRequestId, requestId));
+    
+    const result = [];
+    for (const item of items) {
+      let selectedOption: TripItemOption | undefined;
+      if (item.concierge_request_items.selectedOptionId) {
+        const [opt] = await db.select().from(tripItemOptions)
+          .where(eq(tripItemOptions.id, item.concierge_request_items.selectedOptionId));
+        selectedOption = opt;
+      }
+      result.push({ ...item.concierge_request_items, tripItem: item.trip_items, selectedOption });
+    }
+    return result;
+  }
+
+  async updateConciergeRequestItem(id: number, data: Partial<ConciergeRequestItem>): Promise<ConciergeRequestItem> {
+    const [item] = await db.update(conciergeRequestItems)
+      .set(data)
+      .where(eq(conciergeRequestItems.id, id))
+      .returning();
+    return item;
+  }
+
+  async getAgents(): Promise<User[]> {
+    return db.select().from(users).where(eq(users.isAgent, true));
   }
 }
 

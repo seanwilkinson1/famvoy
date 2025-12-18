@@ -35,6 +35,7 @@ export const users = pgTable("users", {
   familyMotto: text("family_motto"),
   favoriteTraditions: text("favorite_traditions"),
   dreamVacation: text("dream_vacation"),
+  isAgent: boolean("is_agent").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -343,6 +344,41 @@ export const orderItems = pgTable("order_items", {
   confirmationCode: text("confirmation_code"),
 });
 
+export const conciergeRequests = pgTable("concierge_requests", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => podTrips.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  assignedAgentId: integer("assigned_agent_id").references(() => users.id),
+  status: text("status").default("pending").notNull(),
+  totalEstimatedCents: integer("total_estimated_cents").notNull(),
+  serviceFeePercent: integer("service_fee_percent").default(15).notNull(),
+  serviceFeeCents: integer("service_fee_cents").notNull(),
+  totalPaidCents: integer("total_paid_cents").notNull(),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  stripeCheckoutSessionId: text("stripe_checkout_session_id"),
+  customerNotes: text("customer_notes"),
+  agentNotes: text("agent_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const conciergeRequestItems = pgTable("concierge_request_items", {
+  id: serial("id").primaryKey(),
+  conciergeRequestId: integer("concierge_request_id").notNull().references(() => conciergeRequests.id),
+  tripItemId: integer("trip_item_id").notNull().references(() => tripItems.id),
+  selectedOptionId: integer("selected_option_id").references(() => tripItemOptions.id),
+  status: text("status").default("pending").notNull(),
+  estimatedPriceCents: integer("estimated_price_cents"),
+  actualPriceCents: integer("actual_price_cents"),
+  confirmationCode: text("confirmation_code"),
+  bookingReference: text("booking_reference"),
+  providerName: text("provider_name"),
+  agentNotes: text("agent_notes"),
+  bookedAt: timestamp("booked_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({ id: true });
 export const insertExperienceSchema = createInsertSchema(experiences).omit({ id: true, createdAt: true });
@@ -370,6 +406,8 @@ export const insertCartSchema = createInsertSchema(carts).omit({ id: true, creat
 export const insertCartItemSchema = createInsertSchema(cartItems).omit({ id: true, createdAt: true });
 export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true });
 export const insertOrderItemSchema = createInsertSchema(orderItems).omit({ id: true });
+export const insertConciergeRequestSchema = createInsertSchema(conciergeRequests).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertConciergeRequestItemSchema = createInsertSchema(conciergeRequestItems).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -467,3 +505,9 @@ export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
 export type OrderItem = typeof orderItems.$inferSelect;
 export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
+
+export type ConciergeRequest = typeof conciergeRequests.$inferSelect;
+export type InsertConciergeRequest = z.infer<typeof insertConciergeRequestSchema>;
+
+export type ConciergeRequestItem = typeof conciergeRequestItems.$inferSelect;
+export type InsertConciergeRequestItem = z.infer<typeof insertConciergeRequestItemSchema>;

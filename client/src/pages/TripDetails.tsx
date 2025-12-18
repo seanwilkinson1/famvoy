@@ -1,5 +1,5 @@
 import { useRoute, useLocation } from "wouter";
-import { ChevronLeft, MapPin, Calendar, Sparkles, Loader2, RefreshCw, Plus, Trash2, Edit2, X, Clock, Utensils, BedDouble, Car, Ticket, Check, ShoppingCart, CreditCard, DollarSign, ExternalLink, Star, Share2, GripVertical, Settings2 } from "lucide-react";
+import { ChevronLeft, MapPin, Calendar, Sparkles, Loader2, RefreshCw, Plus, Trash2, Edit2, X, Clock, Utensils, BedDouble, Car, Ticket, Check, ShoppingCart, CreditCard, DollarSign, ExternalLink, Star, Share2, GripVertical, Settings2, Users, CheckCircle2, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { BookingModal } from "@/components/shared/BookingModal";
 import { useAuth } from "@clerk/clerk-react";
+import { apiRequest } from "@/lib/queryClient";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -170,6 +171,37 @@ export default function TripDetails() {
     queryKey: ["trip", tripId],
     queryFn: () => api.trips.getById(tripId),
     enabled: !!match && tripId > 0,
+  });
+
+  interface ConciergeRequestData {
+    id: number;
+    status: string;
+    totalEstimatedCents: number;
+    serviceFeeCents: number;
+    totalPaidCents: number;
+    customerNotes: string | null;
+    items?: { id: number; status: string; confirmationCode: string | null; providerName: string | null }[];
+  }
+
+  const { data: conciergeRequest } = useQuery<ConciergeRequestData | null>({
+    queryKey: [`/api/trips/${tripId}/concierge`],
+    queryFn: () => apiRequest("GET", `/api/trips/${tripId}/concierge`),
+    enabled: !!trip && (trip.status === "confirmed" || trip.status === "booking_in_progress" || trip.status === "booked"),
+  });
+
+  const conciergeCheckoutMutation = useMutation({
+    mutationFn: (data: { tripId: number; customerNotes?: string }) => 
+      apiRequest("POST", "/api/concierge/checkout", data),
+    onSuccess: (data: { url: string }) => {
+      queryClient.invalidateQueries({ queryKey: ["trip", tripId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/trips/${tripId}/concierge`] });
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to start checkout");
+    },
   });
 
   const { data: podExperiences = [] } = useQuery({
@@ -526,52 +558,140 @@ export default function TripDetails() {
           </div>
         )}
 
-        {trip.status === "confirmed" && (
+        {(trip.status === "confirmed" || trip.status === "booking_in_progress" || trip.status === "booked") && (
           <>
-            <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl">
-              <div className="flex items-center justify-between">
+            {trip.status === "booked" ? (
+              <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-emerald-500 to-green-500 rounded-2xl">
                 <div className="flex items-center gap-3 text-white">
                   <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                    <Check className="h-6 w-6" />
+                    <CheckCircle2 className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg">Trip Confirmed!</h3>
-                    <p className="text-sm opacity-90">All your bookings are ready</p>
+                    <h3 className="font-bold text-lg">All Booked!</h3>
+                    <p className="text-sm opacity-90">Your trip is fully booked and ready</p>
                   </div>
                 </div>
-                <button
-                  onClick={async () => {
-                    try {
-                      if (navigator.share) {
-                        await navigator.share({
-                          title: trip.name,
-                          text: `Check out my trip to ${trip.destination}!`,
-                          url: window.location.href,
-                        });
-                      } else {
-                        await navigator.clipboard.writeText(window.location.href);
-                        toast.success("Link copied to clipboard!");
-                      }
-                    } catch (err) {
-                      if ((err as Error).name !== 'AbortError') {
-                        try {
+              </div>
+            ) : trip.status === "booking_in_progress" ? (
+              <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl">
+                <div className="flex items-center gap-3 text-white">
+                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">Booking In Progress</h3>
+                    <p className="text-sm opacity-90">Your concierge is booking your trip</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-white">
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                      <Check className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg">Trip Confirmed!</h3>
+                      <p className="text-sm opacity-90">Ready to book with concierge</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      try {
+                        if (navigator.share) {
+                          await navigator.share({
+                            title: trip.name,
+                            text: `Check out my trip to ${trip.destination}!`,
+                            url: window.location.href,
+                          });
+                        } else {
                           await navigator.clipboard.writeText(window.location.href);
                           toast.success("Link copied to clipboard!");
-                        } catch {
-                          toast.error("Failed to share");
+                        }
+                      } catch (err) {
+                        if ((err as Error).name !== 'AbortError') {
+                          try {
+                            await navigator.clipboard.writeText(window.location.href);
+                            toast.success("Link copied to clipboard!");
+                          } catch {
+                            toast.error("Failed to share");
+                          }
                         }
                       }
-                    }
-                  }}
-                  className="shrink-0 bg-white/20 text-white p-2.5 rounded-xl hover:bg-white/30 transition-colors"
-                  data-testid="button-share-trip"
-                >
-                  <Share2 className="h-5 w-5" />
-                </button>
+                    }}
+                    className="shrink-0 bg-white/20 text-white p-2.5 rounded-xl hover:bg-white/30 transition-colors"
+                    data-testid="button-share-trip"
+                  >
+                    <Share2 className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
-            {trip.costSummary && (
+            {!conciergeRequest && trip.status === "confirmed" && (
+              <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl">
+                <div className="flex items-center justify-between">
+                  <div className="text-white">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Users className="h-5 w-5" />
+                      <h3 className="font-bold text-lg">Book with Concierge</h3>
+                    </div>
+                    <p className="text-sm opacity-90">Let our travel agent book everything for you</p>
+                    <p className="text-xs opacity-75 mt-1">15% service fee • Personal support</p>
+                  </div>
+                  <button
+                    onClick={() => conciergeCheckoutMutation.mutate({ tripId })}
+                    disabled={conciergeCheckoutMutation.isPending}
+                    className="shrink-0 bg-white text-purple-600 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    data-testid="button-book-concierge"
+                  >
+                    {conciergeCheckoutMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CreditCard className="h-4 w-4" />
+                    )}
+                    Book Now
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {conciergeRequest && (
+              <div className="mx-4 mt-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-purple-600" />
+                    <h4 className="font-bold text-charcoal">Concierge Booking</h4>
+                  </div>
+                  <span className={cn(
+                    "text-xs font-medium px-2 py-1 rounded-full",
+                    conciergeRequest.status === 'completed' || conciergeRequest.status === 'booked' ? "bg-green-100 text-green-700" :
+                    conciergeRequest.status === 'in_progress' ? "bg-blue-100 text-blue-700" :
+                    "bg-yellow-100 text-yellow-700"
+                  )}>
+                    {conciergeRequest.status === 'completed' || conciergeRequest.status === 'booked' ? 'Completed' :
+                     conciergeRequest.status === 'in_progress' ? 'In Progress' : 'Pending'}
+                  </span>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Estimated Total</span>
+                    <span className="font-medium">${(conciergeRequest.totalEstimatedCents / 100).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Service Fee</span>
+                    <span className="font-medium">${(conciergeRequest.serviceFeeCents / 100).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="font-medium">Total Paid</span>
+                    <span className="font-bold text-primary">${(conciergeRequest.totalPaidCents / 100).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {trip.costSummary && !conciergeRequest && (
               <div className="mx-4 mt-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div>
@@ -600,9 +720,6 @@ export default function TripDetails() {
                   </p>
                 </div>
               </div>
-              <p className="text-xs text-gray-400 mt-3">
-                Booking locations will be shown on the map once address data is available from your booking providers.
-              </p>
             </div>
           </>
         )}

@@ -25,6 +25,9 @@ import TripConfirmWizard from "@/pages/TripConfirmWizard";
 import Cart from "@/pages/Cart";
 import CheckoutSuccess from "@/pages/CheckoutSuccess";
 import CheckoutCancel from "@/pages/CheckoutCancel";
+import AgentDashboard from "@/pages/AgentDashboard";
+import AgentRequestDetails from "@/pages/AgentRequestDetails";
+import ConciergeSuccess from "@/pages/ConciergeSuccess";
 import { useClerkAuth } from "@/hooks/useAuth";
 import { setAuthTokenGetter } from "@/lib/api";
 
@@ -67,6 +70,9 @@ function AuthenticatedRouter() {
           <Route path="/cart" component={Cart} />
           <Route path="/checkout/success" component={CheckoutSuccess} />
           <Route path="/checkout/cancel" component={CheckoutCancel} />
+          <Route path="/concierge/success" component={ConciergeSuccess} />
+          <Route path="/agent" component={AgentDashboard} />
+          <Route path="/agent/request/:id" component={AgentRequestDetails} />
           <Route component={NotFound} />
         </Switch>
         <BottomNav />
