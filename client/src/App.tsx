@@ -48,7 +48,11 @@ function AuthenticatedRouter() {
   }
 
   if (needsOnboarding) {
-    return <Onboarding />;
+    return (
+      <GoogleMapsProvider>
+        <Onboarding />
+      </GoogleMapsProvider>
+    );
   }
 
   return (
