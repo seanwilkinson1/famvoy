@@ -385,13 +385,15 @@ export default function Explore() {
             {/* Bottom Sheet */}
             <motion.div
               drag="y"
-              dragConstraints={{ top: -500, bottom: 0 }}
+              dragConstraints={{ top: 0, bottom: 0 }}
               dragElastic={0.2}
+              dragSnapToOrigin
               onDragEnd={(_, info) => {
-                if (info.offset.y < -100) setIsExpanded(true);
-                if (info.offset.y > 100) setIsExpanded(false);
+                if (info.offset.y < -50) setIsExpanded(true);
+                if (info.offset.y > 50) setIsExpanded(false);
               }}
-              animate={{ height: isExpanded ? "50%" : "140px" }}
+              animate={{ y: 0, height: isExpanded ? "50%" : "140px" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className="absolute bottom-0 left-0 right-0 z-30 rounded-t-[32px] bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.12)] overflow-hidden"
             >
               <div className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing" onClick={() => setIsExpanded(!isExpanded)}>
