@@ -392,7 +392,7 @@ export default function Explore() {
                 if (info.offset.y < -50) setIsExpanded(true);
                 if (info.offset.y > 50) setIsExpanded(false);
               }}
-              animate={{ y: 0, height: isExpanded ? "50%" : "140px" }}
+              animate={{ y: 0, height: isExpanded ? "70%" : "140px" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className="absolute bottom-0 left-0 right-0 z-30 rounded-t-[32px] bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.12)] overflow-hidden"
             >
