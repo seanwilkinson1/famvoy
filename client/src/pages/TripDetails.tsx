@@ -58,9 +58,12 @@ interface TripItem {
 }
 
 interface CostSummary {
-  min: number;
-  max: number;
+  total: number;
+  serviceFee: number;
+  grandTotal: number;
   formatted: string;
+  serviceFeeFormatted: string;
+  grandTotalFormatted: string;
 }
 
 interface TripDestination {
@@ -693,16 +696,30 @@ export default function TripDetails() {
 
             {trip.costSummary && !conciergeRequest && (
               <div className="mx-4 mt-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500">Estimated Total Cost</p>
-                    <p className="text-2xl font-bold text-charcoal">{trip.costSummary.formatted}</p>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-teal-600" />
+                    <h4 className="font-bold text-charcoal">Concierge Booking</h4>
                   </div>
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <DollarSign className="h-6 w-6 text-green-600" />
+                  <span className="text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
+                    Pending
+                  </span>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Estimated Total</span>
+                    <span className="font-medium">{trip.costSummary.formatted}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Service Fee (15%)</span>
+                    <span className="font-medium">{trip.costSummary.serviceFeeFormatted}</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="font-medium">Total Paid</span>
+                    <span className="font-bold text-primary">{trip.costSummary.grandTotalFormatted}</span>
                   </div>
                 </div>
-                <p className="text-xs text-gray-400 mt-2">
+                <p className="text-xs text-gray-400 mt-3">
                   Based on your selected booking options. Actual prices may vary.
                 </p>
               </div>

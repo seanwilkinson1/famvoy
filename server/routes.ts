@@ -1629,31 +1629,27 @@ export async function registerRoutes(
           })
         );
         
-        // Calculate total estimated cost
-        let totalMinCost = 0;
-        let totalMaxCost = 0;
+        // Calculate total estimated cost using numericPriceEstimate
+        let totalCost = 0;
         itemsWithOptions.forEach(item => {
-          if (item.lockedOption?.priceEstimate) {
-            const priceStr = item.lockedOption.priceEstimate;
-            const matches = priceStr.match(/\$?(\d+)(?:-(\d+))?/);
-            if (matches) {
-              const min = parseInt(matches[1]) || 0;
-              const max = parseInt(matches[2]) || min;
-              totalMinCost += min;
-              totalMaxCost += max;
-            }
+          if (item.lockedOption?.numericPriceEstimate) {
+            totalCost += item.lockedOption.numericPriceEstimate;
           }
         });
+        
+        // Calculate service fee (15%)
+        const serviceFee = Math.round(totalCost * 0.15);
         
         res.json({
           ...trip,
           items: itemsWithOptions,
           costSummary: {
-            min: totalMinCost,
-            max: totalMaxCost,
-            formatted: totalMinCost === totalMaxCost 
-              ? `$${totalMinCost}`
-              : `$${totalMinCost} - $${totalMaxCost}`
+            total: totalCost,
+            serviceFee: serviceFee,
+            grandTotal: totalCost + serviceFee,
+            formatted: `$${totalCost}`,
+            serviceFeeFormatted: `$${serviceFee}`,
+            grandTotalFormatted: `$${totalCost + serviceFee}`
           }
         });
         return;
