@@ -164,8 +164,10 @@ export default function TripConfirmWizard() {
       if (!res.ok) throw new Error("Failed to complete trip");
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Trip confirmed! 🎉");
+      await queryClient.invalidateQueries({ queryKey: ["trip", tripId] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/users/me/trips"] });
       navigate(`/trip/${tripId}`);
     },
   });
