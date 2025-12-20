@@ -11,12 +11,38 @@ interface BookingSearchResult {
   title: string;
   description: string;
   priceEstimate: string;
+  numericPriceEstimate: number;
   rating: string;
   reviewCount: number;
   image: string;
   bookingUrl: string;
   address: string;
   provider: string;
+}
+
+function parseNumericPrice(priceEstimate: string, itemType: string): number {
+  const defaultPrices: Record<string, number> = {
+    STAY: 150,
+    MEAL: 30,
+    ACTIVITY: 50,
+    TRANSPORT: 25,
+  };
+  
+  const match = priceEstimate.match(/\$(\d+)/);
+  if (match) {
+    return parseInt(match[1], 10);
+  }
+  
+  const rangeMatch = priceEstimate.match(/\$(\d+)-(\d+)/);
+  if (rangeMatch) {
+    return Math.round((parseInt(rangeMatch[1]) + parseInt(rangeMatch[2])) / 2);
+  }
+  
+  if (priceEstimate.toLowerCase() === 'free') {
+    return 0;
+  }
+  
+  return defaultPrices[itemType] || 50;
 }
 
 function generateGenerationId(): string {
@@ -146,17 +172,21 @@ Make the options realistic and varied. Include real-sounding business names that
       throw new Error("Invalid response format");
     }
 
-    return options.slice(0, 3).map((opt: any, index: number) => ({
-      title: opt.title || "Unknown",
-      description: opt.description || "",
-      priceEstimate: opt.priceEstimate || opt.price || "Price varies",
-      rating: opt.rating || "4.0",
-      reviewCount: opt.reviewCount || Math.floor(Math.random() * 500) + 50,
-      image: getPlaceholderImage(tripItem.itemType, index),
-      bookingUrl: generateBookingUrl(tripItem.itemType, opt.title, destination),
-      address: opt.address || destination,
-      provider: provider,
-    }));
+    return options.slice(0, 3).map((opt: any, index: number) => {
+      const priceEstimate = opt.priceEstimate || opt.price || "Price varies";
+      return {
+        title: opt.title || "Unknown",
+        description: opt.description || "",
+        priceEstimate,
+        numericPriceEstimate: parseNumericPrice(priceEstimate, tripItem.itemType),
+        rating: opt.rating || "4.0",
+        reviewCount: opt.reviewCount || Math.floor(Math.random() * 500) + 50,
+        image: getPlaceholderImage(tripItem.itemType, index),
+        bookingUrl: generateBookingUrl(tripItem.itemType, opt.title, destination),
+        address: opt.address || destination,
+        provider: provider,
+      };
+    });
   } catch (error) {
     console.error("Error searching booking options:", error);
     return generateFallbackOptions(tripItem, destination);
@@ -168,15 +198,16 @@ function generateFallbackOptions(tripItem: TripItem, destination: string): Booki
   const baseTitle = tripItem.title;
   
   const options = [
-    { suffix: "- Budget Option", price: "$30-50", rating: "4.2" },
-    { suffix: "- Popular Choice", price: "$75-120", rating: "4.6" },
-    { suffix: "- Premium Experience", price: "$150-200", rating: "4.8" },
+    { suffix: "- Budget Option", price: "$30-50", numericPrice: 40, rating: "4.2" },
+    { suffix: "- Popular Choice", price: "$75-120", numericPrice: 98, rating: "4.6" },
+    { suffix: "- Premium Experience", price: "$150-200", numericPrice: 175, rating: "4.8" },
   ];
 
   return options.map((opt, index) => ({
     title: `${baseTitle} ${opt.suffix}`,
     description: `A ${index === 0 ? "budget-friendly" : index === 1 ? "popular" : "premium"} option for ${tripItem.title.toLowerCase()} in ${destination}.`,
     priceEstimate: opt.price,
+    numericPriceEstimate: opt.numericPrice,
     rating: opt.rating,
     reviewCount: Math.floor(Math.random() * 800) + 100,
     image: getPlaceholderImage(tripItem.itemType, index),
@@ -204,6 +235,7 @@ export async function generateAndSaveOptions(
     title: result.title,
     description: result.description,
     priceEstimate: result.priceEstimate,
+    numericPriceEstimate: result.numericPriceEstimate,
     rating: result.rating,
     reviewCount: result.reviewCount,
     image: result.image,
