@@ -267,6 +267,7 @@ export const tripItemOptions = pgTable("trip_item_options", {
   title: text("title").notNull(),
   description: text("description"),
   priceEstimate: text("price_estimate"),
+  numericPriceEstimate: integer("numeric_price_estimate"),
   rating: text("rating"),
   reviewCount: integer("review_count"),
   image: text("image"),
