@@ -1278,7 +1278,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTrip(tripId: number): Promise<void> {
+    // Get trip items to delete their options
+    const items = await db.select({ id: tripItems.id }).from(tripItems).where(eq(tripItems.tripId, tripId));
+    const itemIds = items.map(i => i.id);
+    
+    // Delete concierge request items first (via concierge requests)
+    const requests = await db.select({ id: conciergeRequests.id }).from(conciergeRequests).where(eq(conciergeRequests.tripId, tripId));
+    for (const req of requests) {
+      await db.delete(conciergeRequestItems).where(eq(conciergeRequestItems.conciergeRequestId, req.id));
+    }
+    
+    // Delete concierge requests
+    await db.delete(conciergeRequests).where(eq(conciergeRequests.tripId, tripId));
+    
+    // Delete trip confirmation sessions
+    await db.delete(tripConfirmationSessions).where(eq(tripConfirmationSessions.tripId, tripId));
+    
+    // Delete trip item options
+    if (itemIds.length > 0) {
+      await db.delete(tripItemOptions).where(inArray(tripItemOptions.tripItemId, itemIds));
+    }
+    
+    // Delete trip destinations
+    await db.delete(tripDestinations).where(eq(tripDestinations.tripId, tripId));
+    
+    // Delete trip items
     await db.delete(tripItems).where(eq(tripItems.tripId, tripId));
+    
+    // Finally delete the trip
     await db.delete(podTrips).where(eq(podTrips.id, tripId));
   }
 
