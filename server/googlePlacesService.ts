@@ -50,6 +50,24 @@ function getPriceLevelString(priceLevel?: number): string {
   return levels[priceLevel] || "Price varies";
 }
 
+function getNumericPriceEstimate(priceLevel: number | undefined, itemType: string): number {
+  const basePrices: Record<string, Record<number, number>> = {
+    MEAL: { 0: 0, 1: 15, 2: 30, 3: 60, 4: 100 },
+    STAY: { 0: 0, 1: 80, 2: 150, 3: 250, 4: 400 },
+    ACTIVITY: { 0: 0, 1: 20, 2: 50, 3: 100, 4: 200 },
+    TRANSPORT: { 0: 0, 1: 15, 2: 30, 3: 50, 4: 80 },
+  };
+  
+  const defaultPrices = { 0: 0, 1: 25, 2: 50, 3: 100, 4: 175 };
+  const prices = basePrices[itemType] || defaultPrices;
+  
+  if (priceLevel === undefined) {
+    return prices[2];
+  }
+  
+  return prices[priceLevel] ?? prices[2];
+}
+
 export async function searchPlaces(
   query: string,
   location: string,
@@ -164,6 +182,7 @@ export async function searchPlacesForTripItem(
   title: string;
   description: string;
   priceEstimate: string;
+  numericPriceEstimate: number;
   rating: string;
   reviewCount: number;
   image: string;
@@ -196,6 +215,7 @@ export async function searchPlacesForTripItem(
       title: place.name,
       description: `${place.name} - Located at ${place.address}. ${place.rating > 0 ? `Rated ${place.rating}/5 by ${place.userRatingsTotal} reviewers.` : ""}`,
       priceEstimate: getPriceLevelString(place.priceLevel),
+      numericPriceEstimate: getNumericPriceEstimate(place.priceLevel, itemType),
       rating: place.rating > 0 ? place.rating.toFixed(1) : "N/A",
       reviewCount: place.userRatingsTotal,
       image: place.photoUrl || "",
