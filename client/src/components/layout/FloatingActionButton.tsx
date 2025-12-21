@@ -49,11 +49,11 @@ export function FloatingActionButton() {
                 >
                   <Link href={action.href} onClick={() => setIsOpen(false)}>
                     <div className="flex items-center gap-3 cursor-pointer group" data-testid={`fab-action-${action.label.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <span className="px-3 py-1.5 bg-white rounded-full text-sm font-medium text-gray-700 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                      <span className="px-3 py-2 bg-white rounded-full text-sm font-semibold text-gray-800 shadow-xl whitespace-nowrap">
                         {action.label}
                       </span>
                       <div className={cn(
-                        "w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg",
+                        "w-12 h-12 rounded-full flex items-center justify-center text-white shadow-xl border-2 border-white",
                         action.color
                       )}>
                         <action.icon className="w-5 h-5" />
