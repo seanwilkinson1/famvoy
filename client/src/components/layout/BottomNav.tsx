@@ -1,9 +1,24 @@
 import { Home, Compass, Plane, Users, MessageCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { useEffect, useRef } from "react";
 
 export function BottomNav() {
   const [location] = useLocation();
+  const navRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const updateNavHeight = () => {
+      if (navRef.current) {
+        const height = navRef.current.getBoundingClientRect().height;
+        document.documentElement.style.setProperty('--bottom-nav-height', `${height}px`);
+      }
+    };
+    
+    updateNavHeight();
+    window.addEventListener('resize', updateNavHeight);
+    return () => window.removeEventListener('resize', updateNavHeight);
+  }, []);
 
   const tabs = [
     { href: "/", icon: Home, label: "Home" },
@@ -14,7 +29,10 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/80 px-6 pb-8 pt-4 backdrop-blur-lg md:pb-4">
+    <nav 
+      ref={navRef}
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/80 px-6 pb-8 pt-4 backdrop-blur-lg md:pb-4"
+    >
       <div className="mx-auto flex max-w-md justify-between">
         {tabs.map((tab) => {
           const isActive = location === tab.href;
