@@ -96,6 +96,15 @@ export function ExploreMap({
       const bounds = new google.maps.LatLngBounds();
       points.forEach((point) => bounds.extend(point));
       map.fitBounds(bounds, 50);
+      
+      // Prevent zooming out too far - minimum zoom of 3 to avoid showing gray areas
+      const listener = google.maps.event.addListenerOnce(map, 'idle', () => {
+        const currentZoom = map.getZoom();
+        if (currentZoom && currentZoom < 3) {
+          map.setZoom(3);
+        }
+      });
+      
       lastFitKey.current = fitKey;
     }
   }, [map, experiences, people, userLocation]);
