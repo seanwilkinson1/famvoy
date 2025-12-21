@@ -35,7 +35,7 @@ export function FloatingActionButton() {
         )}
       </AnimatePresence>
 
-      <div className="fixed bottom-24 right-4 z-50 flex flex-col-reverse items-end gap-3">
+      <div className="fixed bottom-[88px] right-4 z-50 flex flex-col-reverse items-end gap-3">
         <AnimatePresence>
           {isOpen && (
             <>
