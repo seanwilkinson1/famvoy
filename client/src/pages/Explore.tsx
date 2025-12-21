@@ -337,7 +337,7 @@ export default function Explore() {
             </div>
 
             {/* SeaPeople-style Filter Chips - Below Tab Selector */}
-            <div className="absolute top-28 left-0 right-0 z-30 px-4">
+            <div className="absolute top-32 left-0 right-0 z-30 px-4">
               <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
                 {/* Clear/All Filter */}
                 <button
