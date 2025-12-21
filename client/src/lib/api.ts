@@ -431,6 +431,31 @@ export const api = {
       return res.json();
     },
   },
+
+  explore: {
+    getPeople: async (podId?: number): Promise<(User & { podIds: number[]; distance?: number })[]> => {
+      const params = podId ? `?podId=${podId}` : '';
+      const res = await fetchWithAuth(`${API_BASE}/explore/people${params}`);
+      if (!res.ok) throw new Error("Failed to fetch explore people");
+      return res.json();
+    },
+    
+    getTrips: async (): Promise<any[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/explore/trips`);
+      if (!res.ok) throw new Error("Failed to fetch explore trips");
+      return res.json();
+    },
+    
+    updateLocation: async (lat: number, lng: number, shareLocation: boolean): Promise<User> => {
+      const res = await fetchWithAuth(`${API_BASE}/users/me/location`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lat, lng, shareLocation }),
+      });
+      if (!res.ok) throw new Error("Failed to update location");
+      return res.json();
+    },
+  },
   
   activities: {
     getFeed: async (limit?: number): Promise<any[]> => {

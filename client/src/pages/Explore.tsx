@@ -3,15 +3,16 @@ import { FamilySwipeCard, SwipeButtons } from "@/components/shared/FamilySwipeCa
 import { MatchModal } from "@/components/shared/MatchModal";
 import { ExploreMap } from "@/components/shared/ExploreMap";
 import { useGoogleMapsContext } from "@/components/shared/GoogleMapsProvider";
-import { Search, Navigation, Map, Users, Compass, X, ChevronDown, MessageCircle, MapPin, Filter, SlidersHorizontal, Locate, Clock, DollarSign, Star, CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
+import { Search, Navigation, Map, Users, Compass, X, ChevronDown, MessageCircle, MapPin, Filter, SlidersHorizontal, Locate, Clock, DollarSign, Star, CheckCircle2, ArrowRight, Loader2, Plane, MapPinned, Eye, EyeOff } from "lucide-react";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import type { User, Experience } from "@shared/schema";
+import type { User, Experience, Pod } from "@shared/schema";
+import { format } from "date-fns";
 
 type ExploreTab = "map" | "discover" | "connections";
 
@@ -69,6 +70,11 @@ export default function Explore() {
   const [isSearchingPlaces, setIsSearchingPlaces] = useState(false);
   const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
   const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
+  
+  // SeaPeople-style explore features
+  const [selectedPodFilter, setSelectedPodFilter] = useState<number | "all" | "following">("all");
+  const [showPeopleOnMap, setShowPeopleOnMap] = useState(true);
+  const [showTripsDrawer, setShowTripsDrawer] = useState(false);
   
   const { location: userLocation } = useUserLocation();
   const { isLoaded: mapsLoaded } = useGoogleMapsContext();
@@ -173,6 +179,34 @@ export default function Explore() {
     queryKey: ["connections", currentUser?.id],
     queryFn: () => currentUser ? api.users.getMatches(currentUser.id) : [],
     enabled: !!currentUser,
+  });
+
+  // User's pods for filtering
+  const { data: userPods = [] } = useQuery({
+    queryKey: ["userPods"],
+    queryFn: () => api.pods.getAll(),
+  });
+
+  // Explore people (families sharing location) - always fetch, toggle controls visibility only
+  const { data: explorePeople = [] } = useQuery({
+    queryKey: ["explorePeople", selectedPodFilter],
+    queryFn: () => api.explore.getPeople(typeof selectedPodFilter === "number" ? selectedPodFilter : undefined),
+  });
+
+  // Filter people based on selected pod filter
+  const filteredExplorePeople = useMemo(() => {
+    if (selectedPodFilter === "all") return explorePeople;
+    if (selectedPodFilter === "following") {
+      const followingIds = new Set(connections.map((c: User) => c.id));
+      return explorePeople.filter(p => followingIds.has(p.id));
+    }
+    return explorePeople.filter(p => p.podIds.includes(selectedPodFilter));
+  }, [explorePeople, selectedPodFilter, connections]);
+
+  // Explore trips
+  const { data: exploreTrips = [] } = useQuery({
+    queryKey: ["exploreTrips"],
+    queryFn: () => api.explore.getTrips(),
   });
 
   const swipeMutation = useMutation({
@@ -298,7 +332,74 @@ export default function Explore() {
                 experiences={filteredExperiences}
                 userLocation={userLocation}
                 searchLocation={searchLocation}
+                people={showPeopleOnMap ? filteredExplorePeople : []}
               />
+            </div>
+
+            {/* SeaPeople-style Filter Chips - Below Tab Selector */}
+            <div className="absolute top-28 left-0 right-0 z-30 px-4">
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                {/* Clear/All Filter */}
+                <button
+                  onClick={() => setSelectedPodFilter("all")}
+                  className={cn(
+                    "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all",
+                    selectedPodFilter === "all"
+                      ? "bg-charcoal text-white"
+                      : "bg-white/90 text-gray-700 shadow-sm"
+                  )}
+                  data-testid="filter-all"
+                >
+                  All
+                </button>
+
+                {/* People You Follow Filter */}
+                <button
+                  onClick={() => setSelectedPodFilter("following")}
+                  className={cn(
+                    "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all",
+                    selectedPodFilter === "following"
+                      ? "bg-warm-teal text-white"
+                      : "bg-white/90 text-gray-700 shadow-sm"
+                  )}
+                  data-testid="filter-following"
+                >
+                  <Users className="h-4 w-4" />
+                  People you follow
+                </button>
+
+                {/* Pod Filters */}
+                {userPods.filter((p: Pod) => !p.isDirect).slice(0, 5).map((pod: Pod) => (
+                  <button
+                    key={pod.id}
+                    onClick={() => setSelectedPodFilter(pod.id)}
+                    className={cn(
+                      "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all truncate max-w-[150px]",
+                      selectedPodFilter === pod.id
+                        ? "bg-coral text-white"
+                        : "bg-white/90 text-gray-700 shadow-sm"
+                    )}
+                    data-testid={`filter-pod-${pod.id}`}
+                  >
+                    {pod.name}
+                  </button>
+                ))}
+
+                {/* Toggle People on Map */}
+                <button
+                  onClick={() => setShowPeopleOnMap(!showPeopleOnMap)}
+                  className={cn(
+                    "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all",
+                    showPeopleOnMap
+                      ? "bg-blue-500 text-white"
+                      : "bg-white/90 text-gray-500 shadow-sm"
+                  )}
+                  data-testid="toggle-people-map"
+                >
+                  {showPeopleOnMap ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  People
+                </button>
+              </div>
             </div>
 
             {/* Search Overlay */}
@@ -366,7 +467,7 @@ export default function Explore() {
             </AnimatePresence>
 
             {/* Map Overlays */}
-            <div className="absolute right-4 top-32 flex flex-col gap-3">
+            <div className="absolute right-4 top-44 flex flex-col gap-3 z-20">
               <button 
                 onClick={() => setShowSearch(!showSearch)}
                 className={cn(
@@ -381,6 +482,82 @@ export default function Explore() {
                 <Navigation className="h-6 w-6 text-primary fill-primary" />
               </button>
             </div>
+
+            {/* Explore Trips Button - SeaPeople style */}
+            <motion.button
+              onClick={() => setShowTripsDrawer(true)}
+              className="absolute bottom-36 right-4 z-30 flex items-center gap-2 px-4 py-3 rounded-full bg-coral text-white shadow-lg font-medium"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              data-testid="button-explore-trips"
+            >
+              <Plane className="h-5 w-5" />
+              Explore trips
+              {exploreTrips.length > 0 && (
+                <span className="bg-white text-coral text-xs font-bold px-1.5 py-0.5 rounded-full">
+                  {exploreTrips.length}
+                </span>
+              )}
+            </motion.button>
+
+            {/* Trips Drawer */}
+            <AnimatePresence>
+              {showTripsDrawer && (
+                <motion.div
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                  className="absolute bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[70vh] overflow-hidden"
+                >
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-bold text-charcoal">Explore Trips</h3>
+                      <button
+                        onClick={() => setShowTripsDrawer(false)}
+                        className="p-2 rounded-full hover:bg-gray-100"
+                        data-testid="button-close-trips-drawer"
+                      >
+                        <X className="h-5 w-5 text-gray-500" />
+                      </button>
+                    </div>
+                    
+                    <div className="overflow-y-auto max-h-[50vh] space-y-3">
+                      {exploreTrips.length === 0 ? (
+                        <div className="text-center py-8">
+                          <Plane className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-gray-500">No confirmed trips yet</p>
+                          <p className="text-sm text-gray-400">Plan a trip with your pod to see it here!</p>
+                        </div>
+                      ) : (
+                        exploreTrips.map((trip: any) => (
+                          <Link key={trip.id} href={`/trip/${trip.id}`}>
+                            <div 
+                              className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
+                              data-testid={`trip-card-${trip.id}`}
+                            >
+                              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-coral to-amber-400 flex items-center justify-center flex-shrink-0">
+                                <MapPinned className="h-7 w-7 text-white" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-charcoal truncate">{trip.name}</h4>
+                                <p className="text-sm text-gray-500 truncate">{trip.destination}</p>
+                                <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                                  <span>{format(new Date(trip.startDate), "MMM d")} - {format(new Date(trip.endDate), "MMM d")}</span>
+                                  <span>·</span>
+                                  <span>{trip.pod?.name}</span>
+                                </div>
+                              </div>
+                              <ArrowRight className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                            </div>
+                          </Link>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Bottom Sheet */}
             <motion.div

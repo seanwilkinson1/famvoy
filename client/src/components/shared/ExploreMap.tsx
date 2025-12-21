@@ -1,8 +1,13 @@
 import { useCallback, useState, useEffect, useRef } from "react";
-import { GoogleMap, Marker, InfoWindow } from "@react-google-maps/api";
+import { GoogleMap, Marker, InfoWindow, OverlayView } from "@react-google-maps/api";
 import { useLocation } from "wouter";
-import type { Experience } from "@shared/schema";
+import type { Experience, User } from "@shared/schema";
 import { useGoogleMapsContext } from "./GoogleMapsProvider";
+
+interface ExplorePerson extends User {
+  podIds: number[];
+  distance?: number;
+}
 
 const mapContainerStyle = {
   width: "100%",
@@ -32,6 +37,7 @@ interface ExploreMapProps {
   onExperienceClick?: (experience: Experience) => void;
   className?: string;
   searchLocation?: { lat: number; lng: number } | null;
+  people?: ExplorePerson[];
 }
 
 export function ExploreMap({
@@ -40,9 +46,11 @@ export function ExploreMap({
   onExperienceClick,
   className = "",
   searchLocation,
+  people = [],
 }: ExploreMapProps) {
   const [, setLocation] = useLocation();
   const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
+  const [selectedPerson, setSelectedPerson] = useState<ExplorePerson | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const { isLoaded } = useGoogleMapsContext();
   const lastFitKey = useRef<string>("");
@@ -63,9 +71,16 @@ export function ExploreMap({
   useEffect(() => {
     if (!map) return;
 
-    const points = experiences
+    const points: { lat: number; lng: number }[] = experiences
       .filter((exp) => exp.locationLat && exp.locationLng)
       .map((exp) => ({ lat: exp.locationLat, lng: exp.locationLng }));
+
+    // Include people coordinates in bounds
+    people.forEach((person) => {
+      if (person.locationLat && person.locationLng) {
+        points.push({ lat: person.locationLat, lng: person.locationLng });
+      }
+    });
 
     if (userLocation) {
       points.push(userLocation);
@@ -73,6 +88,7 @@ export function ExploreMap({
 
     const fitKey = JSON.stringify({
       expIds: experiences.map(e => e.id).sort(),
+      peopleIds: people.map(p => p.id).sort(),
       userLoc: userLocation ? `${userLocation.lat},${userLocation.lng}` : null
     });
 
@@ -82,7 +98,14 @@ export function ExploreMap({
       map.fitBounds(bounds, 50);
       lastFitKey.current = fitKey;
     }
-  }, [map, experiences, userLocation]);
+  }, [map, experiences, people, userLocation]);
+
+  // Clear selectedPerson when they're no longer in the people array
+  useEffect(() => {
+    if (selectedPerson && !people.find(p => p.id === selectedPerson.id)) {
+      setSelectedPerson(null);
+    }
+  }, [people, selectedPerson]);
 
   const onLoad = useCallback((mapInstance: google.maps.Map) => {
     setMap(mapInstance);
@@ -173,6 +196,85 @@ export function ExploreMap({
                 <span className="text-gray-400">•</span>
                 <span className="text-gray-500">{selectedExperience.duration}</span>
               </div>
+            </div>
+          </InfoWindow>
+        )}
+
+        {/* People Markers - Avatar Style like SeaPeople */}
+        {people.map((person) => {
+          if (!person.locationLat || !person.locationLng) return null;
+          return (
+            <OverlayView
+              key={person.id}
+              position={{ lat: person.locationLat, lng: person.locationLng }}
+              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+            >
+              <div 
+                className="relative cursor-pointer transform -translate-x-1/2 -translate-y-1/2"
+                onClick={() => setSelectedPerson(person)}
+              >
+                <div className="w-12 h-12 rounded-full border-3 border-white shadow-lg overflow-hidden bg-gray-200">
+                  {person.avatar || person.profileImageUrl ? (
+                    <img 
+                      src={person.avatar || person.profileImageUrl || ''} 
+                      alt={person.name || 'Family'} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-coral to-amber-400 flex items-center justify-center text-white font-bold text-lg">
+                      {(person.name || 'F').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                {/* Status indicator */}
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
+              </div>
+            </OverlayView>
+          );
+        })}
+
+        {/* Selected Person InfoWindow */}
+        {selectedPerson && selectedPerson.locationLat && selectedPerson.locationLng && (
+          <InfoWindow
+            position={{
+              lat: selectedPerson.locationLat,
+              lng: selectedPerson.locationLng,
+            }}
+            onCloseClick={() => setSelectedPerson(null)}
+          >
+            <div
+              className="cursor-pointer min-w-[150px] p-1"
+              onClick={() => setLocation(`/family/${selectedPerson.id}`)}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                  {selectedPerson.avatar || selectedPerson.profileImageUrl ? (
+                    <img 
+                      src={selectedPerson.avatar || selectedPerson.profileImageUrl || ''} 
+                      alt={selectedPerson.name || 'Family'} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-coral to-amber-400 flex items-center justify-center text-white font-bold">
+                      {(selectedPerson.name || 'F').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm text-gray-900">
+                    {selectedPerson.name || 'Family'}
+                  </h3>
+                  <p className="text-xs text-gray-500">{selectedPerson.location || 'Unknown location'}</p>
+                </div>
+              </div>
+              {selectedPerson.distance !== undefined && (
+                <p className="text-xs text-gray-400">
+                  {selectedPerson.distance < 1 
+                    ? `${(selectedPerson.distance * 5280).toFixed(0)} ft away`
+                    : `${selectedPerson.distance.toFixed(1)} mi away`
+                  }
+                </p>
+              )}
             </div>
           </InfoWindow>
         )}

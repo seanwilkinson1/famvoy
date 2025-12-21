@@ -337,7 +337,18 @@ export async function registerRoutes(
         return res.status(404).json({ message: "User not found" });
       }
       
-      const { lat, lng, shareLocation } = req.body;
+      const locationSchema = z.object({
+        lat: z.number(),
+        lng: z.number(),
+        shareLocation: z.boolean(),
+      });
+      
+      const parsed = locationSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: fromError(parsed.error).toString() });
+      }
+      
+      const { lat, lng, shareLocation } = parsed.data;
       const updated = await storage.updateUserLocation(user.id, lat, lng, shareLocation);
       res.json(updated);
     } catch (error) {
