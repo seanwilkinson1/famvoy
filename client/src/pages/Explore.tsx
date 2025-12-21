@@ -5,6 +5,7 @@ import { ExploreMap } from "@/components/shared/ExploreMap";
 import { useGoogleMapsContext } from "@/components/shared/GoogleMapsProvider";
 import { Search, Navigation, Map, Users, Compass, X, ChevronDown, MessageCircle, MapPin, Filter, SlidersHorizontal, Locate, Clock, DollarSign, Star, CheckCircle2, ArrowRight, Loader2, Plane, MapPinned, Eye, EyeOff, Check } from "lucide-react";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
@@ -61,7 +62,7 @@ interface FilterBottomSheetProps {
 }
 
 function FilterBottomSheet({ isOpen, onClose, title, description, children, onClear, onApply }: FilterBottomSheetProps) {
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <>
@@ -110,7 +111,8 @@ function FilterBottomSheet({ isOpen, onClose, title, description, children, onCl
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
 
