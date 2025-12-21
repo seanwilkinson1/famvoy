@@ -35,7 +35,7 @@ export function FloatingActionButton() {
         )}
       </AnimatePresence>
 
-      <div className="fixed bottom-24 right-4 z-50 flex flex-col-reverse items-end gap-3">
+      <div className="fixed bottom-20 right-4 z-50 flex flex-col-reverse items-end gap-3">
         <AnimatePresence>
           {isOpen && (
             <>
@@ -66,26 +66,24 @@ export function FloatingActionButton() {
           )}
         </AnimatePresence>
 
-        <div className="p-1 bg-white rounded-full shadow-xl">
-          <motion.button
-            onClick={() => setIsOpen(!isOpen)}
-            className={cn(
-              "w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors",
-              isOpen 
-                ? "bg-gray-800 text-white" 
-                : "bg-warm-teal text-white"
-            )}
-            whileTap={{ scale: 0.95 }}
-            data-testid="fab-toggle"
+        <motion.button
+          onClick={() => setIsOpen(!isOpen)}
+          className={cn(
+            "w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-colors",
+            isOpen 
+              ? "bg-gray-700 text-white" 
+              : "bg-primary text-white"
+          )}
+          whileTap={{ scale: 0.95 }}
+          data-testid="fab-toggle"
+        >
+          <motion.div
+            animate={{ rotate: isOpen ? 45 : 0 }}
+            transition={{ duration: 0.2 }}
           >
-            <motion.div
-              animate={{ rotate: isOpen ? 45 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              {isOpen ? <X className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
-            </motion.div>
-          </motion.button>
-        </div>
+            {isOpen ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+          </motion.div>
+        </motion.button>
       </div>
     </>
   );
