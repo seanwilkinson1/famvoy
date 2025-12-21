@@ -69,7 +69,7 @@ function FilterBottomSheet({ isOpen, onClose, title, description, children, onCl
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 z-[60]"
+            className="fixed inset-0 bg-black/60 z-[100]"
             onClick={onClose}
           />
           <motion.div
@@ -77,9 +77,12 @@ function FilterBottomSheet({ isOpen, onClose, title, description, children, onCl
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 z-[70] bg-gray-900 rounded-t-3xl max-h-[80vh] overflow-hidden"
+            className="fixed bottom-0 left-0 right-0 z-[110] bg-gray-900 rounded-t-3xl max-h-[85vh] overflow-hidden"
           >
-            <div className="p-4">
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-10 h-1 bg-gray-600 rounded-full" />
+            </div>
+            <div className="px-4 pb-8">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-lg font-bold text-white">{title}</h3>
                 <button
