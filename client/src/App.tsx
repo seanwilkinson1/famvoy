@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -38,10 +38,14 @@ import { setAuthTokenGetter } from "@/lib/api";
 function AuthenticatedRouter() {
   const { user, isLoading, needsOnboarding } = useClerkAuth();
   const { getToken } = useAuth();
+  const [location] = useLocation();
 
   useEffect(() => {
     setAuthTokenGetter(getToken);
   }, [getToken]);
+
+  // Only show header on home page (SeaPeople style)
+  const showHeader = location === "/";
 
   if (isLoading) {
     return (
@@ -62,7 +66,7 @@ function AuthenticatedRouter() {
   return (
     <GoogleMapsProvider>
       <div className="mx-auto min-h-screen max-w-md bg-background shadow-2xl overflow-hidden relative flex flex-col">
-        <TopHeader />
+        {showHeader && <TopHeader />}
         <PWAInstallBanner />
         <div className="flex-1 overflow-auto pb-24">
           <Switch>
