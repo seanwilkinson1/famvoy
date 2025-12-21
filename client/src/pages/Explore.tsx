@@ -336,6 +336,72 @@ export default function Explore() {
               />
             </div>
 
+            {/* SeaPeople-style Filter Chips - Below Tab Selector */}
+            <div className="absolute top-32 left-0 right-0 z-30 px-4">
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                {/* Clear/All Filter */}
+                <button
+                  onClick={() => setSelectedPodFilter("all")}
+                  className={cn(
+                    "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all",
+                    selectedPodFilter === "all"
+                      ? "bg-charcoal text-white"
+                      : "bg-white/90 text-gray-700 shadow-sm"
+                  )}
+                  data-testid="filter-all"
+                >
+                  All
+                </button>
+
+                {/* People You Follow Filter */}
+                <button
+                  onClick={() => setSelectedPodFilter("following")}
+                  className={cn(
+                    "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all",
+                    selectedPodFilter === "following"
+                      ? "bg-warm-teal text-white"
+                      : "bg-white/90 text-gray-700 shadow-sm"
+                  )}
+                  data-testid="filter-following"
+                >
+                  <Users className="h-4 w-4" />
+                  People you follow
+                </button>
+
+                {/* Pod Filters */}
+                {userPods.filter((p: Pod) => !p.isDirect).slice(0, 5).map((pod: Pod) => (
+                  <button
+                    key={pod.id}
+                    onClick={() => setSelectedPodFilter(pod.id)}
+                    className={cn(
+                      "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all truncate max-w-[150px]",
+                      selectedPodFilter === pod.id
+                        ? "bg-coral text-white"
+                        : "bg-white/90 text-gray-700 shadow-sm"
+                    )}
+                    data-testid={`filter-pod-${pod.id}`}
+                  >
+                    {pod.name}
+                  </button>
+                ))}
+
+                {/* Toggle People on Map */}
+                <button
+                  onClick={() => setShowPeopleOnMap(!showPeopleOnMap)}
+                  className={cn(
+                    "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all",
+                    showPeopleOnMap
+                      ? "bg-blue-500 text-white"
+                      : "bg-white/90 text-gray-500 shadow-sm"
+                  )}
+                  data-testid="toggle-people-map"
+                >
+                  {showPeopleOnMap ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  People
+                </button>
+              </div>
+            </div>
+
             {/* Search Overlay */}
             <AnimatePresence>
               {showSearch && (
