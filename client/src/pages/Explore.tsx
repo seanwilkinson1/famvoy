@@ -449,10 +449,11 @@ export default function Explore() {
               </button>
             </div>
 
-            {/* Explore Trips Button - SeaPeople style */}
+            {/* Explore Trips Button - SeaPeople style - positioned on left, same level as FAB */}
             <motion.button
               onClick={() => setShowTripsDrawer(true)}
-              className="absolute bottom-36 right-4 z-30 flex items-center gap-2 px-4 py-3 rounded-full bg-coral text-white shadow-lg font-medium"
+              className="fixed left-4 z-50 flex items-center gap-2 px-4 py-3 rounded-full bg-coral text-white shadow-lg font-medium"
+              style={{ bottom: 'calc(var(--bottom-nav-height, 80px) + 12px)' }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               data-testid="button-explore-trips"
