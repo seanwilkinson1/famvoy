@@ -26,6 +26,8 @@ export const users = pgTable("users", {
   location: text("location"),
   locationLat: real("location_lat"),
   locationLng: real("location_lng"),
+  shareLocation: boolean("share_location").default(false),
+  locationUpdatedAt: timestamp("location_updated_at"),
   kids: text("kids"),
   interests: text("interests").array(),
   bio: text("bio"),
@@ -418,6 +420,9 @@ export type UpsertUser = {
   name?: string | null;
   avatar?: string | null;
   location?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
+  shareLocation?: boolean | null;
   kids?: string | null;
   interests?: string[] | null;
   bio?: string | null;
