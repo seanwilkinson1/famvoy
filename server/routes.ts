@@ -284,6 +284,68 @@ export async function registerRoutes(
     }
   });
 
+  // Explore API - People with location sharing
+  app.get('/api/explore/people', requireAuth(), async (req, res) => {
+    try {
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const podId = req.query.podId ? parseInt(req.query.podId as string) : undefined;
+      const people = await storage.getExplorePeople(user.id, podId);
+      res.json(people);
+    } catch (error) {
+      console.error("Error fetching explore people:", error);
+      res.status(500).json({ message: "Failed to fetch people" });
+    }
+  });
+
+  // Explore API - Public/Shared trips
+  app.get('/api/explore/trips', requireAuth(), async (req, res) => {
+    try {
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const trips = await storage.getExploreTrips(user.id);
+      res.json(trips);
+    } catch (error) {
+      console.error("Error fetching explore trips:", error);
+      res.status(500).json({ message: "Failed to fetch trips" });
+    }
+  });
+
+  // Update user location
+  app.patch('/api/users/me/location', requireAuth(), async (req, res) => {
+    try {
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const { lat, lng, shareLocation } = req.body;
+      const updated = await storage.updateUserLocation(user.id, lat, lng, shareLocation);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating location:", error);
+      res.status(500).json({ message: "Failed to update location" });
+    }
+  });
+
   app.get("/api/experiences", async (req, res) => {
     try {
       const allExperiences = await storage.getExperiences();

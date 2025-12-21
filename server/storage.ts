@@ -265,6 +265,11 @@ export interface IStorage {
   updateConciergeRequestItem(id: number, data: Partial<ConciergeRequestItem>): Promise<ConciergeRequestItem>;
   
   getAgents(): Promise<User[]>;
+  
+  // Explore API
+  getExplorePeople(currentUserId: number, podId?: number): Promise<(User & { podIds: number[]; distance?: number })[]>;
+  getExploreTrips(currentUserId: number): Promise<(PodTrip & { pod: Pod; creator: User; itemCount: number })[]>;
+  updateUserLocation(userId: number, lat: number, lng: number, shareLocation: boolean): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1713,6 +1718,126 @@ export class DatabaseStorage implements IStorage {
 
   async getAgents(): Promise<User[]> {
     return db.select().from(users).where(eq(users.isAgent, true));
+  }
+
+  async getExplorePeople(currentUserId: number, podId?: number): Promise<(User & { podIds: number[]; distance?: number })[]> {
+    // Get the current user for distance calculation
+    const currentUser = await this.getUser(currentUserId);
+    
+    // Get users who are sharing their location
+    let query = db.select().from(users).where(
+      and(
+        eq(users.shareLocation, true),
+        ne(users.id, currentUserId),
+        isNotNull(users.locationLat),
+        isNotNull(users.locationLng)
+      )
+    );
+    
+    const allUsers = await query;
+    
+    // If podId filter, get pod members
+    let filteredUserIds: Set<number> | null = null;
+    if (podId) {
+      const members = await db.select().from(podMembers).where(eq(podMembers.podId, podId));
+      filteredUserIds = new Set(members.map(m => m.userId));
+    }
+    
+    // Get all pod memberships for the filtered users
+    const userIds = allUsers.map(u => u.id);
+    const allMemberships = userIds.length > 0 
+      ? await db.select().from(podMembers).where(inArray(podMembers.userId, userIds))
+      : [];
+    
+    // Create map of userId -> podIds
+    const userPodMap = new Map<number, number[]>();
+    for (const m of allMemberships) {
+      const existing = userPodMap.get(m.userId) || [];
+      existing.push(m.podId);
+      userPodMap.set(m.userId, existing);
+    }
+    
+    // Build result with distance
+    const result = allUsers
+      .filter(user => {
+        if (filteredUserIds) {
+          return filteredUserIds.has(user.id);
+        }
+        return true;
+      })
+      .map(user => {
+        let distance: number | undefined;
+        if (currentUser?.locationLat && currentUser?.locationLng && user.locationLat && user.locationLng) {
+          distance = calculateDistance(
+            currentUser.locationLat, currentUser.locationLng,
+            user.locationLat, user.locationLng
+          );
+        }
+        return {
+          ...user,
+          podIds: userPodMap.get(user.id) || [],
+          distance,
+        };
+      });
+    
+    // Sort by distance if available
+    return result.sort((a, b) => {
+      if (a.distance === undefined) return 1;
+      if (b.distance === undefined) return -1;
+      return a.distance - b.distance;
+    });
+  }
+
+  async getExploreTrips(currentUserId: number): Promise<(PodTrip & { pod: Pod; creator: User; itemCount: number })[]> {
+    // Get all user's pods
+    const userPodMemberships = await db.select().from(podMembers).where(eq(podMembers.userId, currentUserId));
+    const userPodIds = userPodMemberships.map(m => m.podId);
+    
+    if (userPodIds.length === 0) {
+      return [];
+    }
+    
+    // Get confirmed trips from user's pods
+    const trips = await db.select().from(podTrips).where(
+      and(
+        inArray(podTrips.podId, userPodIds),
+        eq(podTrips.status, 'confirmed')
+      )
+    ).orderBy(desc(podTrips.startDate));
+    
+    // Enrich with pod, creator, and item count
+    const enrichedTrips = await Promise.all(
+      trips.map(async (trip) => {
+        const [pod, creator, items] = await Promise.all([
+          this.getPodById(trip.podId),
+          this.getUser(trip.createdByUserId),
+          db.select().from(tripItems).where(eq(tripItems.tripId, trip.id)),
+        ]);
+        
+        return {
+          ...trip,
+          pod: pod!,
+          creator: creator!,
+          itemCount: items.length,
+        };
+      })
+    );
+    
+    return enrichedTrips.filter(t => t.pod && t.creator);
+  }
+
+  async updateUserLocation(userId: number, lat: number, lng: number, shareLocation: boolean): Promise<User> {
+    const [updated] = await db.update(users)
+      .set({
+        locationLat: lat,
+        locationLng: lng,
+        shareLocation,
+        locationUpdatedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated;
   }
 }
 
