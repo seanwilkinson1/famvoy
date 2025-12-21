@@ -1,4 +1,4 @@
-import { Home, Map, Users, PlusCircle, User } from "lucide-react";
+import { Home, Compass, Plane, Users, MessageCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
@@ -7,10 +7,10 @@ export function BottomNav() {
 
   const tabs = [
     { href: "/", icon: Home, label: "Home" },
-    { href: "/explore", icon: Map, label: "Explore" },
+    { href: "/explore", icon: Compass, label: "Explore" },
+    { href: "/trips", icon: Plane, label: "Trips" },
     { href: "/pods", icon: Users, label: "Pods" },
-    { href: "/create", icon: PlusCircle, label: "Create" },
-    { href: "/profile", icon: User, label: "Profile" },
+    { href: "/chat", icon: MessageCircle, label: "Chat" },
   ];
 
   return (
