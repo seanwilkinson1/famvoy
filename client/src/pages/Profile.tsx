@@ -2,7 +2,8 @@ import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { PodCard } from "@/components/shared/PodCard";
 import { ImageUpload } from "@/components/shared/ImageUpload";
 import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
-import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Trophy, CheckCircle, Star, Heart, Globe, Quote, Plane, Users } from "lucide-react";
+import { ExploreMap } from "@/components/shared/ExploreMap";
+import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Trophy, CheckCircle, Star, Heart, Globe, Quote, Plane, Users, Share2, UserPlus, ChevronLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,7 +13,7 @@ import { useClerk } from "@clerk/clerk-react";
 import { useLocation } from "wouter";
 import type { FamilyMember } from "@shared/schema";
 import { FAMILY_VALUES, LANGUAGES, FAMILY_ROLES, AGE_GROUPS } from "@/lib/constants";
-import { Plus, Trash2, UserPlus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
 const BADGE_ICONS: Record<string, string> = {
   "Park Explorer": "🌲",
@@ -34,7 +35,7 @@ const INTEREST_OPTIONS = [
 ];
 
 export default function Profile() {
-  const [activeTab, setActiveTab] = useState<"experiences" | "saved" | "completed" | "pods" | "trips">("experiences");
+  const [activeTab, setActiveTab] = useState<"experiences" | "about" | "saved" | "trips">("experiences");
   const [isEditing, setIsEditing] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [newMember, setNewMember] = useState({
@@ -66,6 +67,26 @@ export default function Profile() {
   const { data: currentUser } = useQuery({
     queryKey: ["currentUser"],
     queryFn: api.users.getMe,
+  });
+
+  const { data: followersCount = 0 } = useQuery({
+    queryKey: ["followersCount", currentUser?.id],
+    queryFn: async () => {
+      if (!currentUser) return 0;
+      const followers = await api.follows.getFollowers(currentUser.id);
+      return followers.length;
+    },
+    enabled: !!currentUser,
+  });
+
+  const { data: followingCount = 0 } = useQuery({
+    queryKey: ["followingCount", currentUser?.id],
+    queryFn: async () => {
+      if (!currentUser) return 0;
+      const following = await api.follows.getFollowing(currentUser.id);
+      return following.length;
+    },
+    enabled: !!currentUser,
   });
 
   useEffect(() => {
@@ -156,7 +177,7 @@ export default function Profile() {
   const { data: userExperiences = [] } = useQuery({
     queryKey: ["userExperiences", currentUser?.id],
     queryFn: () => currentUser ? api.users.getExperiences(currentUser.id) : [],
-    enabled: !!currentUser && activeTab === "experiences",
+    enabled: !!currentUser,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -170,7 +191,7 @@ export default function Profile() {
   const { data: pods = [] } = useQuery({
     queryKey: ["userPods", currentUser?.id],
     queryFn: () => currentUser ? api.users.getPods(currentUser.id) : [],
-    enabled: !!currentUser && activeTab === "pods",
+    enabled: !!currentUser,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -184,14 +205,14 @@ export default function Profile() {
   const { data: userTrips = [] } = useQuery({
     queryKey: ["userTrips", currentUser?.id],
     queryFn: api.users.getMyTrips,
-    enabled: !!currentUser && activeTab === "trips",
+    enabled: !!currentUser,
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: userCheckins = [] } = useQuery({
     queryKey: ["userCheckins", currentUser?.id],
     queryFn: () => currentUser ? api.checkins.getByUser(currentUser.id) : [],
-    enabled: !!currentUser && activeTab === "completed",
+    enabled: !!currentUser,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -205,51 +226,47 @@ export default function Profile() {
   const kidMembers = familyMembers.filter(m => !m.isAdult);
 
   const formattedUserExperiences = userExperiences.map(exp => formatExperience(exp as any));
-
   const formattedSavedExperiences = savedExperiences.map(exp => formatExperience(exp as any));
 
-  return (
-    <div className="min-h-screen bg-background pt-14 pb-32 px-6">
-      <div className="mb-6 flex justify-between">
-        <button
-          onClick={() => setLocation("/settings")}
-          className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
-          data-testid="button-settings"
-        >
-          <SettingsIcon className="h-4 w-4" />
-          Settings
-        </button>
-        {isEditing ? (
-          <div className="flex gap-2">
-            <button 
-              onClick={() => setIsEditing(false)}
-              className="rounded-full bg-gray-100 p-2"
-              data-testid="button-cancel-edit"
-            >
-              <X className="h-5 w-5 text-gray-500" />
-            </button>
-            <button 
-              onClick={() => updateProfileMutation.mutate()}
-              disabled={updateProfileMutation.isPending}
-              className="rounded-full bg-primary p-2"
-              data-testid="button-save-profile"
-            >
-              <Check className="h-5 w-5 text-white" />
-            </button>
-          </div>
-        ) : (
-          <button 
-            onClick={() => setIsEditing(true)}
-            className="rounded-full bg-gray-100 p-2"
-            data-testid="button-edit-profile"
-          >
-            <Edit2 className="h-5 w-5 text-gray-500" />
-          </button>
-        )}
-      </div>
+  const userLocation = currentUser?.locationLat && currentUser?.locationLng
+    ? { lat: currentUser.locationLat, lng: currentUser.locationLng }
+    : null;
 
-      {/* Profile Header */}
-      {isEditing ? (
+  const handleShareProfile = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: `${currentUser?.name || 'Family'}'s Profile`,
+        text: `Check out ${currentUser?.name || 'our family'}'s profile on FamVoy!`,
+        url: window.location.href,
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div className="min-h-screen bg-background pt-14 pb-32 px-6">
+        <div className="mb-6 flex justify-between">
+          <button
+            onClick={() => setIsEditing(false)}
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+            data-testid="button-cancel-edit"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Cancel
+          </button>
+          <button 
+            onClick={() => updateProfileMutation.mutate()}
+            disabled={updateProfileMutation.isPending}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-full font-bold text-sm"
+            data-testid="button-save-profile"
+          >
+            <Check className="h-4 w-4" />
+            Save
+          </button>
+        </div>
+
         <div className="space-y-6 mb-8">
           <div className="flex flex-col items-center">
             <ImageUpload
@@ -494,115 +511,317 @@ export default function Profile() {
             )}
           </div>
         </div>
-      ) : (
-        <div className="flex flex-col items-center text-center mb-8">
-          <div className="relative mb-4">
+
+        {showAddMemberModal && (
+          <AddMemberModal
+            showModal={showAddMemberModal}
+            setShowModal={setShowAddMemberModal}
+            newMember={newMember}
+            setNewMember={setNewMember}
+            addMemberMutation={addMemberMutation}
+          />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background pb-32">
+      {/* Map Header - 30% viewport height */}
+      <div className="relative h-[30vh] min-h-[200px]">
+        <ExploreMap
+          experiences={[]}
+          userLocation={userLocation}
+          className="h-full w-full"
+        />
+        
+        {/* Top controls overlay */}
+        <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10 pt-10">
+          <button
+            onClick={() => setIsEditing(true)}
+            className="rounded-full bg-white/90 backdrop-blur-sm p-2 shadow-lg"
+            data-testid="button-edit-profile"
+          >
+            <Edit2 className="h-5 w-5 text-gray-700" />
+          </button>
+          <button
+            onClick={() => setLocation("/settings")}
+            className="rounded-full bg-white/90 backdrop-blur-sm p-2 shadow-lg"
+            data-testid="button-settings"
+          >
+            <SettingsIcon className="h-5 w-5 text-gray-700" />
+          </button>
+        </div>
+
+        {/* Pinned location chip */}
+        {currentUser?.location && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+            <div className="flex items-center gap-2 px-4 py-2 bg-gray-800/90 backdrop-blur-sm rounded-full text-white text-sm font-medium">
+              <MapPin className="h-4 w-4 text-primary" />
+              Pinned location
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Dark Profile Info Section */}
+      <div className="bg-gray-900 px-6 py-6">
+        <div className="flex items-start justify-between">
+          {/* Left side - Name and info */}
+          <div className="flex-1">
+            <h1 className="font-heading text-2xl font-bold text-white" data-testid="text-username">
+              {currentUser?.name || "Loading..."}
+            </h1>
+            <p className="text-gray-400 text-sm mt-0.5">
+              @{(currentUser?.name || "family").toLowerCase().replace(/\s+/g, '')}
+            </p>
+            
+            {/* Followers/Following */}
+            <div className="flex items-center gap-4 mt-3">
+              <button 
+                className="text-sm"
+                onClick={() => {}}
+                data-testid="button-following"
+              >
+                <span className="text-white font-bold">{followingCount}</span>
+                <span className="text-gray-400 ml-1">following</span>
+              </button>
+              <button 
+                className="text-sm"
+                onClick={() => {}}
+                data-testid="button-followers"
+              >
+                <span className="text-white font-bold">{followersCount}</span>
+                <span className="text-gray-400 ml-1">followers</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Right side - Avatar with flag */}
+          <div className="relative">
             <img
-              src={currentUser?.avatar || "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400"}
+              src={currentUser?.avatar || currentUser?.profileImageUrl || "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400"}
               alt="Profile"
-              className="h-24 w-24 rounded-full object-cover ring-4 ring-white shadow-lg"
+              className="h-20 w-20 rounded-full object-cover ring-4 ring-gray-700"
               data-testid="img-avatar"
             />
-            <div className="absolute bottom-0 right-0 rounded-full bg-primary p-1.5 ring-4 ring-white">
-              <div className="h-3 w-3 rounded-full bg-white" />
+            {currentUser?.location && (
+              <div className="absolute -bottom-1 -right-1 text-xl">
+                🇺🇸
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Trip Stats Card */}
+        <div className="mt-6 bg-gray-800 rounded-xl p-4">
+          {userTrips.length === 0 ? (
+            <div className="text-center">
+              <p className="text-white font-bold">No trip stats yet</p>
+              <p className="text-gray-400 text-sm mt-1">Track or post trips to log miles and get badges</p>
             </div>
-          </div>
-          <h1 className="font-heading text-2xl font-bold text-gray-900" data-testid="text-username">{currentUser?.name || "Loading..."}</h1>
-          <div className="mt-2 flex items-center gap-1 text-sm text-gray-500">
-            <MapPin className="h-3.5 w-3.5" />
-            {currentUser?.location || "Loading..."}
-          </div>
-          <p className="mt-1 text-sm font-medium text-gray-500">{currentUser?.kids || ""}</p>
-          {currentUser?.bio && (
-            <p className="mt-2 text-sm text-gray-600 max-w-xs">{currentUser.bio}</p>
-          )}
-
-          {/* Interest Tags */}
-          <div className="mt-4 flex flex-wrap justify-center gap-2">
-            {currentUser?.interests?.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-secondary/50 px-3 py-1 text-xs font-bold text-secondary-foreground"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-
-          {/* Family Members Grid - Team Style */}
-          {familyMembers.length > 0 && (
-            <div className="mt-8 w-full max-w-md">
-              <h3 className="font-heading text-lg font-bold text-gray-900 text-center mb-4">
-                <Users className="inline-block h-5 w-5 mr-2 text-primary" />
-                Meet Our Family
-              </h3>
-              
-              {adultMembers.length > 0 && (
-                <div className="mb-6">
-                  <span className="inline-block px-3 py-1 text-xs font-bold bg-primary/10 text-primary rounded-full mb-3">
-                    Adults
-                  </span>
-                  <div className="flex flex-wrap justify-center gap-4">
-                    {adultMembers.map((member) => (
-                      <div key={member.id} className="flex flex-col items-center" data-testid={`family-member-${member.id}`}>
-                        <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-gray-200 bg-gray-100">
-                          {member.photo ? (
-                            <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-2xl bg-gradient-to-br from-primary/20 to-primary/40">
-                              {member.name.charAt(0)}
-                            </div>
-                          )}
-                        </div>
-                        <p className="mt-2 text-sm font-bold text-gray-900">{member.name}</p>
-                        <p className="text-xs text-primary font-medium">{member.role}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {kidMembers.length > 0 && (
-                <div>
-                  <span className="inline-block px-3 py-1 text-xs font-bold bg-secondary/20 text-secondary-foreground rounded-full mb-3">
-                    Kids
-                  </span>
-                  <div className="flex flex-wrap justify-center gap-4">
-                    {kidMembers.map((member) => (
-                      <div key={member.id} className="flex flex-col items-center" data-testid={`family-member-${member.id}`}>
-                        <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-gray-200 bg-gray-100">
-                          {member.photo ? (
-                            <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-2xl bg-gradient-to-br from-secondary/20 to-secondary/40">
-                              {member.name.charAt(0)}
-                            </div>
-                          )}
-                        </div>
-                        <p className="mt-2 text-sm font-bold text-gray-900">{member.name}</p>
-                        <p className="text-xs text-secondary font-medium">{member.role}</p>
-                        {member.ageGroup && (
-                          <p className="text-xs text-gray-400">{member.ageGroup}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+          ) : (
+            <div className="flex items-center justify-around">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-white">{userTrips.length}</p>
+                <p className="text-gray-400 text-xs">Trips</p>
+              </div>
+              <div className="w-px h-8 bg-gray-700" />
+              <div className="text-center">
+                <p className="text-2xl font-bold text-white">{userCheckins.length}</p>
+                <p className="text-gray-400 text-xs">Experiences</p>
+              </div>
+              <div className="w-px h-8 bg-gray-700" />
+              <div className="text-center">
+                <p className="text-2xl font-bold text-white">{userBadges.length}</p>
+                <p className="text-gray-400 text-xs">Badges</p>
+              </div>
             </div>
           )}
+        </div>
 
-          {/* Enhanced Profile Info */}
-          <div className="mt-8 w-full max-w-md space-y-4">
+        {/* Action Buttons */}
+        <div className="mt-4 flex gap-3">
+          <button
+            onClick={handleShareProfile}
+            className="flex-1 flex items-center justify-center gap-2 py-3 border-2 border-gray-600 rounded-xl text-white font-bold text-sm hover:bg-gray-800 transition-colors"
+            data-testid="button-share-profile"
+          >
+            <Share2 className="h-4 w-4" />
+            Share profile
+          </button>
+          <button
+            onClick={() => {}}
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-primary rounded-xl text-white font-bold text-sm hover:bg-primary/90 transition-colors"
+            data-testid="button-invite-friends"
+          >
+            <UserPlus className="h-4 w-4" />
+            Invite friends
+          </button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="bg-white sticky top-14 z-20 border-b border-gray-200">
+        <div className="flex">
+          {[
+            { id: "experiences", label: `Experiences (${formattedUserExperiences.length})` },
+            { id: "about", label: "About" },
+            { id: "saved", label: "Saved" },
+            { id: "trips", label: "Trips" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={cn(
+                "flex-1 py-4 text-sm font-bold transition-all border-b-2",
+                activeTab === tab.id
+                  ? "text-primary border-primary"
+                  : "text-gray-500 border-transparent hover:text-gray-700"
+              )}
+              data-testid={`button-tab-${tab.id}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      <div className="px-6 py-6 animate-in fade-in duration-300">
+        {activeTab === "experiences" && (
+          <div className="space-y-4">
+            {formattedUserExperiences.length === 0 ? (
+              <div className="py-12 text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MapPin className="h-8 w-8 text-gray-300" />
+                </div>
+                <p className="text-gray-500 font-medium">No experiences shared yet</p>
+                <p className="text-gray-400 text-sm mt-1">Share your first family adventure!</p>
+              </div>
+            ) : (
+              [...formattedUserExperiences].reverse().map((exp) => (
+                <ExperienceCard key={exp.id} experience={exp} />
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === "about" && (
+          <div className="space-y-6">
+            {/* Bio */}
+            {currentUser?.bio && (
+              <div>
+                <p className="text-gray-700">{currentUser.bio}</p>
+              </div>
+            )}
+
+            {/* Kids info */}
+            {currentUser?.kids && (
+              <div className="flex items-center gap-2 text-gray-600">
+                <Users className="h-4 w-4 text-primary" />
+                <span>{currentUser.kids}</span>
+              </div>
+            )}
+
+            {/* Location */}
+            {currentUser?.location && (
+              <div className="flex items-center gap-2 text-gray-600">
+                <MapPin className="h-4 w-4 text-primary" />
+                <span>{currentUser.location}</span>
+              </div>
+            )}
+
+            {/* Family Members */}
+            {familyMembers.length > 0 && (
+              <div>
+                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Family Members
+                </h3>
+                
+                {adultMembers.length > 0 && (
+                  <div className="mb-4">
+                    <span className="inline-block px-3 py-1 text-xs font-bold bg-primary/10 text-primary rounded-full mb-3">
+                      Adults
+                    </span>
+                    <div className="flex flex-wrap gap-4">
+                      {adultMembers.map((member) => (
+                        <div key={member.id} className="flex flex-col items-center" data-testid={`family-member-${member.id}`}>
+                          <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-gray-200 bg-gray-100">
+                            {member.photo ? (
+                              <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-xl bg-gradient-to-br from-primary/20 to-primary/40">
+                                {member.name.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <p className="mt-1 text-sm font-bold text-gray-900">{member.name}</p>
+                          <p className="text-xs text-primary font-medium">{member.role}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {kidMembers.length > 0 && (
+                  <div>
+                    <span className="inline-block px-3 py-1 text-xs font-bold bg-secondary/20 text-secondary-foreground rounded-full mb-3">
+                      Kids
+                    </span>
+                    <div className="flex flex-wrap gap-4">
+                      {kidMembers.map((member) => (
+                        <div key={member.id} className="flex flex-col items-center" data-testid={`family-member-${member.id}`}>
+                          <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-gray-200 bg-gray-100">
+                            {member.photo ? (
+                              <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-xl bg-gradient-to-br from-secondary/20 to-secondary/40">
+                                {member.name.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <p className="mt-1 text-sm font-bold text-gray-900">{member.name}</p>
+                          <p className="text-xs text-secondary font-medium">{member.role}</p>
+                          {member.ageGroup && (
+                            <p className="text-xs text-gray-400">{member.ageGroup}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Interests */}
+            {currentUser?.interests && currentUser.interests.length > 0 && (
+              <div>
+                <h3 className="font-bold text-gray-900 mb-3">Interests</h3>
+                <div className="flex flex-wrap gap-2">
+                  {currentUser.interests.map((interest) => (
+                    <span
+                      key={interest}
+                      className="px-3 py-1.5 bg-gray-800 text-white text-sm rounded-full font-medium"
+                    >
+                      {interest}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Family Values */}
             {currentUser?.familyValues && currentUser.familyValues.length > 0 && (
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-center gap-2 mb-2">
+              <div>
+                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
                   <Heart className="h-4 w-4 text-rose-500" />
-                  <h4 className="font-bold text-sm text-gray-900">Family Values</h4>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
+                  Family Values
+                </h3>
+                <div className="flex flex-wrap gap-2">
                   {currentUser.familyValues.map((value) => (
-                    <span key={value} className="px-2.5 py-1 bg-rose-50 text-rose-700 text-xs rounded-full font-medium">
+                    <span key={value} className="px-3 py-1.5 bg-rose-50 text-rose-700 text-sm rounded-full font-medium">
                       {value}
                     </span>
                   ))}
@@ -610,15 +829,16 @@ export default function Profile() {
               </div>
             )}
 
+            {/* Languages */}
             {currentUser?.languages && currentUser.languages.length > 0 && (
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-center gap-2 mb-2">
+              <div>
+                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
                   <Globe className="h-4 w-4 text-blue-500" />
-                  <h4 className="font-bold text-sm text-gray-900">Languages</h4>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
+                  Languages
+                </h3>
+                <div className="flex flex-wrap gap-2">
                   {currentUser.languages.map((lang) => (
-                    <span key={lang} className="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs rounded-full font-medium">
+                    <span key={lang} className="px-3 py-1.5 bg-blue-50 text-blue-700 text-sm rounded-full font-medium">
                       {lang}
                     </span>
                   ))}
@@ -626,192 +846,113 @@ export default function Profile() {
               </div>
             )}
 
-            {(currentUser?.familyMotto || currentUser?.favoriteTraditions || currentUser?.dreamVacation || currentUser?.pets) && (
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-3">
-                {currentUser?.familyMotto && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Quote className="h-4 w-4 text-purple-500" />
-                      <h4 className="font-bold text-sm text-gray-900">Our Motto</h4>
+            {/* Pets */}
+            {currentUser?.pets && (
+              <div>
+                <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  <span>🐾</span>
+                  Pets
+                </h3>
+                <p className="text-gray-600">{currentUser.pets}</p>
+              </div>
+            )}
+
+            {/* Family Motto */}
+            {currentUser?.familyMotto && (
+              <div>
+                <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  <Quote className="h-4 w-4 text-purple-500" />
+                  Family Motto
+                </h3>
+                <p className="text-gray-600 italic">"{currentUser.familyMotto}"</p>
+              </div>
+            )}
+
+            {/* Favorite Traditions */}
+            {currentUser?.favoriteTraditions && (
+              <div>
+                <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  <Star className="h-4 w-4 text-amber-500" />
+                  Favorite Traditions
+                </h3>
+                <p className="text-gray-600">{currentUser.favoriteTraditions}</p>
+              </div>
+            )}
+
+            {/* Dream Vacation */}
+            {currentUser?.dreamVacation && (
+              <div>
+                <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  <Plane className="h-4 w-4 text-teal-500" />
+                  Dream Vacation
+                </h3>
+                <p className="text-gray-600">{currentUser.dreamVacation}</p>
+              </div>
+            )}
+
+            {/* Badges */}
+            {userBadges.length > 0 && (
+              <div>
+                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <Award className="h-4 w-4 text-amber-500" />
+                  Badges
+                </h3>
+                <div className="flex flex-wrap gap-3">
+                  {userBadges.map((badge: any) => (
+                    <div
+                      key={badge.id}
+                      className="flex items-center gap-2 px-3 py-2 bg-amber-50 rounded-xl"
+                      data-testid={`badge-${badge.id}`}
+                    >
+                      <span className="text-xl">{BADGE_ICONS[badge.badge?.name || ''] || '🏅'}</span>
+                      <span className="text-sm font-medium text-amber-800">{badge.badge?.name || 'Badge'}</span>
                     </div>
-                    <p className="text-sm text-gray-600 italic">"{currentUser.familyMotto}"</p>
-                  </div>
-                )}
-                
-                {currentUser?.favoriteTraditions && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Star className="h-4 w-4 text-amber-500" />
-                      <h4 className="font-bold text-sm text-gray-900">Favorite Traditions</h4>
-                    </div>
-                    <p className="text-sm text-gray-600">{currentUser.favoriteTraditions}</p>
-                  </div>
-                )}
-                
-                {currentUser?.dreamVacation && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Plane className="h-4 w-4 text-teal-500" />
-                      <h4 className="font-bold text-sm text-gray-900">Dream Vacation</h4>
-                    </div>
-                    <p className="text-sm text-gray-600">{currentUser.dreamVacation}</p>
-                  </div>
-                )}
-                
-                {currentUser?.pets && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-base">🐾</span>
-                      <h4 className="font-bold text-sm text-gray-900">Pets</h4>
-                    </div>
-                    <p className="text-sm text-gray-600">{currentUser.pets}</p>
-                  </div>
-                )}
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Pods */}
+            {pods.length > 0 && (
+              <div>
+                <h3 className="font-bold text-gray-900 mb-3">Pods</h3>
+                <div className="space-y-3">
+                  {pods.map((pod) => (
+                    <PodCard key={pod.id} pod={pod} />
+                  ))}
+                </div>
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div className="mb-6 flex rounded-xl bg-gray-100 p-1">
-        {[
-          { id: "experiences", label: "Posts" },
-          { id: "saved", label: "Saved" },
-          { id: "completed", label: "Done" },
-          { id: "pods", label: "Pods" },
-          { id: "trips", label: "Trips" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={cn(
-              "flex-1 rounded-lg py-2 text-xs font-bold transition-all",
-              activeTab === tab.id
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            )}
-            data-testid={`button-tab-${tab.id}`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Content Grid */}
-      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        {activeTab === "experiences" && (
-          <>
-            {formattedUserExperiences.length === 0 ? (
-              <div className="py-8 text-center text-sm text-gray-400">
-                No experiences shared yet.
-              </div>
-            ) : (
-              [...formattedUserExperiences].reverse().map((exp) => (
-                <ExperienceCard key={exp.id} experience={exp} />
-              ))
-            )}
-          </>
         )}
 
         {activeTab === "saved" && (
-           <>
+          <div className="space-y-4">
             {formattedSavedExperiences.length === 0 ? (
-              <div className="py-8 text-center text-sm text-gray-400">
-                No saved experiences yet.
+              <div className="py-12 text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Heart className="h-8 w-8 text-gray-300" />
+                </div>
+                <p className="text-gray-500 font-medium">No saved experiences yet</p>
+                <p className="text-gray-400 text-sm mt-1">Save experiences you want to try!</p>
               </div>
             ) : (
               [...formattedSavedExperiences].reverse().map((exp) => (
                 <ExperienceCard key={exp.id} experience={exp} />
               ))
             )}
-          </>
-        )}
-
-        {activeTab === "completed" && (
-          <>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <span className="font-bold text-gray-900">{userCheckins.length} Completed</span>
-              </div>
-            </div>
-            {userCheckins.length === 0 ? (
-              <div className="py-8 text-center">
-                <CheckCircle className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                <p className="text-sm text-gray-400">No experiences completed yet</p>
-                <p className="text-xs text-gray-400 mt-1">Try an experience and tap "I Did This!"</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {[...userCheckins].reverse().map((checkin: any) => (
-                  <div 
-                    key={checkin.id}
-                    className="rounded-2xl bg-white p-4 shadow-sm border border-gray-100 cursor-pointer"
-                    onClick={() => setLocation(`/experience/${checkin.experienceId}`)}
-                    data-testid={`checkin-card-${checkin.id}`}
-                  >
-                    <div className="flex gap-4">
-                      {checkin.photoUrl && (
-                        <img
-                          src={checkin.photoUrl}
-                          alt="Check-in"
-                          className="h-20 w-20 rounded-xl object-cover flex-shrink-0"
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-gray-900 line-clamp-1">
-                          {checkin.experience?.title || 'Experience'}
-                        </p>
-                        {checkin.rating && (
-                          <div className="flex items-center gap-0.5 mt-1">
-                            {[...Array(checkin.rating)].map((_, i) => (
-                              <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
-                            ))}
-                          </div>
-                        )}
-                        {checkin.review && (
-                          <p className="text-sm text-gray-600 line-clamp-2 mt-1">{checkin.review}</p>
-                        )}
-                        <p className="text-xs text-gray-400 mt-2">
-                          Completed {new Date(checkin.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {activeTab === "pods" && (
-           <>
-            {pods.length === 0 ? (
-              <div className="py-8 text-center text-sm text-gray-400">
-                No pods joined yet.
-              </div>
-            ) : (
-              pods.map((pod) => (
-                <PodCard key={pod.id} pod={pod} />
-              ))
-            )}
-          </>
+          </div>
         )}
 
         {activeTab === "trips" && (
-          <>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Plane className="h-5 w-5 text-primary" />
-                <span className="font-bold text-gray-900">{userTrips.length} Trips</span>
-              </div>
-            </div>
+          <div className="space-y-4">
             {userTrips.length === 0 ? (
-              <div className="py-8 text-center">
-                <Plane className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                <p className="text-sm text-gray-400">No trips planned yet</p>
-                <p className="text-xs text-gray-400 mt-1">Join a pod and start planning your first trip!</p>
+              <div className="py-12 text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Plane className="h-8 w-8 text-gray-300" />
+                </div>
+                <p className="text-gray-500 font-medium">No trips planned yet</p>
+                <p className="text-gray-400 text-sm mt-1">Join a pod and start planning your first trip!</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -858,119 +999,143 @@ export default function Profile() {
                 ))}
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
 
       {showAddMemberModal && (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-end sm:items-center justify-center">
-          <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[85vh] overflow-y-auto animate-slide-up mb-20 sm:mb-0 mx-4">
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-              <h2 className="font-heading text-xl font-bold">Add Family Member</h2>
-              <button
-                onClick={() => {
-                  setShowAddMemberModal(false);
-                  setNewMember({ name: "", role: "", ageGroup: "", isAdult: true, photo: "" });
-                }}
-                className="p-2 rounded-full bg-gray-100"
-              >
-                <X className="h-5 w-5" />
-              </button>
+        <AddMemberModal
+          showModal={showAddMemberModal}
+          setShowModal={setShowAddMemberModal}
+          newMember={newMember}
+          setNewMember={setNewMember}
+          addMemberMutation={addMemberMutation}
+        />
+      )}
+    </div>
+  );
+}
+
+function AddMemberModal({ 
+  showModal, 
+  setShowModal, 
+  newMember, 
+  setNewMember, 
+  addMemberMutation 
+}: {
+  showModal: boolean;
+  setShowModal: (show: boolean) => void;
+  newMember: { name: string; role: string; ageGroup: string; isAdult: boolean; photo: string };
+  setNewMember: (member: { name: string; role: string; ageGroup: string; isAdult: boolean; photo: string }) => void;
+  addMemberMutation: any;
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/50 z-[100] flex items-end sm:items-center justify-center">
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[85vh] overflow-y-auto animate-slide-up mb-20 sm:mb-0 mx-4">
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+          <h2 className="font-heading text-xl font-bold">Add Family Member</h2>
+          <button
+            onClick={() => {
+              setShowModal(false);
+              setNewMember({ name: "", role: "", ageGroup: "", isAdult: true, photo: "" });
+            }}
+            className="p-2 rounded-full bg-gray-100"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          <div className="flex justify-center">
+            <ImageUpload
+              currentImage={newMember.photo}
+              onImageChange={(url) => setNewMember({ ...newMember, photo: url })}
+              size="md"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Name</label>
+            <input
+              type="text"
+              value={newMember.name}
+              onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
+              placeholder="e.g., Emma"
+              data-testid="input-member-name"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Role (Adults)</label>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {FAMILY_ROLES.adults.map((role) => (
+                <button
+                  key={role}
+                  type="button"
+                  onClick={() => setNewMember({ ...newMember, role, isAdult: true })}
+                  style={{
+                    backgroundColor: newMember.role === role ? '#14b8a6' : '#f3f4f6',
+                    color: newMember.role === role ? 'white' : '#6b7280',
+                  }}
+                  className="rounded-full px-4 py-2 text-sm font-bold transition-all"
+                  data-testid={`button-role-${role.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  {role}
+                </button>
+              ))}
             </div>
-
-            <div className="p-6 space-y-5">
-              <div className="flex justify-center">
-                <ImageUpload
-                  currentImage={newMember.photo}
-                  onImageChange={(url) => setNewMember({ ...newMember, photo: url })}
-                  size="md"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Name</label>
-                <input
-                  type="text"
-                  value={newMember.name}
-                  onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
-                  className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
-                  placeholder="e.g., Emma"
-                  data-testid="input-member-name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Role (Adults)</label>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {FAMILY_ROLES.adults.map((role) => (
-                    <button
-                      key={role}
-                      type="button"
-                      onClick={() => setNewMember({ ...newMember, role, isAdult: true })}
-                      style={{
-                        backgroundColor: newMember.role === role ? '#14b8a6' : '#f3f4f6',
-                        color: newMember.role === role ? 'white' : '#6b7280',
-                      }}
-                      className="rounded-full px-4 py-2 text-sm font-bold transition-all"
-                      data-testid={`button-role-${role.toLowerCase().replace(/\s+/g, '-')}`}
-                    >
-                      {role}
-                    </button>
-                  ))}
-                </div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Role (Kids)</label>
-                <div className="flex flex-wrap gap-2">
-                  {FAMILY_ROLES.kids.map((role) => (
-                    <button
-                      key={role}
-                      type="button"
-                      onClick={() => setNewMember({ ...newMember, role, isAdult: false })}
-                      style={{
-                        backgroundColor: newMember.role === role ? '#14b8a6' : '#f3f4f6',
-                        color: newMember.role === role ? 'white' : '#6b7280',
-                      }}
-                      className="rounded-full px-4 py-2 text-sm font-bold transition-all"
-                      data-testid={`button-role-${role.toLowerCase().replace(/\s+/g, '-')}`}
-                    >
-                      {role}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Age Group</label>
-                <div className="flex flex-wrap gap-2">
-                  {AGE_GROUPS.map((age) => (
-                    <button
-                      key={age}
-                      type="button"
-                      onClick={() => setNewMember({ ...newMember, ageGroup: age })}
-                      style={{
-                        backgroundColor: newMember.ageGroup === age ? '#14b8a6' : '#f3f4f6',
-                        color: newMember.ageGroup === age ? 'white' : '#6b7280',
-                      }}
-                      className="rounded-full px-4 py-2 text-sm font-bold transition-all"
-                      data-testid={`button-age-${age.toLowerCase().replace(/\s+/g, '-')}`}
-                    >
-                      {age}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                onClick={() => addMemberMutation.mutate()}
-                disabled={!newMember.name || !newMember.role || addMemberMutation.isPending}
-                className="w-full py-4 bg-primary text-white font-bold rounded-xl disabled:opacity-50"
-                data-testid="button-submit-member"
-              >
-                {addMemberMutation.isPending ? "Adding..." : "Add Family Member"}
-              </button>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Role (Kids)</label>
+            <div className="flex flex-wrap gap-2">
+              {FAMILY_ROLES.kids.map((role) => (
+                <button
+                  key={role}
+                  type="button"
+                  onClick={() => setNewMember({ ...newMember, role, isAdult: false })}
+                  style={{
+                    backgroundColor: newMember.role === role ? '#14b8a6' : '#f3f4f6',
+                    color: newMember.role === role ? 'white' : '#6b7280',
+                  }}
+                  className="rounded-full px-4 py-2 text-sm font-bold transition-all"
+                  data-testid={`button-role-${role.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  {role}
+                </button>
+              ))}
             </div>
           </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Age Group</label>
+            <div className="flex flex-wrap gap-2">
+              {AGE_GROUPS.map((age) => (
+                <button
+                  key={age}
+                  type="button"
+                  onClick={() => setNewMember({ ...newMember, ageGroup: age })}
+                  style={{
+                    backgroundColor: newMember.ageGroup === age ? '#14b8a6' : '#f3f4f6',
+                    color: newMember.ageGroup === age ? 'white' : '#6b7280',
+                  }}
+                  className="rounded-full px-4 py-2 text-sm font-bold transition-all"
+                  data-testid={`button-age-${age.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  {age}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={() => addMemberMutation.mutate()}
+            disabled={!newMember.name || !newMember.role || addMemberMutation.isPending}
+            className="w-full py-4 bg-primary text-white font-bold rounded-xl disabled:opacity-50"
+            data-testid="button-submit-member"
+          >
+            {addMemberMutation.isPending ? "Adding..." : "Add Family Member"}
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
