@@ -165,6 +165,7 @@ export function ExploreMap({
       const bounds = new google.maps.LatLngBounds();
       points.forEach((point) => bounds.extend(point));
       map.fitBounds(bounds, 50);
+      initialCenterSet.current = true;
       
       const listener = google.maps.event.addListenerOnce(map, 'idle', () => {
         const currentZoom = map.getZoom();
@@ -185,7 +186,6 @@ export function ExploreMap({
 
   const onLoad = useCallback((mapInstance: google.maps.Map) => {
     setMap(mapInstance);
-    initialCenterSet.current = true;
     
     mapInstance.addListener('zoom_changed', () => {
       const newZoom = mapInstance.getZoom();
