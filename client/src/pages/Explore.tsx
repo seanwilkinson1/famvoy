@@ -399,7 +399,7 @@ export default function Explore() {
                 setSearchQuery(e.target.value);
                 if (searchLocation) setSearchLocation(null);
               }}
-              className="w-full rounded-full bg-gray-900 py-3.5 pl-12 pr-12 text-white text-base shadow-xl outline-none placeholder:text-gray-400"
+              className="w-full rounded-full bg-gray-900 py-4 pl-12 pr-12 text-white text-base shadow-xl outline-none placeholder:text-gray-400"
               data-testid="input-search-main"
             />
             {isSearchingPlaces ? (
@@ -444,7 +444,7 @@ export default function Explore() {
 
         {/* Filter Chips Row - Below search bar */}
         <div className="absolute top-20 left-0 right-0 z-30 px-4 pt-safe">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-2">
             {/* Clear Filter with Badge */}
             {activeFiltersCount > 0 && (
               <button
