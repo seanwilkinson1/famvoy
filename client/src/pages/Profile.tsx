@@ -536,8 +536,11 @@ export default function Profile() {
             zoom={10}
           />
         ) : (
-          <div className="h-full w-full bg-gray-200 flex items-center justify-center">
-            <span className="text-gray-500 text-sm">No location set</span>
+          <div className="h-full w-full bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 flex items-center justify-center">
+            <div className="text-center">
+              <MapPin className="h-8 w-8 text-gray-500 mx-auto mb-2" />
+              <span className="text-gray-400 text-sm">Pin your location in Settings</span>
+            </div>
           </div>
         )}
         
@@ -560,11 +563,11 @@ export default function Profile() {
         </div>
 
         {/* Pinned location chip */}
-        {currentUser?.location && (
+        {userLocation && currentUser?.location && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
             <div className="flex items-center gap-2 px-4 py-2 bg-gray-800/90 backdrop-blur-sm rounded-full text-white text-sm font-medium">
               <MapPin className="h-4 w-4 text-primary" />
-              Pinned location
+              {currentUser.location}
             </div>
           </div>
         )}
