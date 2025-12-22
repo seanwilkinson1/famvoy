@@ -27,6 +27,7 @@ import TripDetails from "@/pages/TripDetails";
 import TripConfirmWizard from "@/pages/TripConfirmWizard";
 import Trips from "@/pages/Trips";
 import Chat from "@/pages/Chat";
+import ConversationDetail from "@/pages/ConversationDetail";
 import Cart from "@/pages/Cart";
 import CheckoutSuccess from "@/pages/CheckoutSuccess";
 import CheckoutCancel from "@/pages/CheckoutCancel";
@@ -80,6 +81,7 @@ function AuthenticatedRouter() {
             <Route path="/pods" component={Pods} />
             <Route path="/trips" component={Trips} />
             <Route path="/chat" component={Chat} />
+            <Route path="/conversation/:id" component={ConversationDetail} />
             <Route path="/create" component={Create} />
             <Route path="/profile" component={Profile} />
             <Route path="/settings" component={Settings} />

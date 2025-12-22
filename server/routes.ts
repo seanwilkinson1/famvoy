@@ -5,7 +5,7 @@ import multer from "multer";
 import express from "express";
 import { clerkMiddleware, getAuth, requireAuth, clerkClient } from "@clerk/express";
 import { storage } from "./storage";
-import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema, insertFamilyMemberSchema, insertBookingOptionSchema, insertCartItemSchema } from "@shared/schema";
+import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema, insertFamilyMemberSchema, insertBookingOptionSchema, insertCartItemSchema, insertPodPostSchema, insertChatMessageSchema } from "@shared/schema";
 import { z } from "zod";
 import { fromError } from "zod-validation-error";
 import OpenAI from "openai";
@@ -488,6 +488,15 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/users", requireAuth(), async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/users/:userId", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
@@ -957,6 +966,170 @@ export async function registerRoutes(
         return res.status(400).json({ error: fromError(parsed.error).toString() });
       }
       const message = await storage.createMessage(parsed.data);
+      res.status(201).json(message);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Pod Posts
+  app.get("/api/pods/:id/posts", async (req, res) => {
+    try {
+      const podId = parseInt(req.params.id);
+      if (isNaN(podId)) {
+        return res.status(400).json({ error: "Invalid pod ID" });
+      }
+      const posts = await storage.getPodPosts(podId);
+      res.json(posts);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/pods/:id/posts", requireAuth(), async (req, res) => {
+    try {
+      const podId = parseInt(req.params.id);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      const isMember = await storage.isPodMember(podId, user.id);
+      if (!isMember) {
+        return res.status(403).json({ error: "You must be a member of this pod to post" });
+      }
+      const parsed = insertPodPostSchema.safeParse({ ...req.body, podId, userId: user.id });
+      if (!parsed.success) {
+        return res.status(400).json({ error: fromError(parsed.error).toString() });
+      }
+      const post = await storage.createPodPost(parsed.data);
+      res.status(201).json(post);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/pods/:podId/posts/:postId", requireAuth(), async (req, res) => {
+    try {
+      const postId = parseInt(req.params.postId);
+      if (isNaN(postId)) {
+        return res.status(400).json({ error: "Invalid post ID" });
+      }
+      await storage.deletePodPost(postId);
+      res.status(200).json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Conversations (Direct Messages & Group Chats)
+  app.get("/api/conversations", requireAuth(), async (req, res) => {
+    try {
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      const conversations = await storage.getConversations(user.id);
+      res.json(conversations);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/conversations/:id", requireAuth(), async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      if (isNaN(conversationId)) {
+        return res.status(400).json({ error: "Invalid conversation ID" });
+      }
+      const conversation = await storage.getConversationById(conversationId);
+      if (!conversation) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+      res.json(conversation);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/conversations", requireAuth(), async (req, res) => {
+    try {
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      const { memberIds, name, isGroup } = req.body;
+      if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
+        return res.status(400).json({ error: "At least one member is required" });
+      }
+      const conversation = await storage.createConversation(user.id, memberIds, name, isGroup);
+      res.status(201).json(conversation);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/conversations/direct/:userId", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const currentUser = await storage.getUserByClerkId(clerkUserId);
+      if (!currentUser) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      const targetUserId = parseInt(req.params.userId);
+      if (isNaN(targetUserId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+      const conversation = await storage.getOrCreateDirectConversation(currentUser.id, targetUserId);
+      res.json(conversation);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/conversations/:id/messages", requireAuth(), async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      if (isNaN(conversationId)) {
+        return res.status(400).json({ error: "Invalid conversation ID" });
+      }
+      const messages = await storage.getChatMessages(conversationId);
+      res.json(messages);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/conversations/:id/messages", requireAuth(), async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      const parsed = insertChatMessageSchema.safeParse({ ...req.body, conversationId, userId: user.id });
+      if (!parsed.success) {
+        return res.status(400).json({ error: fromError(parsed.error).toString() });
+      }
+      const message = await storage.createChatMessage(parsed.data);
       res.status(201).json(message);
     } catch (error: any) {
       res.status(500).json({ error: error.message });

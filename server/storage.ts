@@ -53,6 +53,13 @@ import {
   type InsertConciergeRequest,
   type ConciergeRequestItem,
   type InsertConciergeRequestItem,
+  type PodPost,
+  type InsertPodPost,
+  type Conversation,
+  type InsertConversation,
+  type ConversationMember,
+  type ChatMessage,
+  type InsertChatMessage,
   users,
   experiences,
   pods,
@@ -83,6 +90,10 @@ import {
   tripItemOptions,
   conciergeRequests,
   conciergeRequestItems,
+  podPosts,
+  conversations,
+  conversationMembers,
+  chatMessages,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ne, notInArray, ilike, isNotNull, inArray } from "drizzle-orm";
@@ -270,6 +281,26 @@ export interface IStorage {
   getExplorePeople(currentUserId: number, podId?: number): Promise<(User & { podIds: number[]; distance?: number })[]>;
   getExploreTrips(currentUserId: number): Promise<(PodTrip & { pod: Pod; creator: User; itemCount: number })[]>;
   updateUserLocation(userId: number, lat: number, lng: number, shareLocation: boolean): Promise<User>;
+  
+  // Pod Posts
+  getPodPosts(podId: number): Promise<Array<PodPost & { user: User }>>;
+  createPodPost(data: InsertPodPost): Promise<PodPost>;
+  deletePodPost(postId: number): Promise<void>;
+  
+  // Conversations (Direct Messages & Group Chats)
+  getConversations(userId: number): Promise<Array<Conversation & { members: User[]; lastMessage?: ChatMessage }>>;
+  getConversationById(conversationId: number): Promise<(Conversation & { members: User[] }) | undefined>;
+  createConversation(creatorId: number, memberIds: number[], name?: string, isGroup?: boolean): Promise<Conversation>;
+  findDirectConversation(userId1: number, userId2: number): Promise<Conversation | undefined>;
+  getOrCreateDirectConversation(userId1: number, userId2: number): Promise<Conversation>;
+  
+  // Chat Messages
+  getChatMessages(conversationId: number): Promise<Array<ChatMessage & { user: User }>>;
+  createChatMessage(data: InsertChatMessage): Promise<ChatMessage>;
+  
+  // Trip linking to pods
+  linkTripToPod(tripId: number, podId: number): Promise<void>;
+  unlinkTripFromPod(tripId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1838,6 +1869,164 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return updated;
+  }
+
+  // Pod Posts
+  async getPodPosts(podId: number): Promise<Array<PodPost & { user: User }>> {
+    const result = await db
+      .select()
+      .from(podPosts)
+      .innerJoin(users, eq(podPosts.userId, users.id))
+      .where(eq(podPosts.podId, podId))
+      .orderBy(desc(podPosts.createdAt));
+    return result.map(r => ({ ...r.pod_posts, user: r.users }));
+  }
+
+  async createPodPost(data: InsertPodPost): Promise<PodPost> {
+    const [post] = await db.insert(podPosts).values(data).returning();
+    return post;
+  }
+
+  async deletePodPost(postId: number): Promise<void> {
+    await db.delete(podPosts).where(eq(podPosts.id, postId));
+  }
+
+  // Conversations
+  async getConversations(userId: number): Promise<Array<Conversation & { members: User[]; lastMessage?: ChatMessage }>> {
+    // Get conversations where user is a member
+    const userConversations = await db
+      .select({ conversationId: conversationMembers.conversationId })
+      .from(conversationMembers)
+      .where(eq(conversationMembers.userId, userId));
+    
+    const conversationIds = userConversations.map(c => c.conversationId);
+    if (conversationIds.length === 0) return [];
+    
+    const convos = await db.select().from(conversations)
+      .where(inArray(conversations.id, conversationIds))
+      .orderBy(desc(conversations.updatedAt));
+    
+    // Enrich with members and last message
+    const enriched = await Promise.all(convos.map(async (convo) => {
+      const memberRows = await db.select()
+        .from(conversationMembers)
+        .innerJoin(users, eq(conversationMembers.userId, users.id))
+        .where(eq(conversationMembers.conversationId, convo.id));
+      
+      const [lastMsg] = await db.select()
+        .from(chatMessages)
+        .where(eq(chatMessages.conversationId, convo.id))
+        .orderBy(desc(chatMessages.createdAt))
+        .limit(1);
+      
+      return {
+        ...convo,
+        members: memberRows.map(r => r.users),
+        lastMessage: lastMsg || undefined,
+      };
+    }));
+    
+    return enriched;
+  }
+
+  async getConversationById(conversationId: number): Promise<(Conversation & { members: User[] }) | undefined> {
+    const [convo] = await db.select().from(conversations).where(eq(conversations.id, conversationId));
+    if (!convo) return undefined;
+    
+    const memberRows = await db.select()
+      .from(conversationMembers)
+      .innerJoin(users, eq(conversationMembers.userId, users.id))
+      .where(eq(conversationMembers.conversationId, conversationId));
+    
+    return {
+      ...convo,
+      members: memberRows.map(r => r.users),
+    };
+  }
+
+  async createConversation(creatorId: number, memberIds: number[], name?: string, isGroup?: boolean): Promise<Conversation> {
+    const [convo] = await db.insert(conversations).values({
+      name: name || null,
+      isGroup: isGroup || false,
+      createdByUserId: creatorId,
+    }).returning();
+    
+    // Add all members including creator
+    const allMemberIds = Array.from(new Set([creatorId, ...memberIds]));
+    await db.insert(conversationMembers).values(
+      allMemberIds.map(userId => ({ conversationId: convo.id, userId }))
+    );
+    
+    return convo;
+  }
+
+  async findDirectConversation(userId1: number, userId2: number): Promise<Conversation | undefined> {
+    // Find a non-group conversation where both users are members
+    const user1Convos = await db.select({ conversationId: conversationMembers.conversationId })
+      .from(conversationMembers)
+      .where(eq(conversationMembers.userId, userId1));
+    
+    const user1ConvoIds = user1Convos.map(c => c.conversationId);
+    if (user1ConvoIds.length === 0) return undefined;
+    
+    const sharedConvos = await db.select({ conversationId: conversationMembers.conversationId })
+      .from(conversationMembers)
+      .where(and(
+        eq(conversationMembers.userId, userId2),
+        inArray(conversationMembers.conversationId, user1ConvoIds)
+      ));
+    
+    for (const c of sharedConvos) {
+      const [convo] = await db.select().from(conversations).where(
+        and(eq(conversations.id, c.conversationId), eq(conversations.isGroup, false))
+      );
+      if (convo) {
+        // Verify it's exactly 2 members
+        const members = await db.select().from(conversationMembers)
+          .where(eq(conversationMembers.conversationId, convo.id));
+        if (members.length === 2) return convo;
+      }
+    }
+    
+    return undefined;
+  }
+
+  async getOrCreateDirectConversation(userId1: number, userId2: number): Promise<Conversation> {
+    const existing = await this.findDirectConversation(userId1, userId2);
+    if (existing) return existing;
+    return this.createConversation(userId1, [userId2], undefined, false);
+  }
+
+  // Chat Messages
+  async getChatMessages(conversationId: number): Promise<Array<ChatMessage & { user: User }>> {
+    const result = await db
+      .select()
+      .from(chatMessages)
+      .innerJoin(users, eq(chatMessages.userId, users.id))
+      .where(eq(chatMessages.conversationId, conversationId))
+      .orderBy(chatMessages.createdAt);
+    return result.map(r => ({ ...r.chat_messages, user: r.users }));
+  }
+
+  async createChatMessage(data: InsertChatMessage): Promise<ChatMessage> {
+    const [message] = await db.insert(chatMessages).values(data).returning();
+    // Update conversation's updatedAt
+    await db.update(conversations)
+      .set({ updatedAt: new Date() })
+      .where(eq(conversations.id, data.conversationId));
+    return message;
+  }
+
+  // Trip linking to pods
+  async linkTripToPod(tripId: number, podId: number): Promise<void> {
+    await db.update(podTrips)
+      .set({ podId })
+      .where(eq(podTrips.id, tripId));
+  }
+
+  async unlinkTripFromPod(tripId: number): Promise<void> {
+    // We can't really unlink since podId is required, but we could implement this differently
+    // For now, this is a no-op since trips must belong to a pod
   }
 }
 

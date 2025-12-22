@@ -137,6 +137,12 @@ export const api = {
       return res.json();
     },
     
+    getAll: async (): Promise<User[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/users`);
+      if (!res.ok) throw new Error("Failed to fetch users");
+      return res.json();
+    },
+    
     getMyTrips: async (): Promise<any[]> => {
       const res = await fetchWithAuth(`${API_BASE}/users/me/trips`);
       if (!res.ok) throw new Error("Failed to fetch trips");
@@ -318,6 +324,29 @@ export const api = {
       });
       if (!res.ok) throw new Error("Failed to send message");
       return res.json();
+    },
+    
+    getPosts: async (podId: number): Promise<any[]> => {
+      const res = await fetch(`${API_BASE}/pods/${podId}/posts`);
+      if (!res.ok) throw new Error("Failed to fetch posts");
+      return res.json();
+    },
+    
+    createPost: async (podId: number, data: { content: string; imageUrl?: string }): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/pods/${podId}/posts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create post");
+      return res.json();
+    },
+    
+    deletePost: async (podId: number, postId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/pods/${podId}/posts/${postId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete post");
     },
     
     getExperiences: async (podId: number): Promise<Experience[]> => {
@@ -541,6 +570,54 @@ export const api = {
     getCounts: async (userId: number): Promise<{ followers: number; following: number }> => {
       const res = await fetch(`${API_BASE}/users/${userId}/follow-counts`);
       if (!res.ok) throw new Error("Failed to fetch follow counts");
+      return res.json();
+    },
+  },
+  
+  conversations: {
+    getAll: async (): Promise<any[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/conversations`);
+      if (!res.ok) throw new Error("Failed to fetch conversations");
+      return res.json();
+    },
+    
+    getById: async (conversationId: number): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/conversations/${conversationId}`);
+      if (!res.ok) throw new Error("Failed to fetch conversation");
+      return res.json();
+    },
+    
+    create: async (memberIds: number[], name?: string, isGroup?: boolean): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/conversations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberIds, name, isGroup }),
+      });
+      if (!res.ok) throw new Error("Failed to create conversation");
+      return res.json();
+    },
+    
+    getOrCreateDirect: async (userId: number): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/conversations/direct/${userId}`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to get or create conversation");
+      return res.json();
+    },
+    
+    getMessages: async (conversationId: number): Promise<any[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/conversations/${conversationId}/messages`);
+      if (!res.ok) throw new Error("Failed to fetch messages");
+      return res.json();
+    },
+    
+    sendMessage: async (conversationId: number, content: string, imageUrl?: string): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/conversations/${conversationId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content, imageUrl }),
+      });
+      if (!res.ok) throw new Error("Failed to send message");
       return res.json();
     },
   },

@@ -382,6 +382,40 @@ export const conciergeRequestItems = pgTable("concierge_request_items", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const podPosts = pgTable("pod_posts", {
+  id: serial("id").primaryKey(),
+  podId: integer("pod_id").notNull().references(() => pods.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  content: text("content").notNull(),
+  imageUrl: text("image_url"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const conversations = pgTable("conversations", {
+  id: serial("id").primaryKey(),
+  name: text("name"),
+  isGroup: boolean("is_group").default(false).notNull(),
+  createdByUserId: integer("created_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const conversationMembers = pgTable("conversation_members", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull().references(() => conversations.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
+});
+
+export const chatMessages = pgTable("chat_messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull().references(() => conversations.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  content: text("content").notNull(),
+  imageUrl: text("image_url"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({ id: true });
 export const insertExperienceSchema = createInsertSchema(experiences).omit({ id: true, createdAt: true });
@@ -411,6 +445,10 @@ export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, cre
 export const insertOrderItemSchema = createInsertSchema(orderItems).omit({ id: true });
 export const insertConciergeRequestSchema = createInsertSchema(conciergeRequests).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertConciergeRequestItemSchema = createInsertSchema(conciergeRequestItems).omit({ id: true, createdAt: true });
+export const insertPodPostSchema = createInsertSchema(podPosts).omit({ id: true, createdAt: true });
+export const insertConversationSchema = createInsertSchema(conversations).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertConversationMemberSchema = createInsertSchema(conversationMembers).omit({ id: true, joinedAt: true });
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -517,3 +555,15 @@ export type InsertConciergeRequest = z.infer<typeof insertConciergeRequestSchema
 
 export type ConciergeRequestItem = typeof conciergeRequestItems.$inferSelect;
 export type InsertConciergeRequestItem = z.infer<typeof insertConciergeRequestItemSchema>;
+
+export type PodPost = typeof podPosts.$inferSelect;
+export type InsertPodPost = z.infer<typeof insertPodPostSchema>;
+
+export type Conversation = typeof conversations.$inferSelect;
+export type InsertConversation = z.infer<typeof insertConversationSchema>;
+
+export type ConversationMember = typeof conversationMembers.$inferSelect;
+export type InsertConversationMember = z.infer<typeof insertConversationMemberSchema>;
+
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;

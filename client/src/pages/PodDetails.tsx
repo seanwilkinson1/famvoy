@@ -14,7 +14,8 @@ import { format } from "date-fns";
 export default function PodDetails() {
   const [match, params] = useRoute("/pod/:id");
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<"chat" | "experiences" | "albums" | "trips">("chat");
+  const [activeTab, setActiveTab] = useState<"posts" | "experiences" | "albums" | "trips">("posts");
+  const [postInput, setPostInput] = useState("");
   const [messageInput, setMessageInput] = useState("");
   const [showExperiencePicker, setShowExperiencePicker] = useState(false);
   const [showAddExperienceModal, setShowAddExperienceModal] = useState(false);
@@ -83,6 +84,24 @@ export default function PodDetails() {
     queryKey: ["podTrips", podId],
     queryFn: () => api.trips.getByPod(podId),
     enabled: podId > 0,
+  });
+
+  const { data: podPosts = [], refetch: refetchPosts } = useQuery({
+    queryKey: ["podPosts", podId],
+    queryFn: () => api.pods.getPosts(podId),
+    enabled: podId > 0,
+  });
+
+  const createPostMutation = useMutation({
+    mutationFn: (data: { content: string; imageUrl?: string }) => api.pods.createPost(podId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["podPosts", podId] });
+      setPostInput("");
+      toast.success("Post shared!");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
   });
 
   const createTripMutation = useMutation({
@@ -303,7 +322,7 @@ export default function PodDetails() {
 
         {/* Tabs */}
         <div className="mt-6 flex rounded-xl bg-gray-100 p-1">
-          {["chat", "experiences", "albums", "trips"].map((t) => (
+          {["posts", "experiences", "albums", "trips"].map((t) => (
             <button
               key={t}
               onClick={() => setActiveTab(t as any)}
@@ -321,176 +340,70 @@ export default function PodDetails() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto bg-gray-50/50">
-        {activeTab === "chat" && (
+        {activeTab === "posts" && (
           <div className="flex h-full flex-col">
-            <div className="flex-1 space-y-4 p-4">
-              {messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-32 text-gray-400">
-                  <p className="text-sm">No messages yet. Say hi!</p>
-                </div>
-              ) : messages.map((msg) => {
-                const isMe = msg.userId === currentUser?.id;
-                const sharedExp = msg.sharedExperienceId ? allExperiences.find(e => e.id === msg.sharedExperienceId) : null;
-                
-                return (
-                  <div key={msg.id} className={cn("flex gap-3", isMe && "flex-row-reverse")}>
-                    {!isMe ? (
-                      <img 
-                        src={msg.user.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400'} 
-                        className="h-8 w-8 rounded-full object-cover" 
-                        alt={msg.user.name || 'Family'} 
-                      />
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">You</div>
-                    )}
-                    <div className={cn(
-                      "rounded-2xl shadow-sm max-w-[75%] overflow-hidden",
-                      msg.messageType === 'image' || msg.messageType === 'experience' ? "p-0" : "p-3",
-                      isMe ? "rounded-tr-none bg-primary" : "rounded-tl-none bg-white"
-                    )}>
-                      {msg.messageType === 'image' && msg.imageUrl ? (
-                        <div>
-                          <img 
-                            src={msg.imageUrl} 
-                            alt="Shared image" 
-                            className="w-full max-h-64 object-cover cursor-pointer"
-                            onClick={() => window.open(msg.imageUrl!, '_blank')}
-                          />
-                          <span className={cn("block text-[10px] p-2", isMe ? "text-primary-foreground/70" : "text-gray-400")}>
-                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                      ) : msg.messageType === 'experience' && sharedExp ? (
-                        <div 
-                          className="cursor-pointer"
-                          onClick={() => setLocation(`/experience/${sharedExp.id}`)}
-                        >
-                          <div className="relative h-32 w-full">
-                            <img 
-                              src={sharedExp.image || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400'} 
-                              alt={sharedExp.title}
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                            <div className="absolute bottom-2 left-2 right-2">
-                              <span className="inline-block rounded bg-primary/90 px-1.5 py-0.5 text-[10px] font-bold text-white mb-1">
-                                {sharedExp.category}
-                              </span>
-                              <p className="text-xs font-bold text-white line-clamp-1">{sharedExp.title}</p>
-                            </div>
-                          </div>
-                          <div className="p-2">
-                            <p className={cn("text-xs", isMe ? "text-primary-foreground/80" : "text-gray-500")}>
-                              Shared an experience
-                            </p>
-                            <span className={cn("block text-[10px]", isMe ? "text-primary-foreground/70" : "text-gray-400")}>
-                              {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <p className={cn("text-sm", isMe ? "text-white" : "text-gray-800")}>{msg.content}</p>
-                          <span className={cn("mt-1 block text-[10px]", isMe ? "text-primary-foreground/70" : "text-gray-400")}>
-                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Experience Picker Modal */}
-            {showExperiencePicker && (
-              <div className="absolute inset-0 bg-black/50 z-50 flex items-end">
-                <div className="bg-white rounded-t-3xl w-full max-h-[70vh] overflow-hidden">
-                  <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                    <h3 className="font-heading text-lg font-bold">Share an Experience</h3>
-                    <button 
-                      onClick={() => setShowExperiencePicker(false)}
-                      className="rounded-full bg-gray-100 p-2"
+            {/* Post Input */}
+            <div className="border-b border-gray-100 bg-white p-4">
+              <div className="flex items-start gap-3">
+                <img 
+                  src={currentUser?.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400'} 
+                  className="h-10 w-10 rounded-full object-cover" 
+                  alt="You" 
+                />
+                <div className="flex-1">
+                  <textarea
+                    placeholder="Share an update with the pod..."
+                    className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm outline-none focus:border-primary focus:bg-white transition-colors"
+                    rows={2}
+                    value={postInput}
+                    onChange={(e) => setPostInput(e.target.value)}
+                    data-testid="input-post"
+                  />
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      onClick={() => postInput.trim() && createPostMutation.mutate({ content: postInput.trim() })}
+                      disabled={createPostMutation.isPending || !postInput.trim()}
+                      className="rounded-full bg-primary px-4 py-2 text-xs font-bold text-white shadow-sm active:scale-95 transition-transform disabled:opacity-50"
+                      data-testid="button-post"
                     >
-                      <X className="h-5 w-5" />
+                      {createPostMutation.isPending ? "Posting..." : "Post"}
                     </button>
                   </div>
-                  <div className="overflow-y-auto p-4 space-y-3 max-h-[55vh]">
-                    {allExperiences.length === 0 ? (
-                      <p className="text-center text-gray-400 py-8">No experiences to share</p>
-                    ) : allExperiences.map((exp) => (
-                      <div 
-                        key={exp.id}
-                        onClick={() => handleShareExperience(exp)}
-                        className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
-                      >
-                        <img 
-                          src={exp.image || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400'} 
-                          alt={exp.title}
-                          className="h-16 w-16 rounded-lg object-cover"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <span className="inline-block rounded bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary mb-1">
-                            {exp.category}
-                          </span>
-                          <p className="font-bold text-sm text-gray-900 line-clamp-1">{exp.title}</p>
-                          <p className="text-xs text-gray-500 line-clamp-1">{exp.locationName}</p>
-                        </div>
-                        <Share2 className="h-5 w-5 text-gray-400" />
-                      </div>
-                    ))}
-                  </div>
                 </div>
               </div>
-            )}
+            </div>
 
-            {/* Input Area */}
-            <div className="border-t border-gray-200 bg-white p-4 pb-8">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageUpload}
-              />
-              <div className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2">
-                <button 
-                  className="text-gray-400 hover:text-primary disabled:opacity-50" 
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
-                  data-testid="button-image"
-                >
-                  {isUploading ? (
-                    <div className="h-5 w-5 rounded-full border-2 border-gray-300 border-t-primary animate-spin" />
-                  ) : (
-                    <Camera className="h-5 w-5" />
+            {/* Posts Feed */}
+            <div className="flex-1 space-y-4 p-4">
+              {podPosts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+                  <p className="text-sm">No posts yet. Share something with the pod!</p>
+                </div>
+              ) : podPosts.map((post: any) => (
+                <div key={post.id} className="rounded-2xl bg-white p-4 shadow-sm" data-testid={`post-${post.id}`}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <img 
+                      src={post.user?.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400'} 
+                      className="h-10 w-10 rounded-full object-cover" 
+                      alt={post.user?.name || 'Family'} 
+                    />
+                    <div>
+                      <p className="font-bold text-sm text-gray-900">{post.user?.name || 'Family'}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(post.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })} at {new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-800 whitespace-pre-wrap">{post.content}</p>
+                  {post.imageUrl && (
+                    <img 
+                      src={post.imageUrl} 
+                      alt="Post image" 
+                      className="mt-3 w-full rounded-xl object-cover max-h-64"
+                    />
                   )}
-                </button>
-                <button 
-                  className="text-gray-400 hover:text-primary"
-                  onClick={() => setShowExperiencePicker(true)}
-                  data-testid="button-share-experience"
-                >
-                  <Share2 className="h-5 w-5" />
-                </button>
-                <input 
-                  type="text" 
-                  placeholder="Message..." 
-                  className="flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-gray-400"
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && messageInput.trim() && sendMessageMutation.mutate({})}
-                  data-testid="input-message"
-                />
-                <button 
-                  className="rounded-full bg-primary p-2 text-white shadow-sm active:scale-90 transition-transform disabled:opacity-50"
-                  onClick={() => sendMessageMutation.mutate({})}
-                  disabled={sendMessageMutation.isPending || !messageInput.trim()}
-                  data-testid="button-send"
-                >
-                  <Send className="h-4 w-4" />
-                </button>
-              </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
