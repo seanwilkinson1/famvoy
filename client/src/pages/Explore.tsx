@@ -1,7 +1,7 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { FamilySwipeCard, SwipeButtons } from "@/components/shared/FamilySwipeCard";
 import { MatchModal } from "@/components/shared/MatchModal";
-import { ExploreMap } from "@/components/shared/ExploreMap";
+import { ExploreMap, MapBounds } from "@/components/shared/ExploreMap";
 import { useGoogleMapsContext } from "@/components/shared/GoogleMapsProvider";
 import { Search, Navigation, Map, Users, Compass, X, ChevronDown, MessageCircle, MapPin, Filter, SlidersHorizontal, Locate, Clock, DollarSign, Star, CheckCircle2, ArrowRight, Loader2, Plane, MapPinned, Eye, EyeOff, Check } from "lucide-react";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -144,6 +144,7 @@ export default function Explore() {
   
   const [activeFilterModal, setActiveFilterModal] = useState<FilterModalType>(null);
   const [podSearchQuery, setPodSearchQuery] = useState("");
+  const [visibleBounds, setVisibleBounds] = useState<MapBounds | null>(null);
   
   const { location: userLocation } = useUserLocation();
   const { isLoaded: mapsLoaded } = useGoogleMapsContext();
@@ -343,7 +344,20 @@ export default function Explore() {
     });
   }, [displayExperiences, categoryFilter, maxDistance, selectedInterests]);
 
-  const formattedExperiences = filteredExperiences.map(exp => ({
+  const isInBounds = useCallback((lat: number, lng: number, bounds: MapBounds | null) => {
+    if (!bounds) return true;
+    return lat >= bounds.south && lat <= bounds.north && 
+           lng >= bounds.west && lng <= bounds.east;
+  }, []);
+
+  const experiencesInView = useMemo(() => {
+    if (!visibleBounds) return filteredExperiences;
+    return filteredExperiences.filter(exp => 
+      isInBounds(exp.locationLat, exp.locationLng, visibleBounds)
+    );
+  }, [filteredExperiences, visibleBounds, isInBounds]);
+
+  const formattedExperiences = experiencesInView.map(exp => ({
     ...formatExperience(exp as any),
     distance: 'distance' in exp ? (exp as any).distance : undefined,
   }));
@@ -384,6 +398,7 @@ export default function Explore() {
             userLocation={userLocation}
             searchLocation={searchLocation}
             people={showPeopleOnMap ? filteredExplorePeople : []}
+            onBoundsChange={setVisibleBounds}
           />
         </div>
 
@@ -570,7 +585,7 @@ export default function Explore() {
           <div className="px-6 pt-2 h-[calc(100%-32px)] overflow-hidden flex flex-col">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="font-heading text-lg font-bold text-gray-900">
-                {searchQuery ? `Results for "${searchQuery}"` : `${filteredExperiences.length} experiences nearby`}
+                {searchQuery ? `Results for "${searchQuery}"` : `${formattedExperiences.length} experiences in view`}
               </h3>
             </div>
 

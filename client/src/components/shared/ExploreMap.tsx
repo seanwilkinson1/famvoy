@@ -38,6 +38,13 @@ const mapOptions: google.maps.MapOptions = {
   ],
 };
 
+export interface MapBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
 interface ExploreMapProps {
   experiences: Experience[];
   userLocation?: { lat: number; lng: number } | null;
@@ -45,6 +52,7 @@ interface ExploreMapProps {
   className?: string;
   searchLocation?: { lat: number; lng: number } | null;
   people?: ExplorePerson[];
+  onBoundsChange?: (bounds: MapBounds) => void;
 }
 
 function clusterPeople(people: ExplorePerson[], clusterRadius: number): PersonCluster[] {
@@ -92,6 +100,7 @@ export function ExploreMap({
   className = "",
   searchLocation,
   people = [],
+  onBoundsChange,
 }: ExploreMapProps) {
   const [, setLocation] = useLocation();
   const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
@@ -184,7 +193,23 @@ export function ExploreMap({
         setZoomLevel(newZoom);
       }
     });
-  }, []);
+    
+    mapInstance.addListener('idle', () => {
+      if (onBoundsChange) {
+        const bounds = mapInstance.getBounds();
+        if (bounds) {
+          const ne = bounds.getNorthEast();
+          const sw = bounds.getSouthWest();
+          onBoundsChange({
+            north: ne.lat(),
+            south: sw.lat(),
+            east: ne.lng(),
+            west: sw.lng(),
+          });
+        }
+      }
+    });
+  }, [onBoundsChange]);
 
   const handleExperienceClick = (exp: Experience) => {
     if (onExperienceClick) {
