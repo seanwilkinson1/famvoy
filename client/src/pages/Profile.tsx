@@ -2,7 +2,7 @@ import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { PodCard } from "@/components/shared/PodCard";
 import { ImageUpload } from "@/components/shared/ImageUpload";
 import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
-import { ExploreMap } from "@/components/shared/ExploreMap";
+import { StaticMap } from "@/components/shared/StaticMap";
 import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Trophy, CheckCircle, Star, Heart, Globe, Quote, Plane, Users, Share2, UserPlus, ChevronLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -529,11 +529,17 @@ export default function Profile() {
     <div className="min-h-screen bg-background pb-32">
       {/* Map Header - 30% viewport height */}
       <div className="relative h-[30vh] min-h-[200px]">
-        <ExploreMap
-          experiences={[]}
-          userLocation={userLocation}
-          className="h-full w-full"
-        />
+        {userLocation ? (
+          <StaticMap
+            center={userLocation}
+            className="h-full w-full"
+            zoom={10}
+          />
+        ) : (
+          <div className="h-full w-full bg-gray-200 flex items-center justify-center">
+            <span className="text-gray-500 text-sm">No location set</span>
+          </div>
+        )}
         
         {/* Top controls overlay */}
         <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10 pt-10">
