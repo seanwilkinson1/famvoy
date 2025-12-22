@@ -665,7 +665,7 @@ export default function Profile() {
       <div className="bg-white sticky top-14 z-20 border-b border-gray-200">
         <div className="flex">
           {[
-            { id: "experiences", label: `Experiences (${formattedUserExperiences.length})` },
+            { id: "experiences", label: "Experiences" },
             { id: "about", label: "About" },
             { id: "saved", label: "Saved" },
             { id: "trips", label: "Trips" },
