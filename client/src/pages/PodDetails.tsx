@@ -278,9 +278,9 @@ export default function PodDetails() {
   if (!match || !pod) return null;
 
   return (
-    <div className="flex h-screen flex-col bg-background pb-20">
+    <div className="flex h-screen flex-col bg-background pb-20 lg:pb-0">
       {/* Header */}
-      <div className="border-b border-gray-100 bg-white px-6 pt-14 pb-4 shadow-sm z-10">
+      <div className="border-b border-gray-100 bg-white px-6 pt-14 lg:pt-6 pb-4 shadow-sm z-10 lg:max-w-5xl lg:mx-auto lg:w-full lg:rounded-b-none">
         <div className="mb-4 flex items-center justify-between">
           <button 
             onClick={() => setLocation("/pods")} 

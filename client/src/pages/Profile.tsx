@@ -246,7 +246,7 @@ export default function Profile() {
 
   if (isEditing) {
     return (
-      <div className="min-h-screen bg-background pt-14 pb-32 px-6">
+      <div className="min-h-screen bg-background pt-14 lg:pt-8 pb-32 lg:pb-8 px-6 lg:max-w-4xl lg:mx-auto">
         <div className="mb-6 flex justify-between">
           <button
             onClick={() => setIsEditing(false)}
@@ -526,9 +526,9 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-background pb-32 lg:pb-8">
       {/* Map Header - 30% viewport height */}
-      <div className="relative h-[30vh] min-h-[200px]">
+      <div className="relative h-[30vh] min-h-[200px] lg:max-w-6xl lg:mx-auto lg:mt-6 lg:rounded-2xl lg:overflow-hidden">
         {userLocation ? (
           <StaticMap
             center={userLocation}

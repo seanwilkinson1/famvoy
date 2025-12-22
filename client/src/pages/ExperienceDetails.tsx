@@ -145,9 +145,9 @@ export default function ExperienceDetails() {
   const formattedSimilar = similar.map(exp => formatExperience(exp as any));
 
   return (
-    <div className="min-h-screen bg-background pb-24 relative z-50">
+    <div className="min-h-screen bg-background pb-24 lg:pb-8 relative z-50">
       {/* Hero Image */}
-      <div className="relative h-72 w-full">
+      <div className="relative h-72 w-full lg:max-w-5xl lg:mx-auto lg:mt-6 lg:rounded-2xl lg:overflow-hidden">
         <img
           src={experience.image}
           alt={experience.title}

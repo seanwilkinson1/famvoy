@@ -79,9 +79,9 @@ export default function Trips() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-20 lg:pb-8">
       {/* Header */}
-      <div className="bg-white px-4 pt-14 pb-4 border-b border-gray-100 sticky top-0 z-10">
+      <div className="bg-white px-4 pt-14 lg:pt-8 pb-4 border-b border-gray-100 lg:border-b-0 sticky top-0 z-10 lg:max-w-6xl lg:mx-auto">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-charcoal font-heading">Your Trips</h1>
           <button
@@ -96,7 +96,7 @@ export default function Trips() {
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-6">
+      <div className="p-4 space-y-6 lg:max-w-6xl lg:mx-auto">
         {userTrips.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -119,7 +119,7 @@ export default function Trips() {
             {upcomingTrips.length > 0 && (
               <section>
                 <h2 className="text-lg font-semibold text-charcoal mb-3">Upcoming</h2>
-                <div className="space-y-3">
+                <div className="space-y-3 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0">
                   {upcomingTrips.map((trip: any) => (
                     <Link key={trip.id} href={`/trip/${trip.id}`}>
                       <div 
@@ -163,7 +163,7 @@ export default function Trips() {
             {pastTrips.length > 0 && (
               <section>
                 <h2 className="text-lg font-semibold text-charcoal mb-3">Past Trips</h2>
-                <div className="space-y-3">
+                <div className="space-y-3 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0">
                   {pastTrips.map((trip: any) => (
                     <Link key={trip.id} href={`/trip/${trip.id}`}>
                       <div 
@@ -200,8 +200,8 @@ export default function Trips() {
 
       {/* Create Trip Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
-          <div className="bg-white rounded-t-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end lg:items-center lg:justify-center">
+          <div className="bg-white rounded-t-3xl lg:rounded-2xl w-full lg:max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <h3 className="font-heading text-lg font-bold">Plan a New Trip</h3>
               <button 

@@ -92,7 +92,7 @@ export default function Pods() {
     : (activeTab === "your-pods" ? userPods : discoverPods.filter(p => !userPodIds.has(p.id)));
 
   return (
-    <div className="min-h-screen bg-background px-6 pt-14 pb-32">
+    <div className="min-h-screen bg-background px-6 pt-14 lg:pt-8 pb-32 lg:pb-8 lg:max-w-6xl lg:mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="font-heading text-3xl font-bold text-gray-900">Pods</h1>
         <button 
@@ -170,7 +170,7 @@ export default function Pods() {
           )}
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0">
           {displayPods.map((pod) => (
             <div key={pod.id} className="relative">
               <PodCard pod={pod} />
