@@ -374,7 +374,7 @@ export default function Explore() {
   const nextFamily = discoverFamilies[currentFamilyIndex + 1];
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-gray-100">
+    <div className="fixed inset-0 w-full overflow-hidden bg-gray-100">
       {/* Map View */}
       <div className="absolute inset-0">
         {/* Interactive Map */}
