@@ -28,6 +28,7 @@ const mapOptions: google.maps.MapOptions = {
   mapTypeControl: false,
   streetViewControl: false,
   fullscreenControl: false,
+  gestureHandling: 'greedy',
   styles: [
     {
       featureType: "poi",
