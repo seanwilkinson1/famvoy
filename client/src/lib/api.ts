@@ -746,13 +746,23 @@ export const api = {
       return res.json();
     },
 
-    create: async (podId: number, data: { name: string; destination: string; startDate: string; endDate: string }): Promise<any> => {
-      const res = await fetchWithAuth(`${API_BASE}/pods/${podId}/trips`, {
+    create: async (data: { name: string; destination: string; startDate: string; endDate: string; podId?: number }): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to create trip");
+      return res.json();
+    },
+
+    linkToPod: async (tripId: number, podId: number): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/link-pod`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ podId }),
+      });
+      if (!res.ok) throw new Error("Failed to link trip to pod");
       return res.json();
     },
 

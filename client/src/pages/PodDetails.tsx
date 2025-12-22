@@ -25,10 +25,6 @@ export default function PodDetails() {
   const [selectedAlbum, setSelectedAlbum] = useState<any | null>(null);
   const [albumName, setAlbumName] = useState("");
   const [albumDescription, setAlbumDescription] = useState("");
-  const [tripName, setTripName] = useState("");
-  const [tripDestination, setTripDestination] = useState("");
-  const [tripStartDate, setTripStartDate] = useState("");
-  const [tripEndDate, setTripEndDate] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [isUploadingAlbumPhoto, setIsUploadingAlbumPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -86,6 +82,13 @@ export default function PodDetails() {
     enabled: podId > 0,
   });
 
+  const { data: userTrips = [] } = useQuery({
+    queryKey: ["userTrips"],
+    queryFn: () => api.users.getMyTrips(),
+  });
+
+  const unlinkedTrips = userTrips.filter((trip: any) => !trip.podId || trip.podId !== podId);
+
   const { data: podPosts = [], refetch: refetchPosts } = useQuery({
     queryKey: ["podPosts", podId],
     queryFn: () => api.pods.getPosts(podId),
@@ -104,22 +107,13 @@ export default function PodDetails() {
     },
   });
 
-  const createTripMutation = useMutation({
-    mutationFn: () => api.trips.create(podId, {
-      name: tripName,
-      destination: tripDestination,
-      startDate: tripStartDate,
-      endDate: tripEndDate,
-    }),
-    onSuccess: (trip) => {
+  const linkTripMutation = useMutation({
+    mutationFn: (tripId: number) => api.trips.linkToPod(tripId, podId),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["podTrips", podId] });
+      queryClient.invalidateQueries({ queryKey: ["userTrips"] });
       setShowCreateTripModal(false);
-      setTripName("");
-      setTripDestination("");
-      setTripStartDate("");
-      setTripEndDate("");
-      toast.success("Trip created!");
-      setLocation(`/trip/${trip.id}`);
+      toast.success("Trip linked to pod!");
     },
     onError: (error: Error) => {
       toast.error(error.message);
@@ -700,27 +694,28 @@ export default function PodDetails() {
         {activeTab === "trips" && (
           <div className="flex-1 overflow-y-auto p-4 pb-20">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-heading text-lg font-bold">Trip Plans</h3>
+              <h3 className="font-heading text-lg font-bold">Pod Trips</h3>
               <button
                 onClick={() => setShowCreateTripModal(true)}
                 className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white"
-                data-testid="button-create-trip"
+                data-testid="button-link-trip"
               >
                 <Plus className="h-4 w-4" />
-                New Trip
+                Link Trip
               </button>
             </div>
 
             {podTrips.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-gray-400">
                 <Plane className="h-12 w-12 mb-2 opacity-20" />
-                <p className="text-sm">No trips planned yet.</p>
+                <p className="text-sm">No trips linked yet.</p>
+                <p className="text-xs mt-1 text-gray-300">Create trips from the Trips tab, then link them here.</p>
                 <button 
                   onClick={() => setShowCreateTripModal(true)}
                   className="mt-4 text-primary font-bold text-sm"
-                  data-testid="button-plan-first-trip"
+                  data-testid="button-link-first-trip"
                 >
-                  Plan your first trip
+                  Link a trip
                 </button>
               </div>
             ) : (
@@ -799,74 +794,49 @@ export default function PodDetails() {
           <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-6">
             <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
               <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                <h3 className="font-heading text-lg font-bold">Plan a Trip</h3>
+                <h3 className="font-heading text-lg font-bold">Link a Trip</h3>
                 <button 
-                  onClick={() => {
-                    setShowCreateTripModal(false);
-                    setTripName("");
-                    setTripDestination("");
-                    setTripStartDate("");
-                    setTripEndDate("");
-                  }}
+                  onClick={() => setShowCreateTripModal(false)}
                   className="rounded-full bg-gray-100 p-2"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <div className="p-4 space-y-4">
-                <div>
-                  <label className="text-sm font-bold text-gray-700 mb-1 block">Trip Name</label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Summer Beach Vacation"
-                    className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:border-primary focus:outline-none"
-                    value={tripName}
-                    onChange={(e) => setTripName(e.target.value)}
-                    data-testid="input-trip-name"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-bold text-gray-700 mb-1 block">Destination</label>
-                  <input
-                    type="text"
-                    placeholder="e.g., San Diego, CA"
-                    className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:border-primary focus:outline-none"
-                    value={tripDestination}
-                    onChange={(e) => setTripDestination(e.target.value)}
-                    data-testid="input-trip-destination"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-sm font-bold text-gray-700 mb-1 block">Start Date</label>
-                    <input
-                      type="date"
-                      className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:border-primary focus:outline-none"
-                      value={tripStartDate}
-                      onChange={(e) => setTripStartDate(e.target.value)}
-                      data-testid="input-trip-start"
-                    />
+              <div className="p-4 space-y-3">
+                {unlinkedTrips.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Plane className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">No trips available to link.</p>
+                    <p className="text-xs mt-1">Create a trip from the Trips tab first.</p>
                   </div>
-                  <div>
-                    <label className="text-sm font-bold text-gray-700 mb-1 block">End Date</label>
-                    <input
-                      type="date"
-                      className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:border-primary focus:outline-none"
-                      value={tripEndDate}
-                      onChange={(e) => setTripEndDate(e.target.value)}
-                      min={tripStartDate}
-                      data-testid="input-trip-end"
-                    />
-                  </div>
-                </div>
-                <button
-                  onClick={() => createTripMutation.mutate()}
-                  disabled={!tripName.trim() || !tripDestination.trim() || !tripStartDate || !tripEndDate || createTripMutation.isPending}
-                  className="w-full rounded-xl bg-primary py-3 text-sm font-bold text-white disabled:opacity-50"
-                  data-testid="button-save-trip"
-                >
-                  {createTripMutation.isPending ? "Creating..." : "Create Trip"}
-                </button>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-500">Select a trip to link to this pod:</p>
+                    {unlinkedTrips.map((trip: any) => (
+                      <button
+                        key={trip.id}
+                        onClick={() => linkTripMutation.mutate(trip.id)}
+                        disabled={linkTripMutation.isPending}
+                        className="w-full bg-gray-50 rounded-xl p-3 text-left hover:bg-gray-100 transition-colors border border-gray-100"
+                        data-testid={`button-link-trip-${trip.id}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Plane className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-charcoal truncate">{trip.name}</h4>
+                            <div className="flex items-center gap-1 text-xs text-gray-400">
+                              <MapPin className="h-3 w-3" />
+                              <span className="truncate">{trip.destination}</span>
+                            </div>
+                          </div>
+                          <Plus className="h-5 w-5 text-primary" />
+                        </div>
+                      </button>
+                    ))}
+                  </>
+                )}
               </div>
             </div>
           </div>

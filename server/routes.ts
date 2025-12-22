@@ -1863,6 +1863,69 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/trips", requireAuth(), async (req, res) => {
+    try {
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      const { name, destination, startDate, endDate, podId } = req.body;
+      if (!name || !destination || !startDate || !endDate) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      const trip = await storage.createTrip({
+        name,
+        destination,
+        startDate,
+        endDate,
+        podId: podId || null,
+        createdByUserId: user.id,
+        status: "draft",
+      });
+      res.status(201).json(trip);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/trips/:id/link-pod", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.id);
+      const { podId } = req.body;
+      if (isNaN(tripId)) {
+        return res.status(400).json({ error: "Invalid trip ID" });
+      }
+      
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      const trip = await storage.getTripById(tripId);
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+      if (trip.createdByUserId !== user.id) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      
+      const updatedTrip = await storage.updateTrip(tripId, { podId });
+      res.json(updatedTrip);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/trips/:id", async (req, res) => {
     try {
       const tripId = parseInt(req.params.id);
@@ -2236,6 +2299,10 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Trip not found" });
       }
 
+      if (!trip.podId) {
+        return res.status(400).json({ error: "Trip must be linked to a pod to generate itinerary" });
+      }
+
       const pod = await storage.getPodWithMembers(trip.podId);
       if (!pod) {
         return res.status(404).json({ error: "Pod not found" });
@@ -2408,6 +2475,10 @@ Return ONLY valid JSON, no markdown or explanations.`;
         return res.status(404).json({ error: "Trip not found" });
       }
 
+      if (!trip.podId) {
+        return res.status(400).json({ error: "Trip must be linked to a pod to regenerate" });
+      }
+
       const pod = await storage.getPodWithMembers(trip.podId);
       if (!pod) {
         return res.status(404).json({ error: "Pod not found" });
@@ -2518,6 +2589,10 @@ Return ONLY valid JSON.`;
         return res.status(404).json({ error: "Trip not found" });
       }
 
+      if (!trip.podId) {
+        return res.status(400).json({ error: "Trip must be linked to a pod to confirm" });
+      }
+
       // Authorization check: ensure user is a member of the trip's pod
       const isMember = await storage.isPodMember(trip.podId, userId);
       if (!isMember) {
@@ -2596,6 +2671,10 @@ Return ONLY valid JSON.`;
         return res.status(404).json({ error: "Trip not found" });
       }
 
+      if (!trip.podId) {
+        return res.status(400).json({ error: "Trip must be linked to a pod" });
+      }
+
       // Authorization check
       const isMember = await storage.isPodMember(trip.podId, user.id);
       if (!isMember) {
@@ -2661,6 +2740,10 @@ Return ONLY valid JSON.`;
         return res.status(404).json({ error: "Trip not found" });
       }
 
+      if (!trip.podId) {
+        return res.status(400).json({ error: "Trip must be linked to a pod" });
+      }
+
       // Authorization check
       const isMember = await storage.isPodMember(trip.podId, user.id);
       if (!isMember) {
@@ -2707,6 +2790,10 @@ Return ONLY valid JSON.`;
       const trip = await storage.getTripById(tripId);
       if (!trip) {
         return res.status(404).json({ error: "Trip not found" });
+      }
+
+      if (!trip.podId) {
+        return res.status(400).json({ error: "Trip must be linked to a pod" });
       }
 
       // Authorization check
@@ -2762,6 +2849,10 @@ Return ONLY valid JSON.`;
         return res.status(404).json({ error: "Trip not found" });
       }
 
+      if (!trip.podId) {
+        return res.status(400).json({ error: "Trip must be linked to a pod" });
+      }
+
       // Authorization check
       const isMember = await storage.isPodMember(trip.podId, user.id);
       if (!isMember) {
@@ -2809,6 +2900,10 @@ Return ONLY valid JSON.`;
       const trip = await storage.getTripById(tripId);
       if (!trip) {
         return res.status(404).json({ error: "Trip not found" });
+      }
+
+      if (!trip.podId) {
+        return res.status(400).json({ error: "Trip must be linked to a pod" });
       }
 
       // Authorization check

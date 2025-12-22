@@ -207,7 +207,7 @@ export const experienceCheckins = pgTable("experience_checkins", {
 
 export const podTrips = pgTable("pod_trips", {
   id: serial("id").primaryKey(),
-  podId: integer("pod_id").notNull().references(() => pods.id),
+  podId: integer("pod_id").references(() => pods.id),
   name: text("name").notNull(),
   destination: text("destination").notNull(),
   startDate: text("start_date").notNull(),
