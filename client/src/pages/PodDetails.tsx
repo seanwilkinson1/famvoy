@@ -25,6 +25,7 @@ export default function PodDetails() {
   const [selectedAlbum, setSelectedAlbum] = useState<any | null>(null);
   const [albumName, setAlbumName] = useState("");
   const [albumDescription, setAlbumDescription] = useState("");
+  const [linkingTripId, setLinkingTripId] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isUploadingAlbumPhoto, setIsUploadingAlbumPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -87,7 +88,7 @@ export default function PodDetails() {
     queryFn: () => api.users.getMyTrips(),
   });
 
-  const unlinkedTrips = userTrips.filter((trip: any) => !trip.podId || trip.podId !== podId);
+  const unlinkedTrips = userTrips.filter((trip: any) => !trip.podId);
 
   const { data: podPosts = [], refetch: refetchPosts } = useQuery({
     queryKey: ["podPosts", podId],
@@ -108,14 +109,19 @@ export default function PodDetails() {
   });
 
   const linkTripMutation = useMutation({
-    mutationFn: (tripId: number) => api.trips.linkToPod(tripId, podId),
+    mutationFn: (tripId: number) => {
+      setLinkingTripId(tripId);
+      return api.trips.linkToPod(tripId, podId);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["podTrips", podId] });
       queryClient.invalidateQueries({ queryKey: ["userTrips"] });
       setShowCreateTripModal(false);
+      setLinkingTripId(null);
       toast.success("Trip linked to pod!");
     },
     onError: (error: Error) => {
+      setLinkingTripId(null);
       toast.error(error.message);
     },
   });
@@ -816,8 +822,12 @@ export default function PodDetails() {
                       <button
                         key={trip.id}
                         onClick={() => linkTripMutation.mutate(trip.id)}
-                        disabled={linkTripMutation.isPending}
-                        className="w-full bg-gray-50 rounded-xl p-3 text-left hover:bg-gray-100 transition-colors border border-gray-100"
+                        disabled={linkingTripId !== null}
+                        className={cn(
+                          "w-full bg-gray-50 rounded-xl p-3 text-left transition-colors border border-gray-100",
+                          linkingTripId === trip.id ? "opacity-70" : "hover:bg-gray-100",
+                          linkingTripId !== null && linkingTripId !== trip.id && "opacity-50"
+                        )}
                         data-testid={`button-link-trip-${trip.id}`}
                       >
                         <div className="flex items-center gap-3">
@@ -831,7 +841,11 @@ export default function PodDetails() {
                               <span className="truncate">{trip.destination}</span>
                             </div>
                           </div>
-                          <Plus className="h-5 w-5 text-primary" />
+                          {linkingTripId === trip.id ? (
+                            <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Plus className="h-5 w-5 text-primary" />
+                          )}
                         </div>
                       </button>
                     ))}
