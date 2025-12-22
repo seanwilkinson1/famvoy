@@ -1,5 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -8,6 +8,7 @@ import { TopHeader } from "@/components/layout/TopHeader";
 import { FloatingActionButton } from "@/components/layout/FloatingActionButton";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { GoogleMapsProvider } from "@/components/shared/GoogleMapsProvider";
+import { PullToRefresh } from "@/components/shared/PullToRefresh";
 import { SignedIn, SignedOut, useAuth } from "@clerk/clerk-react";
 import NotFound from "@/pages/not-found";
 
@@ -44,6 +45,10 @@ function AuthenticatedRouter() {
     setAuthTokenGetter(getToken);
   }, [getToken]);
 
+  const handleRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries();
+  }, []);
+
   // Only show header on home page (SeaPeople style)
   const showHeader = location === "/";
 
@@ -68,7 +73,7 @@ function AuthenticatedRouter() {
       <div className="mx-auto min-h-screen max-w-md bg-background shadow-2xl overflow-hidden relative flex flex-col">
         {showHeader && <TopHeader />}
         <PWAInstallBanner />
-        <div className="flex-1 overflow-auto pb-24">
+        <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-auto pb-24">
           <Switch>
             <Route path="/" component={Home} />
             <Route path="/explore" component={Explore} />
@@ -91,7 +96,7 @@ function AuthenticatedRouter() {
             <Route path="/agent/request/:id" component={AgentRequestDetails} />
             <Route component={NotFound} />
           </Switch>
-        </div>
+        </PullToRefresh>
         <FloatingActionButton />
         <BottomNav />
       </div>

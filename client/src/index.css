@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Disable native browser pull-to-refresh for PWA */
+html, body {
+  overscroll-behavior-y: contain;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
