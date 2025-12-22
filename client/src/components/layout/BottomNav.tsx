@@ -31,7 +31,7 @@ export function BottomNav() {
   return (
     <nav 
       ref={navRef}
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/80 px-6 pb-8 pt-4 backdrop-blur-lg md:pb-4 lg:hidden"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/80 px-6 pb-8 pt-4 backdrop-blur-lg md:hidden"
     >
       <div className="mx-auto flex max-w-md justify-between">
         {tabs.map((tab) => {

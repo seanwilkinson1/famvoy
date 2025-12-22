@@ -138,9 +138,9 @@ export default function Home() {
   }, [formattedExperiences, activeFilter, userLocation]);
 
   return (
-    <div className="min-h-screen bg-background pb-32 lg:pb-8">
+    <div className="min-h-screen bg-background pb-32 md:pb-8">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-background/80 px-6 pt-14 lg:pt-8 pb-4 backdrop-blur-md lg:backdrop-blur-none lg:max-w-6xl lg:mx-auto">
+      <div className="sticky top-0 z-40 bg-background/80 px-6 pt-14 md:pt-8 pb-4 backdrop-blur-md md:backdrop-blur-none md:max-w-6xl md:mx-auto">
         <p className="text-sm font-medium text-gray-500">Good morning,</p>
         <h1 className="font-heading text-2xl font-bold text-gray-900">
           {currentUser?.name || "Loading..."} 👋
@@ -230,7 +230,7 @@ export default function Home() {
                         No experiences match this filter
                       </div>
                     ) : (
-                      <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+                      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {filteredExperiences.map((exp) => (
                           <ExperienceCard key={`filtered-${exp.id}`} experience={exp} />
                         ))}
@@ -259,7 +259,7 @@ export default function Home() {
                 </Link>
               </div>
             ) : (
-              <div className="space-y-4 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-6 lg:space-y-0">
+              <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
                 {formattedFollowingExperiences.map((exp: any) => (
                   <div key={exp.id}>
                     {/* Creator info */}

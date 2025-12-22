@@ -74,10 +74,10 @@ function AuthenticatedRouter() {
     <GoogleMapsProvider>
       <div className="flex min-h-screen bg-gray-50">
         <Sidebar />
-        <div className="flex-1 flex flex-col mx-auto w-full max-w-md lg:max-w-none bg-background shadow-2xl lg:shadow-none overflow-hidden relative">
+        <div className="flex-1 flex flex-col mx-auto w-full max-w-md md:max-w-none bg-background shadow-2xl md:shadow-none overflow-hidden relative">
           {showHeader && <TopHeader />}
           <PWAInstallBanner />
-          <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-auto pb-24 lg:pb-6">
+          <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-auto pb-24 md:pb-6">
             <Switch>
               <Route path="/" component={Home} />
               <Route path="/explore" component={Explore} />

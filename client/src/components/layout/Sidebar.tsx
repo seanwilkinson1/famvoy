@@ -21,7 +21,7 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-gray-100 h-screen sticky top-0">
+    <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-100 h-screen sticky top-0">
       <div className="p-6 border-b border-gray-100">
         <Link href="/">
           <div className="flex items-center gap-3 cursor-pointer">

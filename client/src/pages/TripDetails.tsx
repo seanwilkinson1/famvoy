@@ -452,8 +452,8 @@ export default function TripDetails() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-background lg:pb-0">
-      <div className="border-b border-gray-100 bg-white px-6 pt-14 lg:pt-6 pb-4 shadow-sm z-10 lg:max-w-5xl lg:mx-auto lg:w-full">
+    <div className="flex h-screen flex-col bg-background md:pb-0">
+      <div className="border-b border-gray-100 bg-white px-6 pt-14 md:pt-6 pb-4 shadow-sm z-10 md:max-w-5xl md:mx-auto md:w-full">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <button 
