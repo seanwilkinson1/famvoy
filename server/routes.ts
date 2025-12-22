@@ -325,8 +325,8 @@ export async function registerRoutes(
     }
   });
 
-  // Update user location
-  app.patch('/api/users/me/location', requireAuth(), async (req, res) => {
+  // Update user location (also available at /api/users/location for compatibility)
+  app.patch('/api/users/location', requireAuth(), async (req, res) => {
     try {
       const { userId } = getAuth(req);
       if (!userId) {
@@ -338,8 +338,8 @@ export async function registerRoutes(
       }
       
       const locationSchema = z.object({
-        lat: z.number(),
-        lng: z.number(),
+        lat: z.number().optional(),
+        lng: z.number().optional(),
         shareLocation: z.boolean(),
       });
       
@@ -349,7 +349,19 @@ export async function registerRoutes(
       }
       
       const { lat, lng, shareLocation } = parsed.data;
-      const updated = await storage.updateUserLocation(user.id, lat, lng, shareLocation);
+      
+      // When enabling sharing, coordinates are required
+      if (shareLocation && (lat === undefined || lng === undefined)) {
+        return res.status(400).json({ error: "Coordinates required when enabling location sharing" });
+      }
+      
+      // When disabling, just update shareLocation flag without touching coordinates
+      const updated = await storage.updateUserLocation(
+        user.id, 
+        lat ?? user.locationLat ?? 0, 
+        lng ?? user.locationLng ?? 0, 
+        shareLocation
+      );
       res.json(updated);
     } catch (error) {
       console.error("Error updating location:", error);
@@ -362,7 +374,7 @@ export async function registerRoutes(
       const allExperiences = await storage.getExperiences();
       
       const experienceIds = allExperiences.map(exp => exp.id);
-      const userIds = [...new Set(allExperiences.map(exp => exp.userId))];
+      const userIds = Array.from(new Set(allExperiences.map(exp => exp.userId)));
       
       const [ratingsMap, checkinsMap, usersResults] = await Promise.all([
         storage.getBatchExperienceRatings(experienceIds),

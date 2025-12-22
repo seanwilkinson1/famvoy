@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useRef } from "react";
+import { useCallback, useState, useEffect, useRef, useMemo } from "react";
 import { GoogleMap, Marker, InfoWindow, OverlayView } from "@react-google-maps/api";
 import { useLocation } from "wouter";
 import type { Experience, User } from "@shared/schema";
@@ -7,6 +7,12 @@ import { useGoogleMapsContext } from "./GoogleMapsProvider";
 interface ExplorePerson extends User {
   podIds: number[];
   distance?: number;
+}
+
+interface PersonCluster {
+  lat: number;
+  lng: number;
+  people: ExplorePerson[];
 }
 
 const mapContainerStyle = {
@@ -40,6 +46,44 @@ interface ExploreMapProps {
   people?: ExplorePerson[];
 }
 
+function clusterPeople(people: ExplorePerson[], clusterRadius: number): PersonCluster[] {
+  const validPeople = people.filter(p => p.locationLat && p.locationLng);
+  if (validPeople.length === 0) return [];
+  
+  const clusters: PersonCluster[] = [];
+  const assigned = new Set<number>();
+  
+  for (const person of validPeople) {
+    if (assigned.has(person.id)) continue;
+    
+    const cluster: ExplorePerson[] = [person];
+    assigned.add(person.id);
+    
+    for (const other of validPeople) {
+      if (assigned.has(other.id)) continue;
+      
+      const latDiff = Math.abs(person.locationLat! - other.locationLat!);
+      const lngDiff = Math.abs(person.locationLng! - other.locationLng!);
+      
+      if (latDiff <= clusterRadius && lngDiff <= clusterRadius) {
+        cluster.push(other);
+        assigned.add(other.id);
+      }
+    }
+    
+    const avgLat = cluster.reduce((sum, p) => sum + p.locationLat!, 0) / cluster.length;
+    const avgLng = cluster.reduce((sum, p) => sum + p.locationLng!, 0) / cluster.length;
+    
+    clusters.push({
+      lat: avgLat,
+      lng: avgLng,
+      people: cluster,
+    });
+  }
+  
+  return clusters;
+}
+
 export function ExploreMap({
   experiences,
   userLocation,
@@ -52,10 +96,26 @@ export function ExploreMap({
   const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
   const [selectedPerson, setSelectedPerson] = useState<ExplorePerson | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(12);
   const { isLoaded } = useGoogleMapsContext();
   const lastFitKey = useRef<string>("");
   const initialCenterSet = useRef(false);
   const lastSearchLocation = useRef<string>("");
+
+  const showClusters = zoomLevel < 12;
+  
+  const clusterRadius = useMemo(() => {
+    if (zoomLevel >= 12) return 0.005;
+    if (zoomLevel >= 10) return 0.02;
+    if (zoomLevel >= 8) return 0.05;
+    if (zoomLevel >= 6) return 0.1;
+    return 0.2;
+  }, [zoomLevel]);
+  
+  const peopleClusters = useMemo(() => {
+    if (!showClusters) return [];
+    return clusterPeople(people, clusterRadius);
+  }, [people, showClusters, clusterRadius]);
 
   useEffect(() => {
     if (!map || !searchLocation) return;
@@ -75,7 +135,6 @@ export function ExploreMap({
       .filter((exp) => exp.locationLat && exp.locationLng)
       .map((exp) => ({ lat: exp.locationLat, lng: exp.locationLng }));
 
-    // Include people coordinates in bounds
     people.forEach((person) => {
       if (person.locationLat && person.locationLng) {
         points.push({ lat: person.locationLat, lng: person.locationLng });
@@ -97,7 +156,6 @@ export function ExploreMap({
       points.forEach((point) => bounds.extend(point));
       map.fitBounds(bounds, 50);
       
-      // Prevent zooming out too far - minimum zoom of 3 to avoid showing gray areas
       const listener = google.maps.event.addListenerOnce(map, 'idle', () => {
         const currentZoom = map.getZoom();
         if (currentZoom && currentZoom < 3) {
@@ -109,7 +167,6 @@ export function ExploreMap({
     }
   }, [map, experiences, people, userLocation]);
 
-  // Clear selectedPerson when they're no longer in the people array
   useEffect(() => {
     if (selectedPerson && !people.find(p => p.id === selectedPerson.id)) {
       setSelectedPerson(null);
@@ -119,6 +176,13 @@ export function ExploreMap({
   const onLoad = useCallback((mapInstance: google.maps.Map) => {
     setMap(mapInstance);
     initialCenterSet.current = true;
+    
+    mapInstance.addListener('zoom_changed', () => {
+      const newZoom = mapInstance.getZoom();
+      if (newZoom !== undefined) {
+        setZoomLevel(newZoom);
+      }
+    });
   }, []);
 
   const handleExperienceClick = (exp: Experience) => {
@@ -126,6 +190,28 @@ export function ExploreMap({
       onExperienceClick(exp);
     } else {
       setLocation(`/experience/${exp.id}`);
+    }
+  };
+
+  const handleClusterClick = (cluster: PersonCluster) => {
+    if (!map) return;
+    
+    if (cluster.people.length === 1) {
+      setSelectedPerson(cluster.people[0]);
+      return;
+    }
+    
+    const bounds = new google.maps.LatLngBounds();
+    cluster.people.forEach(person => {
+      if (person.locationLat && person.locationLng) {
+        bounds.extend({ lat: person.locationLat, lng: person.locationLng });
+      }
+    });
+    map.fitBounds(bounds, 50);
+    
+    const currentZoom = map.getZoom();
+    if (currentZoom && currentZoom < 14) {
+      map.setZoom(Math.min(currentZoom + 2, 14));
     }
   };
 
@@ -209,40 +295,84 @@ export function ExploreMap({
           </InfoWindow>
         )}
 
-        {/* People Markers - Avatar Style like SeaPeople */}
-        {people.map((person) => {
-          if (!person.locationLat || !person.locationLng) return null;
-          return (
-            <OverlayView
-              key={person.id}
-              position={{ lat: person.locationLat, lng: person.locationLng }}
-              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-            >
-              <div 
-                className="relative cursor-pointer transform -translate-x-1/2 -translate-y-1/2"
-                onClick={() => setSelectedPerson(person)}
+        {showClusters ? (
+          <>
+            {peopleClusters.map((cluster, index) => (
+              <OverlayView
+                key={`cluster-${index}`}
+                position={{ lat: cluster.lat, lng: cluster.lng }}
+                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
               >
-                <div className="w-12 h-12 rounded-full border-3 border-white shadow-lg overflow-hidden bg-gray-200">
-                  {person.avatar || person.profileImageUrl ? (
-                    <img 
-                      src={person.avatar || person.profileImageUrl || ''} 
-                      alt={person.name || 'Family'} 
-                      className="w-full h-full object-cover"
-                    />
+                <div 
+                  className="relative cursor-pointer transform -translate-x-1/2 -translate-y-1/2"
+                  onClick={() => handleClusterClick(cluster)}
+                  data-testid={`cluster-marker-${index}`}
+                >
+                  {cluster.people.length === 1 ? (
+                    <div className="w-12 h-12 rounded-full border-3 border-white shadow-lg overflow-hidden bg-gray-200">
+                      {cluster.people[0].avatar || cluster.people[0].profileImageUrl ? (
+                        <img 
+                          src={cluster.people[0].avatar || cluster.people[0].profileImageUrl || ''} 
+                          alt={cluster.people[0].name || 'Family'} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-coral to-amber-400 flex items-center justify-center text-white font-bold text-lg">
+                          {(cluster.people[0].name || 'F').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-coral to-amber-400 flex items-center justify-center text-white font-bold text-lg">
-                      {(person.name || 'F').charAt(0).toUpperCase()}
+                    <div 
+                      className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg border-3 border-white"
+                      style={{ backgroundColor: '#22c55e' }}
+                    >
+                      <span className="text-white font-bold text-lg">
+                        {cluster.people.length}
+                      </span>
                     </div>
                   )}
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
                 </div>
-                {/* Status indicator */}
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
-              </div>
-            </OverlayView>
-          );
-        })}
+              </OverlayView>
+            ))}
+          </>
+        ) : (
+          <>
+            {people.map((person) => {
+              if (!person.locationLat || !person.locationLng) return null;
+              return (
+                <OverlayView
+                  key={person.id}
+                  position={{ lat: person.locationLat, lng: person.locationLng }}
+                  mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                >
+                  <div 
+                    className="relative cursor-pointer transform -translate-x-1/2 -translate-y-1/2"
+                    onClick={() => setSelectedPerson(person)}
+                    data-testid={`person-marker-${person.id}`}
+                  >
+                    <div className="w-12 h-12 rounded-full border-3 border-white shadow-lg overflow-hidden bg-gray-200">
+                      {person.avatar || person.profileImageUrl ? (
+                        <img 
+                          src={person.avatar || person.profileImageUrl || ''} 
+                          alt={person.name || 'Family'} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-coral to-amber-400 flex items-center justify-center text-white font-bold text-lg">
+                          {(person.name || 'F').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
+                  </div>
+                </OverlayView>
+              );
+            })}
+          </>
+        )}
 
-        {/* Selected Person InfoWindow */}
         {selectedPerson && selectedPerson.locationLat && selectedPerson.locationLng && (
           <InfoWindow
             position={{
