@@ -254,7 +254,7 @@ export function ExploreMap({
   return (
     <div className={`relative h-full w-full ${className}`}>
       <GoogleMap
-        mapContainerStyle={mapContainerStyle}
+        mapContainerClassName="h-full w-full"
         center={initialCenterSet.current ? undefined : initialCenter}
         zoom={initialCenterSet.current ? undefined : 12}
         onLoad={onLoad}
