@@ -399,7 +399,7 @@ export default function Explore() {
                 setSearchQuery(e.target.value);
                 if (searchLocation) setSearchLocation(null);
               }}
-              className="w-full rounded-full bg-gray-800/90 py-3.5 pl-12 pr-12 text-white text-base shadow-lg outline-none placeholder:text-gray-400 backdrop-blur-sm"
+              className="w-full rounded-full bg-gray-900 py-3.5 pl-12 pr-12 text-white text-base shadow-xl outline-none placeholder:text-gray-400"
               data-testid="input-search-main"
             />
             {isSearchingPlaces ? (
@@ -449,7 +449,7 @@ export default function Explore() {
             {activeFiltersCount > 0 && (
               <button
                 onClick={clearAllFilters}
-                className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full bg-gray-800/90 text-white text-sm font-medium shadow-lg backdrop-blur-sm"
+                className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full bg-gray-900 text-white text-sm font-medium shadow-xl"
                 data-testid="filter-clear-all"
               >
                 <X className="h-4 w-4" />
@@ -464,10 +464,10 @@ export default function Explore() {
             <button
               onClick={() => setActiveFilterModal("categories")}
               className={cn(
-                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium shadow-lg backdrop-blur-sm transition-all",
+                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium shadow-xl transition-all",
                 categoryFilter !== "All"
                   ? "bg-coral text-white"
-                  : "bg-gray-800/90 text-white"
+                  : "bg-gray-900 text-white"
               )}
               data-testid="filter-chip-categories"
             >
@@ -479,10 +479,10 @@ export default function Explore() {
             <button
               onClick={() => setActiveFilterModal("pods")}
               className={cn(
-                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium shadow-lg backdrop-blur-sm transition-all",
+                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium shadow-xl transition-all",
                 selectedPodFilter !== "all"
                   ? "bg-coral text-white"
-                  : "bg-gray-800/90 text-white"
+                  : "bg-gray-900 text-white"
               )}
               data-testid="filter-chip-pods"
             >
@@ -496,10 +496,10 @@ export default function Explore() {
             <button
               onClick={() => setActiveFilterModal("interests")}
               className={cn(
-                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium shadow-lg backdrop-blur-sm transition-all",
+                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium shadow-xl transition-all",
                 selectedInterests.length > 0
                   ? "bg-coral text-white"
-                  : "bg-gray-800/90 text-white"
+                  : "bg-gray-900 text-white"
               )}
               data-testid="filter-chip-interests"
             >
@@ -514,10 +514,10 @@ export default function Explore() {
             <button
               onClick={() => setFollowingFilter(!followingFilter)}
               className={cn(
-                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium shadow-lg backdrop-blur-sm transition-all",
+                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium shadow-xl transition-all",
                 followingFilter
                   ? "bg-warm-teal text-white"
-                  : "bg-gray-800/90 text-white"
+                  : "bg-gray-900 text-white"
               )}
               data-testid="filter-chip-following"
             >
@@ -529,10 +529,10 @@ export default function Explore() {
             <button
               onClick={() => setShowPeopleOnMap(!showPeopleOnMap)}
               className={cn(
-                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium shadow-lg backdrop-blur-sm transition-all",
+                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium shadow-xl transition-all",
                 showPeopleOnMap
                   ? "bg-blue-500 text-white"
-                  : "bg-gray-800/90 text-gray-400"
+                  : "bg-gray-900 text-gray-400"
               )}
               data-testid="toggle-people-map"
             >
