@@ -70,6 +70,8 @@ function AuthenticatedRouter() {
     );
   }
 
+  const isExplorePage = location === "/explore";
+
   return (
     <GoogleMapsProvider>
       <div className="flex min-h-screen bg-gray-50">
@@ -77,31 +79,34 @@ function AuthenticatedRouter() {
         <div className="flex-1 flex flex-col mx-auto w-full max-w-md md:max-w-none bg-background shadow-2xl md:shadow-none overflow-hidden relative">
           {showHeader && <TopHeader />}
           <PWAInstallBanner />
-          <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-auto pb-24 md:pb-6">
-            <Switch>
-              <Route path="/" component={Home} />
-              <Route path="/explore" component={Explore} />
-              <Route path="/pods" component={Pods} />
-              <Route path="/trips" component={Trips} />
-              <Route path="/chat" component={Chat} />
-              <Route path="/conversation/:id" component={ConversationDetail} />
-              <Route path="/create" component={Create} />
-              <Route path="/profile" component={Profile} />
-              <Route path="/settings" component={Settings} />
-              <Route path="/experience/:id" component={ExperienceDetails} />
-              <Route path="/pod/:id" component={PodDetails} />
-              <Route path="/trip/:id" component={TripDetails} />
-              <Route path="/trip/:id/confirm" component={TripConfirmWizard} />
-              <Route path="/family/:id" component={FamilyProfile} />
-              <Route path="/cart" component={Cart} />
-              <Route path="/checkout/success" component={CheckoutSuccess} />
-              <Route path="/checkout/cancel" component={CheckoutCancel} />
-              <Route path="/concierge/success" component={ConciergeSuccess} />
-              <Route path="/agent" component={AgentDashboard} />
-              <Route path="/agent/request/:id" component={AgentRequestDetails} />
-              <Route component={NotFound} />
-            </Switch>
-          </PullToRefresh>
+          {isExplorePage ? (
+            <Explore />
+          ) : (
+            <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-auto pb-24 md:pb-6">
+              <Switch>
+                <Route path="/" component={Home} />
+                <Route path="/pods" component={Pods} />
+                <Route path="/trips" component={Trips} />
+                <Route path="/chat" component={Chat} />
+                <Route path="/conversation/:id" component={ConversationDetail} />
+                <Route path="/create" component={Create} />
+                <Route path="/profile" component={Profile} />
+                <Route path="/settings" component={Settings} />
+                <Route path="/experience/:id" component={ExperienceDetails} />
+                <Route path="/pod/:id" component={PodDetails} />
+                <Route path="/trip/:id" component={TripDetails} />
+                <Route path="/trip/:id/confirm" component={TripConfirmWizard} />
+                <Route path="/family/:id" component={FamilyProfile} />
+                <Route path="/cart" component={Cart} />
+                <Route path="/checkout/success" component={CheckoutSuccess} />
+                <Route path="/checkout/cancel" component={CheckoutCancel} />
+                <Route path="/concierge/success" component={ConciergeSuccess} />
+                <Route path="/agent" component={AgentDashboard} />
+                <Route path="/agent/request/:id" component={AgentRequestDetails} />
+                <Route component={NotFound} />
+              </Switch>
+            </PullToRefresh>
+          )}
           <FloatingActionButton />
           <BottomNav />
         </div>
