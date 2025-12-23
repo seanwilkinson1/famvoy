@@ -388,7 +388,7 @@ export default function Explore() {
   const nextFamily = discoverFamilies[currentFamilyIndex + 1];
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-gray-100 -mt-24 md:-mt-6 pb-24 md:pb-6">
+    <div className="fixed inset-0 top-0 bottom-0 w-full overflow-hidden bg-gray-100 z-30">
       {/* Map View */}
       <div className="relative h-full">
         {/* Interactive Map */}
