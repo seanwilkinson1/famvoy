@@ -2299,36 +2299,63 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Trip not found" });
       }
 
-      if (!trip.podId) {
-        return res.status(400).json({ error: "Trip must be linked to a pod to generate itinerary" });
+      let familyProfiles: { name: string; kids: string | null; interests: string[] }[] = [];
+      let experiencesList: any[] = [];
+
+      if (trip.podId) {
+        // Trip is linked to a pod - use pod members' profiles
+        const pod = await storage.getPodWithMembers(trip.podId);
+        if (!pod) {
+          return res.status(404).json({ error: "Pod not found" });
+        }
+
+        const podExperiences = await storage.getPodExperiences(trip.podId);
+        
+        familyProfiles = pod.members.map(m => ({
+          name: m.name || "Family",
+          kids: m.kids,
+          interests: m.interests || [],
+        }));
+
+        experiencesList = podExperiences.map(e => ({
+          id: e.id,
+          title: e.title,
+          category: e.category,
+          duration: e.duration,
+          cost: e.cost,
+          ages: e.ages,
+          description: e.description,
+          locationName: e.locationName,
+        }));
+      } else {
+        // Standalone trip - use trip creator's profile
+        const user = await storage.getUserByClerkId(clerkUserId);
+        if (!user) {
+          return res.status(404).json({ error: "User not found" });
+        }
+
+        familyProfiles = [{
+          name: user.name || "Your Family",
+          kids: user.kids,
+          interests: user.interests || [],
+        }];
+
+        // Optionally include creator's saved experiences
+        const savedExperiences = await storage.getSavedExperiences(user.id);
+        experiencesList = savedExperiences.slice(0, 5).map(e => ({
+          id: e.id,
+          title: e.title,
+          category: e.category,
+          duration: e.duration,
+          cost: e.cost,
+          ages: e.ages,
+          description: e.description,
+          locationName: e.locationName,
+        }));
       }
 
-      const pod = await storage.getPodWithMembers(trip.podId);
-      if (!pod) {
-        return res.status(404).json({ error: "Pod not found" });
-      }
-
-      const podExperiences = await storage.getPodExperiences(trip.podId);
-      
       // Fetch trip destinations for multi-destination trips
       const tripDestinations = await storage.getTripDestinations(tripId);
-
-      const familyProfiles = pod.members.map(m => ({
-        name: m.name,
-        kids: m.kids,
-        interests: m.interests || [],
-      }));
-
-      const podExperiencesList = podExperiences.map(e => ({
-        id: e.id,
-        title: e.title,
-        category: e.category,
-        duration: e.duration,
-        cost: e.cost,
-        ages: e.ages,
-        description: e.description,
-        locationName: e.locationName,
-      }));
 
       const startDate = new Date(trip.startDate);
       const endDate = new Date(trip.endDate);
@@ -2377,8 +2404,8 @@ ${preferencesBlock ? `TRIP PREFERENCES (prioritize these):\n${preferencesBlock}\
 Family profiles in this trip:
 ${JSON.stringify(familyProfiles, null, 2)}
 
-${podExperiencesList.length > 0 ? `The families have saved these experiences to consider including:
-${JSON.stringify(podExperiencesList, null, 2)}` : ''}
+${experiencesList.length > 0 ? `Saved experiences to consider including:
+${JSON.stringify(experiencesList, null, 2)}` : ''}
 
 Generate a structured JSON response with:
 1. "summary": A 2-3 sentence personalized overview explaining how the itinerary caters to the specified preferences, interests, and children's ages
@@ -2391,7 +2418,7 @@ Generate a structured JSON response with:
      - "description": 1-2 sentence description mentioning which family interests it serves
      - "itemType": One of: "ACTIVITY", "MEAL", "STAY", "TRANSPORT"
      - "sortOrder": Number for ordering (0, 1, 2, etc.)
-     ${podExperiencesList.length > 0 ? '- "experienceId": If this activity matches a saved pod experience, include its ID' : ''}
+     ${experiencesList.length > 0 ? '- "experienceId": If this activity matches a saved experience, include its ID' : ''}
 
 Guidelines:
 - Include 4-6 activities per day (fewer if pace is "relaxed", more if pace is "active")
