@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Calendar, MapPin, Users, ChevronRight, Plane, Plus, X } from "lucide-react";
@@ -199,8 +200,8 @@ export default function Trips() {
       </div>
 
       {/* Create Trip Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center md:justify-center">
+      {showCreateModal && createPortal(
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-end md:items-center md:justify-center">
           <div className="bg-white rounded-t-3xl md:rounded-2xl w-full md:max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <h3 className="font-heading text-lg font-bold">Plan a New Trip</h3>
@@ -267,7 +268,8 @@ export default function Trips() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

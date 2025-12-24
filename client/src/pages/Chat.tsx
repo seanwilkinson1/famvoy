@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { MessageCircle, Users, ChevronRight, Image as ImageIcon, Plus, Search, X, User } from "lucide-react";
@@ -165,8 +166,8 @@ export default function Chat() {
       </div>
 
       {/* New Chat Modal */}
-      {showNewChat && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center md:justify-center">
+      {showNewChat && createPortal(
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-end md:items-center md:justify-center">
           <div className="bg-white rounded-t-3xl md:rounded-2xl w-full md:max-w-md max-h-[80vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <h3 className="font-heading text-lg font-bold">New Message</h3>
@@ -228,7 +229,8 @@ export default function Chat() {
               ))}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
