@@ -745,17 +745,35 @@ export default function TripDetails() {
           <div className="flex flex-col items-center justify-center h-64 text-gray-400 p-6">
             <Sparkles className="h-12 w-12 mb-3 opacity-30" />
             <p className="text-center mb-1 font-medium">No itinerary yet</p>
-            <p className="text-sm text-center text-gray-400 mb-4">
-              Let AI create a personalized {numDays}-day plan based on your pod's interests
-            </p>
-            <button
-              onClick={() => setShowPreferencesModal(true)}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-bold text-white"
-              data-testid="button-generate-empty"
-            >
-              <Sparkles className="h-4 w-4" />
-              Generate Itinerary
-            </button>
+            {trip.podId ? (
+              <>
+                <p className="text-sm text-center text-gray-400 mb-4">
+                  Let AI create a personalized {numDays}-day plan based on your pod's interests
+                </p>
+                <button
+                  onClick={() => setShowPreferencesModal(true)}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-bold text-white"
+                  data-testid="button-generate-empty"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Generate Itinerary
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-center text-gray-400 mb-4">
+                  Link this trip to a pod to generate an AI-powered itinerary based on your group's interests
+                </p>
+                <button
+                  onClick={() => setLocation("/pods")}
+                  className="flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-white"
+                  data-testid="button-link-pod"
+                >
+                  <Users className="h-4 w-4" />
+                  Link to Pod
+                </button>
+              </>
+            )}
           </div>
         )}
 
