@@ -5,12 +5,14 @@ import { Link, useLocation } from "wouter";
 import { Calendar, MapPin, Users, ChevronRight, Plane, Plus, X } from "lucide-react";
 import { format } from "date-fns";
 import { api } from "@/lib/api";
+import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
 
 export default function Trips() {
   const [, setLocation] = useLocation();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [tripName, setTripName] = useState("");
   const [tripDestination, setTripDestination] = useState("");
+  const [destinationSelected, setDestinationSelected] = useState(false);
   const [tripStartDate, setTripStartDate] = useState("");
   const [tripEndDate, setTripEndDate] = useState("");
   const queryClient = useQueryClient();
@@ -32,6 +34,7 @@ export default function Trips() {
       setShowCreateModal(false);
       setTripName("");
       setTripDestination("");
+      setDestinationSelected(false);
       setTripStartDate("");
       setTripEndDate("");
       setLocation(`/trip/${trip.id}`);
@@ -227,13 +230,17 @@ export default function Trips() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Destination</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Hawaii"
+                <GooglePlacesAutocomplete
                   value={tripDestination}
-                  onChange={(e) => setTripDestination(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-primary focus:outline-none"
-                  data-testid="input-trip-destination"
+                  onChange={setTripDestination}
+                  onPlaceSelect={(place) => {
+                    setTripDestination(place.name);
+                    setDestinationSelected(true);
+                  }}
+                  onClear={() => setDestinationSelected(false)}
+                  placeholder="Search for a destination..."
+                  showCurrentLocation={false}
+                  isSelected={destinationSelected}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
