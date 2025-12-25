@@ -2502,20 +2502,30 @@ Return ONLY valid JSON, no markdown or explanations.`;
         return res.status(404).json({ error: "Trip not found" });
       }
 
-      if (!trip.podId) {
-        return res.status(400).json({ error: "Trip must be linked to a pod to regenerate" });
+      // Build family profiles from pod members if linked, otherwise use trip creator
+      let familyProfiles: Array<{ name: string | null; kids: string | null; interests: string[] }> = [];
+      
+      if (trip.podId) {
+        const pod = await storage.getPodWithMembers(trip.podId);
+        if (!pod) {
+          return res.status(404).json({ error: "Pod not found" });
+        }
+        familyProfiles = pod.members.map(m => ({
+          name: m.name,
+          kids: m.kids,
+          interests: m.interests || [],
+        }));
+      } else {
+        // Standalone trip - use the trip creator's profile
+        const creator = await storage.getUser(trip.createdByUserId);
+        if (creator) {
+          familyProfiles = [{
+            name: creator.name,
+            kids: creator.kids,
+            interests: creator.interests || [],
+          }];
+        }
       }
-
-      const pod = await storage.getPodWithMembers(trip.podId);
-      if (!pod) {
-        return res.status(404).json({ error: "Pod not found" });
-      }
-
-      const familyProfiles = pod.members.map(m => ({
-        name: m.name,
-        kids: m.kids,
-        interests: m.interests || [],
-      }));
 
       const currentDayItems = trip.items.filter(i => i.dayNumber === dayNumber);
       const currentDayTitle = currentDayItems[0]?.dayTitle || `Day ${dayNumber}`;
@@ -2616,13 +2626,13 @@ Return ONLY valid JSON.`;
         return res.status(404).json({ error: "Trip not found" });
       }
 
-      if (!trip.podId) {
-        return res.status(400).json({ error: "Trip must be linked to a pod to confirm" });
-      }
-
-      // Authorization check: ensure user is a member of the trip's pod
-      const isMember = await storage.isPodMember(trip.podId, userId);
-      if (!isMember) {
+      // Authorization check: either pod member or trip creator
+      if (trip.podId) {
+        const isMember = await storage.isPodMember(trip.podId, userId);
+        if (!isMember) {
+          return res.status(403).json({ error: "You don't have access to this trip" });
+        }
+      } else if (trip.createdByUserId !== userId) {
         return res.status(403).json({ error: "You don't have access to this trip" });
       }
 
@@ -2698,13 +2708,13 @@ Return ONLY valid JSON.`;
         return res.status(404).json({ error: "Trip not found" });
       }
 
-      if (!trip.podId) {
-        return res.status(400).json({ error: "Trip must be linked to a pod" });
-      }
-
-      // Authorization check
-      const isMember = await storage.isPodMember(trip.podId, user.id);
-      if (!isMember) {
+      // Authorization check: either pod member or trip creator
+      if (trip.podId) {
+        const isMember = await storage.isPodMember(trip.podId, user.id);
+        if (!isMember) {
+          return res.status(403).json({ error: "You don't have access to this trip" });
+        }
+      } else if (trip.createdByUserId !== user.id) {
         return res.status(403).json({ error: "You don't have access to this trip" });
       }
 
@@ -2767,13 +2777,13 @@ Return ONLY valid JSON.`;
         return res.status(404).json({ error: "Trip not found" });
       }
 
-      if (!trip.podId) {
-        return res.status(400).json({ error: "Trip must be linked to a pod" });
-      }
-
-      // Authorization check
-      const isMember = await storage.isPodMember(trip.podId, user.id);
-      if (!isMember) {
+      // Authorization check: either pod member or trip creator
+      if (trip.podId) {
+        const isMember = await storage.isPodMember(trip.podId, user.id);
+        if (!isMember) {
+          return res.status(403).json({ error: "You don't have access to this trip" });
+        }
+      } else if (trip.createdByUserId !== user.id) {
         return res.status(403).json({ error: "You don't have access to this trip" });
       }
 
@@ -2819,13 +2829,13 @@ Return ONLY valid JSON.`;
         return res.status(404).json({ error: "Trip not found" });
       }
 
-      if (!trip.podId) {
-        return res.status(400).json({ error: "Trip must be linked to a pod" });
-      }
-
-      // Authorization check
-      const isMember = await storage.isPodMember(trip.podId, user.id);
-      if (!isMember) {
+      // Authorization check: either pod member or trip creator
+      if (trip.podId) {
+        const isMember = await storage.isPodMember(trip.podId, user.id);
+        if (!isMember) {
+          return res.status(403).json({ error: "You don't have access to this trip" });
+        }
+      } else if (trip.createdByUserId !== user.id) {
         return res.status(403).json({ error: "You don't have access to this trip" });
       }
 
@@ -2876,13 +2886,13 @@ Return ONLY valid JSON.`;
         return res.status(404).json({ error: "Trip not found" });
       }
 
-      if (!trip.podId) {
-        return res.status(400).json({ error: "Trip must be linked to a pod" });
-      }
-
-      // Authorization check
-      const isMember = await storage.isPodMember(trip.podId, user.id);
-      if (!isMember) {
+      // Authorization check: either pod member or trip creator
+      if (trip.podId) {
+        const isMember = await storage.isPodMember(trip.podId, user.id);
+        if (!isMember) {
+          return res.status(403).json({ error: "You don't have access to this trip" });
+        }
+      } else if (trip.createdByUserId !== user.id) {
         return res.status(403).json({ error: "You don't have access to this trip" });
       }
 
@@ -2929,13 +2939,13 @@ Return ONLY valid JSON.`;
         return res.status(404).json({ error: "Trip not found" });
       }
 
-      if (!trip.podId) {
-        return res.status(400).json({ error: "Trip must be linked to a pod" });
-      }
-
-      // Authorization check
-      const isMember = await storage.isPodMember(trip.podId, user.id);
-      if (!isMember) {
+      // Authorization check: either pod member or trip creator
+      if (trip.podId) {
+        const isMember = await storage.isPodMember(trip.podId, user.id);
+        if (!isMember) {
+          return res.status(403).json({ error: "You don't have access to this trip" });
+        }
+      } else if (trip.createdByUserId !== user.id) {
         return res.status(403).json({ error: "You don't have access to this trip" });
       }
 
