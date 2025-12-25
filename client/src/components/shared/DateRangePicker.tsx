@@ -178,7 +178,7 @@ export function DateRangePicker({
           </button>
         </div>
 
-        <div className="grid grid-cols-7 gap-0 mb-2">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 0 }} className="mb-2">
           {weekDays.map((day, i) => (
             <div
               key={i}
@@ -189,7 +189,7 @@ export function DateRangePicker({
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-0">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 0 }}>
           {Array.from({ length: firstDayOfMonth }).map((_, i) => (
             <div key={`empty-${i}`} className="h-10" />
           ))}
@@ -218,7 +218,7 @@ export function DateRangePicker({
                   type="button"
                   onClick={() => handleDayClick(day)}
                   className={cn(
-                    "w-10 h-10 flex items-center justify-center text-sm font-medium relative z-10 transition-colors",
+                    "w-9 h-9 flex items-center justify-center text-sm font-medium relative z-10 transition-colors",
                     isStartDay && "bg-charcoal text-white rounded-full",
                     isEndDay && "bg-charcoal text-white rounded-full",
                     !isStartDay && !isEndDay && "hover:bg-gray-200 rounded-full",
