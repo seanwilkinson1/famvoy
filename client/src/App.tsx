@@ -107,7 +107,7 @@ function AuthenticatedRouter() {
               </Switch>
             </PullToRefresh>
           )}
-          <FloatingActionButton />
+          {location === "/" && <FloatingActionButton />}
           <BottomNav />
         </div>
       </div>
