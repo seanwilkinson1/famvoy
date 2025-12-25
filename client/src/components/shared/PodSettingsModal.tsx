@@ -277,8 +277,11 @@ export function PodSettingsModal({
                 </div>
 
                 {showLeaveConfirm && (
-                  <div className="fixed inset-0 z-60 bg-black/50 flex items-center justify-center p-6">
-                    <div className="bg-white rounded-2xl p-6 max-w-sm w-full">
+                  <div 
+                    className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-6"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="bg-white rounded-2xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
                       <h3 className="font-heading text-lg font-bold text-gray-900 mb-2">Leave Pod?</h3>
                       <p className="text-sm text-gray-500 mb-6">
                         Are you sure you want to leave "{pod.name}"?
@@ -303,8 +306,11 @@ export function PodSettingsModal({
                 )}
 
                 {showDeleteConfirm && (
-                  <div className="fixed inset-0 z-60 bg-black/50 flex items-center justify-center p-6">
-                    <div className="bg-white rounded-2xl p-6 max-w-sm w-full">
+                  <div 
+                    className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-6"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="bg-white rounded-2xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
                       <h3 className="font-heading text-lg font-bold text-gray-900 mb-2">Delete Pod?</h3>
                       <p className="text-sm text-gray-500 mb-6">
                         Are you sure you want to delete "{pod.name}"? This will remove all messages and members. This action cannot be undone.
@@ -313,6 +319,7 @@ export function PodSettingsModal({
                         <button
                           onClick={() => setShowDeleteConfirm(false)}
                           className="flex-1 py-3 rounded-xl border border-gray-200 font-medium text-gray-700"
+                          data-testid="button-cancel-delete"
                         >
                           Cancel
                         </button>
@@ -320,6 +327,7 @@ export function PodSettingsModal({
                           onClick={() => deleteMutation.mutate()}
                           disabled={deleteMutation.isPending}
                           className="flex-1 py-3 rounded-xl bg-red-500 text-white font-medium disabled:opacity-50"
+                          data-testid="button-confirm-delete"
                         >
                           {deleteMutation.isPending ? "Deleting..." : "Delete"}
                         </button>
