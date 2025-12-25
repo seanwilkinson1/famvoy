@@ -6,6 +6,7 @@ import { Calendar, MapPin, Users, ChevronRight, Plane, Plus, X } from "lucide-re
 import { format } from "date-fns";
 import { api } from "@/lib/api";
 import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
+import { DateRangePicker } from "@/components/shared/DateRangePicker";
 
 export default function Trips() {
   const [, setLocation] = useLocation();
@@ -243,27 +244,14 @@ export default function Trips() {
                   isSelected={destinationSelected}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                  <input
-                    type="date"
-                    value={tripStartDate}
-                    onChange={(e) => setTripStartDate(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-primary focus:outline-none"
-                    data-testid="input-start-date"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                  <input
-                    type="date"
-                    value={tripEndDate}
-                    onChange={(e) => setTripEndDate(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-primary focus:outline-none"
-                    data-testid="input-end-date"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Trip Dates</label>
+                <DateRangePicker
+                  startDate={tripStartDate}
+                  endDate={tripEndDate}
+                  onStartDateChange={setTripStartDate}
+                  onEndDateChange={setTripEndDate}
+                />
               </div>
               <button
                 onClick={() => createTripMutation.mutate()}
