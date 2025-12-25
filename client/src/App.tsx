@@ -71,6 +71,7 @@ function AuthenticatedRouter() {
   }
 
   const isExplorePage = location === "/explore";
+  const isConversationPage = location.startsWith("/conversation/");
 
   return (
     <GoogleMapsProvider>
@@ -81,6 +82,8 @@ function AuthenticatedRouter() {
           <PWAInstallBanner />
           {isExplorePage ? (
             <Explore />
+          ) : isConversationPage ? (
+            <ConversationDetail />
           ) : (
             <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-auto pb-24 md:pb-6">
               <Switch>
@@ -88,7 +91,6 @@ function AuthenticatedRouter() {
                 <Route path="/pods" component={Pods} />
                 <Route path="/trips" component={Trips} />
                 <Route path="/chat" component={Chat} />
-                <Route path="/conversation/:id" component={ConversationDetail} />
                 <Route path="/create" component={Create} />
                 <Route path="/profile" component={Profile} />
                 <Route path="/settings" component={Settings} />

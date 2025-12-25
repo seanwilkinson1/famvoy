@@ -60,9 +60,9 @@ export default function ConversationDetail() {
     : otherMembers[0]?.user?.avatar;
 
   return (
-    <div className="flex h-screen flex-col bg-gray-50">
+    <div className="flex flex-1 flex-col bg-gray-50 overflow-hidden">
       {/* Header */}
-      <div className="border-b border-gray-100 bg-white px-4 pt-14 pb-4 shadow-sm z-10">
+      <div className="border-b border-gray-100 bg-white px-4 py-4 shadow-sm z-10 flex-shrink-0">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setLocation("/chat")} 
@@ -142,7 +142,7 @@ export default function ConversationDetail() {
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-gray-200 bg-white p-4 pb-8">
+      <div className="border-t border-gray-200 bg-white p-4 pb-24 md:pb-4 flex-shrink-0">
         <div className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2">
           <input 
             type="text" 
