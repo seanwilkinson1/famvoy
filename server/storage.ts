@@ -96,7 +96,7 @@ import {
   chatMessages,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or, ne, notInArray, ilike, isNotNull, inArray } from "drizzle-orm";
+import { eq, desc, and, or, ne, notInArray, ilike, isNotNull, isNull, inArray } from "drizzle-orm";
 
 function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 3959;
@@ -207,7 +207,7 @@ export interface IStorage {
   hasUserCheckedIn(userId: number, experienceId: number): Promise<boolean>;
   
   getTripsByPod(podId: number): Promise<(PodTrip & { creator: User; itemCount: number })[]>;
-  getTripsByUser(userId: number): Promise<(PodTrip & { creator: User; itemCount: number; pod: Pod })[]>;
+  getTripsByUser(userId: number): Promise<(PodTrip & { creator: User; itemCount: number; pod: Pod | null })[]>;
   getTripById(tripId: number): Promise<(PodTrip & { items: TripItem[] }) | undefined>;
   createTrip(data: InsertPodTrip): Promise<PodTrip>;
   updateTrip(tripId: number, data: Partial<PodTrip>): Promise<PodTrip>;
@@ -1257,17 +1257,22 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getTripsByUser(userId: number): Promise<(PodTrip & { creator: User; itemCount: number; pod: Pod })[]> {
+  async getTripsByUser(userId: number): Promise<(PodTrip & { creator: User; itemCount: number; pod: Pod | null })[]> {
     const userPods = await this.getPodsByUser(userId);
     const podIds = userPods.map(p => p.id);
     
-    if (podIds.length === 0) return [];
+    // Build condition: trips in user's pods OR standalone trips created by user
+    const conditions = [];
+    if (podIds.length > 0) {
+      conditions.push(inArray(podTrips.podId, podIds));
+    }
+    conditions.push(and(isNull(podTrips.podId), eq(podTrips.createdByUserId, userId)));
     
     const results = await db.select()
       .from(podTrips)
       .leftJoin(users, eq(podTrips.createdByUserId, users.id))
       .leftJoin(pods, eq(podTrips.podId, pods.id))
-      .where(inArray(podTrips.podId, podIds))
+      .where(or(...conditions))
       .orderBy(desc(podTrips.createdAt));
     
     if (results.length === 0) return [];
@@ -1283,7 +1288,7 @@ export class DatabaseStorage implements IStorage {
     return results.map(r => ({
       ...r.pod_trips,
       creator: r.users!,
-      pod: r.pods!,
+      pod: r.pods,
       itemCount: itemCountMap.get(r.pod_trips.id) || 0,
     }));
   }
@@ -1838,9 +1843,9 @@ export class DatabaseStorage implements IStorage {
     
     // Enrich with pod, creator, and item count
     const enrichedTrips = await Promise.all(
-      trips.map(async (trip) => {
+      trips.filter(t => t.podId !== null).map(async (trip) => {
         const [pod, creator, items] = await Promise.all([
-          this.getPodById(trip.podId),
+          this.getPodById(trip.podId!),
           this.getUser(trip.createdByUserId),
           db.select().from(tripItems).where(eq(tripItems.tripId, trip.id)),
         ]);
