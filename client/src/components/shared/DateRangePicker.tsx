@@ -119,48 +119,6 @@ export function DateRangePicker({
 
   const weekDays = ["S", "M", "T", "W", "T", "F", "S"];
 
-  const renderCalendarDays = () => {
-    const days = [];
-    
-    for (let i = 0; i < firstDayOfMonth; i++) {
-      days.push(<div key={`empty-${i}`} className="aspect-square" />);
-    }
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const inRange = isInRange(day);
-      const isStartDay = isStart(day);
-      const isEndDay = isEnd(day);
-      const isTodayDay = isToday(day);
-
-      days.push(
-        <button
-          key={day}
-          type="button"
-          onClick={() => handleDayClick(day)}
-          className={cn(
-            "aspect-square flex items-center justify-center text-sm font-medium relative transition-colors",
-            inRange && !isStartDay && !isEndDay && "bg-gray-100",
-            isStartDay && "bg-charcoal text-white rounded-full z-10",
-            isEndDay && "bg-charcoal text-white rounded-full z-10",
-            !inRange && !isStartDay && !isEndDay && "hover:bg-gray-50 rounded-full",
-            isTodayDay && !isStartDay && !isEndDay && "ring-1 ring-gray-300 rounded-full"
-          )}
-          data-testid={`calendar-day-${day}`}
-        >
-          {isStartDay && inRange && parsedEndDate && (
-            <div className="absolute inset-y-0 right-0 w-1/2 bg-gray-100 -z-10" />
-          )}
-          {isEndDay && inRange && parsedStartDate && (
-            <div className="absolute inset-y-0 left-0 w-1/2 bg-gray-100 -z-10" />
-          )}
-          {day}
-        </button>
-      );
-    }
-
-    return days;
-  };
-
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
@@ -220,19 +178,59 @@ export function DateRangePicker({
           </button>
         </div>
 
-        <div className="grid grid-cols-7 gap-1 mb-2">
+        <div className="grid grid-cols-7 gap-0 mb-2">
           {weekDays.map((day, i) => (
             <div
               key={i}
-              className="aspect-square flex items-center justify-center text-xs font-medium text-gray-400"
+              className="h-10 flex items-center justify-center text-xs font-medium text-gray-400"
             >
               {day}
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
-          {renderCalendarDays()}
+        <div className="grid grid-cols-7 gap-0">
+          {Array.from({ length: firstDayOfMonth }).map((_, i) => (
+            <div key={`empty-${i}`} className="h-10" />
+          ))}
+          {Array.from({ length: daysInMonth }).map((_, i) => {
+            const day = i + 1;
+            const inRange = isInRange(day);
+            const isStartDay = isStart(day);
+            const isEndDay = isEnd(day);
+            const isTodayDay = isToday(day);
+
+            return (
+              <div
+                key={day}
+                className={cn(
+                  "h-10 relative flex items-center justify-center",
+                  inRange && !isStartDay && !isEndDay && "bg-gray-100"
+                )}
+              >
+                {isStartDay && inRange && parsedEndDate && !isSameDay(parsedStartDate!, parsedEndDate) && (
+                  <div className="absolute inset-y-0 right-0 w-1/2 bg-gray-100" />
+                )}
+                {isEndDay && inRange && parsedStartDate && !isSameDay(parsedStartDate, parsedEndDate!) && (
+                  <div className="absolute inset-y-0 left-0 w-1/2 bg-gray-100" />
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleDayClick(day)}
+                  className={cn(
+                    "w-10 h-10 flex items-center justify-center text-sm font-medium relative z-10 transition-colors",
+                    isStartDay && "bg-charcoal text-white rounded-full",
+                    isEndDay && "bg-charcoal text-white rounded-full",
+                    !isStartDay && !isEndDay && "hover:bg-gray-200 rounded-full",
+                    isTodayDay && !isStartDay && !isEndDay && "ring-1 ring-gray-300 rounded-full"
+                  )}
+                  data-testid={`calendar-day-${day}`}
+                >
+                  {day}
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
 
