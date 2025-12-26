@@ -1210,37 +1210,6 @@ export default function TripDetails() {
 
               <div>
                 <label className="text-sm font-bold text-gray-700 mb-2 block">
-                  Budget Range (total trip)
-                </label>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      type="number"
-                      placeholder="Min"
-                      className="w-full rounded-xl border border-gray-200 pl-8 pr-3 py-3 text-sm focus:border-primary focus:outline-none"
-                      value={preferences.budgetMin || ""}
-                      onChange={(e) => setPreferences(p => ({ ...p, budgetMin: e.target.value ? parseInt(e.target.value) : undefined }))}
-                      data-testid="input-budget-min"
-                    />
-                  </div>
-                  <span className="text-gray-400">to</span>
-                  <div className="flex-1 relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      type="number"
-                      placeholder="Max"
-                      className="w-full rounded-xl border border-gray-200 pl-8 pr-3 py-3 text-sm focus:border-primary focus:outline-none"
-                      value={preferences.budgetMax || ""}
-                      onChange={(e) => setPreferences(p => ({ ...p, budgetMax: e.target.value ? parseInt(e.target.value) : undefined }))}
-                      data-testid="input-budget-max"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-bold text-gray-700 mb-2 block">
                   Trip Pace
                 </label>
                 <div className="grid grid-cols-3 gap-2">
