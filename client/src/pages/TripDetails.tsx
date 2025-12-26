@@ -1,5 +1,5 @@
 import { useRoute, useLocation } from "wouter";
-import { ChevronLeft, MapPin, Calendar, Sparkles, Loader2, RefreshCw, Plus, Trash2, Edit2, X, Clock, Utensils, BedDouble, Car, Ticket, Check, ShoppingCart, CreditCard, DollarSign, ExternalLink, Star, Share2, GripVertical, Settings2, Users, CheckCircle2, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Calendar, Sparkles, Loader2, RefreshCw, Plus, Trash2, Edit2, X, Clock, Utensils, BedDouble, Car, Ticket, Check, ShoppingCart, CreditCard, DollarSign, ExternalLink, Star, Share2, GripVertical, Settings2, Users, CheckCircle2, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -633,36 +633,25 @@ export default function TripDetails() {
             )}
 
             {!conciergeRequest && trip.status === "confirmed" && (
-              <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl">
-                <div className="flex items-center justify-between">
-                  <div className="text-white">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Users className="h-5 w-5" />
-                      <h3 className="font-bold text-lg">Book with Concierge</h3>
-                    </div>
-                    <p className="text-sm opacity-90">Let our travel agent book everything for you</p>
-                    <p className="text-xs opacity-75 mt-1">15% service fee • Personal support</p>
+              <button
+                onClick={() => setLocation(`/trip/${tripId}/book`)}
+                className="mx-4 mt-4 w-[calc(100%-2rem)] p-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-between"
+                data-testid="button-book-concierge"
+              >
+                <div className="text-white text-left">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Users className="h-5 w-5" />
+                    <h3 className="font-bold text-lg">Book with Concierge</h3>
                   </div>
-                  <button
-                    onClick={() => conciergeCheckoutMutation.mutate({ tripId })}
-                    disabled={conciergeCheckoutMutation.isPending}
-                    className="shrink-0 bg-white text-purple-600 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                    data-testid="button-book-concierge"
-                  >
-                    {conciergeCheckoutMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <CreditCard className="h-4 w-4" />
-                    )}
-                    Book Now
-                  </button>
+                  <p className="text-sm opacity-90">Let our travel agent book everything for you</p>
                 </div>
-              </div>
+                <ChevronRight className="h-6 w-6 text-white shrink-0" />
+              </button>
             )}
 
             {conciergeRequest && (
               <div className="mx-4 mt-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Users className="h-5 w-5 text-purple-600" />
                     <h4 className="font-bold text-charcoal">Concierge Booking</h4>
@@ -673,55 +662,10 @@ export default function TripDetails() {
                     conciergeRequest.status === 'in_progress' ? "bg-blue-100 text-blue-700" :
                     "bg-yellow-100 text-yellow-700"
                   )}>
-                    {conciergeRequest.status === 'completed' || conciergeRequest.status === 'booked' ? 'Completed' :
+                    {conciergeRequest.status === 'completed' || conciergeRequest.status === 'booked' ? 'Booked' :
                      conciergeRequest.status === 'in_progress' ? 'In Progress' : 'Pending'}
                   </span>
                 </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Estimated Total</span>
-                    <span className="font-medium">${(conciergeRequest.totalEstimatedCents / 100).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Service Fee</span>
-                    <span className="font-medium">${(conciergeRequest.serviceFeeCents / 100).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between border-t pt-2">
-                    <span className="font-medium">Total Paid</span>
-                    <span className="font-bold text-primary">${(conciergeRequest.totalPaidCents / 100).toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {trip.costSummary && !conciergeRequest && (
-              <div className="mx-4 mt-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-teal-600" />
-                    <h4 className="font-bold text-charcoal">Concierge Booking</h4>
-                  </div>
-                  <span className="text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
-                    Pending
-                  </span>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Estimated Total</span>
-                    <span className="font-medium">{trip.costSummary.formatted}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Service Fee (15%)</span>
-                    <span className="font-medium">{trip.costSummary.serviceFeeFormatted}</span>
-                  </div>
-                  <div className="flex justify-between border-t pt-2">
-                    <span className="font-medium">Total Paid</span>
-                    <span className="font-bold text-primary">{trip.costSummary.grandTotalFormatted}</span>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400 mt-3">
-                  Based on your selected booking options. Actual prices may vary.
-                </p>
               </div>
             )}
 
