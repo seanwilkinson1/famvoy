@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +48,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  Users,
 } from "lucide-react";
 
 interface User {
@@ -80,7 +81,7 @@ export default function AdminUsers() {
     adminRole: "",
   });
 
-  const { data, isLoading } = useQuery<{ users: User[]; total: number; pages: number }>({
+  const { data, isLoading, error } = useQuery<{ users: User[]; total: number; pages: number }>({
     queryKey: ["/api/admin/users", { search, page, role: roleFilter }],
   });
 
@@ -125,96 +126,111 @@ export default function AdminUsers() {
   return (
     <AdminLayout>
       <div className="space-y-6">
+        {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold" data-testid="text-users-title">User Management</h1>
-            <p className="text-muted-foreground">Manage all users and their permissions</p>
+            <h1 className="text-2xl font-bold text-slate-900" data-testid="text-users-title">User Management</h1>
+            <p className="text-slate-500 mt-1">Manage all users and their permissions</p>
+          </div>
+          <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-lg">
+            <Users className="h-5 w-5" />
+            <span className="font-semibold">{data?.total || 0}</span>
+            <span className="text-blue-600">Total Users</span>
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-4">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        {/* Filters Bar */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                 <Input
                   placeholder="Search users..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
+                  className="pl-10 h-10 bg-white border-slate-200 focus:border-teal-500"
                   data-testid="input-search-users"
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-40" data-testid="select-role-filter">
-                    <Filter className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Filter by role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Users</SelectItem>
-                    <SelectItem value="admin">Admins</SelectItem>
-                    <SelectItem value="agent">Agents</SelectItem>
-                    <SelectItem value="user">Regular Users</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-44 h-10 bg-white border-slate-200" data-testid="select-role-filter">
+                  <Filter className="h-4 w-4 mr-2 text-slate-400" />
+                  <SelectValue placeholder="Filter by role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Users</SelectItem>
+                  <SelectItem value="admin">Admins</SelectItem>
+                  <SelectItem value="agent">Agents</SelectItem>
+                  <SelectItem value="user">Regular Users</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </CardHeader>
-          <CardContent>
+          </CardContent>
+        </Card>
+
+        {/* Users Table */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardContent className="p-0">
             {isLoading ? (
               <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+                <Shield className="h-12 w-12 mb-4 text-slate-300" />
+                <p className="font-medium">Unable to load users</p>
+                <p className="text-sm">You may not have admin permissions</p>
               </div>
             ) : (
               <>
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>User</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Joined</TableHead>
+                    <TableRow className="bg-slate-50 hover:bg-slate-50">
+                      <TableHead className="font-semibold text-slate-700">User</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Email</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Location</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Role</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Joined</TableHead>
                       <TableHead className="w-12"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {data?.users?.map((user) => (
-                      <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
+                      <TableRow key={user.id} className="hover:bg-slate-50" data-testid={`row-user-${user.id}`}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <Avatar>
+                            <Avatar className="h-10 w-10 border border-slate-200">
                               <AvatarImage src={user.profileImageUrl || user.avatar || undefined} />
-                              <AvatarFallback>
+                              <AvatarFallback className="bg-teal-100 text-teal-700 font-medium">
                                 {getUserDisplayName(user)[0]?.toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
-                            <span className="font-medium">{getUserDisplayName(user)}</span>
+                            <span className="font-medium text-slate-900">{getUserDisplayName(user)}</span>
                           </div>
                         </TableCell>
-                        <TableCell>{user.email || "-"}</TableCell>
-                        <TableCell>{user.location || "-"}</TableCell>
+                        <TableCell className="text-slate-600">{user.email || "-"}</TableCell>
+                        <TableCell className="text-slate-600">{user.location || "-"}</TableCell>
                         <TableCell>
-                          <div className="flex gap-1">
+                          <div className="flex gap-1.5">
                             {user.isAdmin && (
-                              <Badge className="bg-red-100 text-red-700">Admin</Badge>
+                              <Badge className="bg-red-100 text-red-700 hover:bg-red-100 font-medium">Admin</Badge>
                             )}
                             {user.isAgent && (
-                              <Badge className="bg-blue-100 text-blue-700">Agent</Badge>
+                              <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 font-medium">Agent</Badge>
                             )}
                             {!user.isAdmin && !user.isAgent && (
-                              <Badge variant="secondary">User</Badge>
+                              <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-medium">User</Badge>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-slate-600">
                           {new Date(user.createdAt).toLocaleDateString()}
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" data-testid={`button-user-menu-${user.id}`}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-slate-900" data-testid={`button-user-menu-${user.id}`}>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -234,12 +250,19 @@ export default function AdminUsers() {
                         </TableCell>
                       </TableRow>
                     ))}
+                    {(!data?.users || data.users.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-32 text-center text-slate-500">
+                          No users found
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
 
                 {/* Pagination */}
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-muted-foreground">
+                <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100">
+                  <p className="text-sm text-slate-500">
                     Showing {data?.users?.length || 0} of {data?.total || 0} users
                   </p>
                   <div className="flex items-center gap-2">
@@ -248,16 +271,18 @@ export default function AdminUsers() {
                       size="sm"
                       onClick={() => setPage(p => Math.max(1, p - 1))}
                       disabled={page === 1}
+                      className="h-8"
                       data-testid="button-prev-page"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <span className="text-sm">Page {page} of {data?.pages || 1}</span>
+                    <span className="text-sm text-slate-600 px-2">Page {page} of {data?.pages || 1}</span>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setPage(p => p + 1)}
                       disabled={page >= (data?.pages || 1)}
+                      className="h-8"
                       data-testid="button-next-page"
                     >
                       <ChevronRight className="h-4 w-4" />
@@ -272,32 +297,32 @@ export default function AdminUsers() {
 
       {/* Edit User Dialog */}
       <Dialog open={editDialog} onOpenChange={setEditDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit User Permissions</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-12 w-12">
+          <div className="space-y-6 py-4">
+            <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg">
+              <Avatar className="h-14 w-14 border-2 border-white shadow">
                 <AvatarImage src={selectedUser?.profileImageUrl || selectedUser?.avatar || undefined} />
-                <AvatarFallback>
+                <AvatarFallback className="bg-teal-100 text-teal-700 text-lg font-medium">
                   {selectedUser ? getUserDisplayName(selectedUser)[0]?.toUpperCase() : "U"}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-medium">{selectedUser ? getUserDisplayName(selectedUser) : ""}</p>
-                <p className="text-sm text-muted-foreground">{selectedUser?.email}</p>
+                <p className="font-semibold text-slate-900">{selectedUser ? getUserDisplayName(selectedUser) : ""}</p>
+                <p className="text-sm text-slate-500">{selectedUser?.email}</p>
               </div>
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label>Admin Access</Label>
+              <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                <Label className="text-slate-700 font-medium">Admin Access</Label>
                 <Select
                   value={editForm.isAdmin ? "yes" : "no"}
                   onValueChange={(v) => setEditForm({ ...editForm, isAdmin: v === "yes" })}
                 >
-                  <SelectTrigger className="w-24" data-testid="select-is-admin">
+                  <SelectTrigger className="w-24 h-9" data-testid="select-is-admin">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -307,13 +332,13 @@ export default function AdminUsers() {
                 </Select>
               </div>
 
-              <div className="flex items-center justify-between">
-                <Label>Agent Access</Label>
+              <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                <Label className="text-slate-700 font-medium">Agent Access</Label>
                 <Select
                   value={editForm.isAgent ? "yes" : "no"}
                   onValueChange={(v) => setEditForm({ ...editForm, isAgent: v === "yes" })}
                 >
-                  <SelectTrigger className="w-24" data-testid="select-is-agent">
+                  <SelectTrigger className="w-24 h-9" data-testid="select-is-agent">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -324,13 +349,13 @@ export default function AdminUsers() {
               </div>
 
               {editForm.isAdmin && (
-                <div className="flex items-center justify-between">
-                  <Label>Admin Role</Label>
+                <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg bg-red-50">
+                  <Label className="text-slate-700 font-medium">Admin Role</Label>
                   <Select
                     value={editForm.adminRole}
                     onValueChange={(v) => setEditForm({ ...editForm, adminRole: v })}
                   >
-                    <SelectTrigger className="w-32" data-testid="select-admin-role">
+                    <SelectTrigger className="w-36 h-9" data-testid="select-admin-role">
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
@@ -347,7 +372,7 @@ export default function AdminUsers() {
             <Button variant="outline" onClick={() => setEditDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={updateUserMutation.isPending}>
+            <Button onClick={handleSave} disabled={updateUserMutation.isPending} className="bg-teal-600 hover:bg-teal-700">
               {updateUserMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Save Changes
             </Button>
