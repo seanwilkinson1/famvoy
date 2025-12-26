@@ -217,6 +217,14 @@ function generateFallbackOptions(tripItem: TripItem, destination: string): Booki
   }));
 }
 
+function isCheckoutItem(tripItem: TripItem): boolean {
+  const title = tripItem.title.toLowerCase();
+  return title.includes("check-out") || 
+         title.includes("checkout") || 
+         title.includes("departure") ||
+         title.includes("check out");
+}
+
 export async function generateAndSaveOptions(
   tripItem: TripItem,
   destination: string,
@@ -225,6 +233,34 @@ export async function generateAndSaveOptions(
   const generationId = generateGenerationId();
   
   await storage.deleteTripItemOptions(tripItem.id);
+  
+  // For checkout/departure items, reuse the locked accommodation from check-in
+  if (isCheckoutItem(tripItem)) {
+    const lockedAccommodation = await storage.getLockedAccommodationForTrip(tripItem.tripId);
+    if (lockedAccommodation) {
+      console.log("Reusing locked accommodation for checkout:", lockedAccommodation.title);
+      const checkoutOption: InsertTripItemOption = {
+        tripItemId: tripItem.id,
+        generationId,
+        provider: lockedAccommodation.provider,
+        title: lockedAccommodation.title,
+        description: `Checking out from ${lockedAccommodation.title}. ${lockedAccommodation.description || ""}`,
+        priceEstimate: "Included with stay",
+        numericPriceEstimate: 0,
+        rating: lockedAccommodation.rating,
+        reviewCount: lockedAccommodation.reviewCount,
+        image: lockedAccommodation.image,
+        bookingUrl: lockedAccommodation.bookingUrl,
+        address: lockedAccommodation.address,
+        isLocked: false,
+      };
+      const savedOptions = await storage.createTripItemOptions([checkoutOption]);
+      return {
+        generationId,
+        options: savedOptions,
+      };
+    }
+  }
   
   const searchResults = await searchBookingOptions(tripItem, destination, tripDates);
   

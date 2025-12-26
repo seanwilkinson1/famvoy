@@ -258,6 +258,7 @@ export interface IStorage {
   createTripItemOptions(options: InsertTripItemOption[]): Promise<TripItemOption[]>;
   deleteTripItemOptions(tripItemId: number, generationId?: string): Promise<void>;
   lockTripItemOption(optionId: number): Promise<TripItemOption>;
+  getLockedAccommodationForTrip(tripId: number): Promise<TripItemOption | null>;
   
   updateTripStatus(tripId: number, status: string): Promise<PodTrip>;
   updateTripItemConfirmation(itemId: number, state: string, selectedOptionId?: number): Promise<TripItem>;
@@ -1624,6 +1625,35 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tripItemOptions.id, optionId))
       .returning();
     return option;
+  }
+
+  async getLockedAccommodationForTrip(tripId: number): Promise<TripItemOption | null> {
+    // Find all STAY items for this trip
+    const stayItems = await db.select()
+      .from(tripItems)
+      .where(and(
+        eq(tripItems.tripId, tripId),
+        eq(tripItems.itemType, "STAY")
+      ));
+    
+    if (stayItems.length === 0) return null;
+    
+    // Find locked options for any STAY item
+    for (const item of stayItems) {
+      const options = await db.select()
+        .from(tripItemOptions)
+        .where(and(
+          eq(tripItemOptions.tripItemId, item.id),
+          eq(tripItemOptions.isLocked, true)
+        ))
+        .limit(1);
+      
+      if (options.length > 0) {
+        return options[0];
+      }
+    }
+    
+    return null;
   }
 
   async updateTripStatus(tripId: number, status: string): Promise<PodTrip> {
