@@ -1294,6 +1294,62 @@ export default function TripDetails() {
                       {interest}
                     </button>
                   ))}
+                  {preferences.tripInterests
+                    .filter(i => !TRIP_INTERESTS.includes(i))
+                    .map(custom => (
+                      <button
+                        key={custom}
+                        onClick={() => {
+                          setPreferences(p => ({
+                            ...p,
+                            tripInterests: p.tripInterests.filter(i => i !== custom)
+                          }));
+                        }}
+                        className="px-3 py-1.5 rounded-full text-sm transition-all bg-accent text-white flex items-center gap-1"
+                        data-testid={`button-custom-interest-${custom.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`}
+                      >
+                        {custom}
+                        <X className="w-3 h-3" />
+                      </button>
+                    ))}
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <input
+                    type="text"
+                    placeholder="Add custom interest..."
+                    className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const value = e.currentTarget.value.trim();
+                        if (value && !preferences.tripInterests.includes(value)) {
+                          setPreferences(p => ({
+                            ...p,
+                            tripInterests: [...p.tripInterests, value]
+                          }));
+                          e.currentTarget.value = '';
+                        }
+                      }
+                    }}
+                    data-testid="input-custom-interest"
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                      const value = input.value.trim();
+                      if (value && !preferences.tripInterests.includes(value)) {
+                        setPreferences(p => ({
+                          ...p,
+                          tripInterests: [...p.tripInterests, value]
+                        }));
+                        input.value = '';
+                      }
+                    }}
+                    className="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent/90"
+                    data-testid="button-add-custom-interest"
+                  >
+                    Add
+                  </button>
                 </div>
               </div>
 
