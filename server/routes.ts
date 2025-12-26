@@ -5,7 +5,9 @@ import multer from "multer";
 import express from "express";
 import { clerkMiddleware, getAuth, requireAuth, clerkClient } from "@clerk/express";
 import { storage } from "./storage";
-import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema, insertFamilyMemberSchema, insertBookingOptionSchema, insertCartItemSchema, insertPodPostSchema, insertChatMessageSchema } from "@shared/schema";
+import { db } from "./db";
+import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema, insertFamilyMemberSchema, insertBookingOptionSchema, insertCartItemSchema, insertPodPostSchema, insertChatMessageSchema, conciergeBookingSessions, conciergeChatMessages, conciergeRequests, conciergeRequestItems, tripItems } from "@shared/schema";
+import { eq, desc, and } from "drizzle-orm";
 import { z } from "zod";
 import { fromError } from "zod-validation-error";
 import OpenAI from "openai";
@@ -3709,6 +3711,32 @@ Keep responses concise but informative. If suggesting specific places, include w
     }
   });
 
+  // Get chat history for a trip
+  app.get('/api/concierge/chat-history/:tripId', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const tripId = parseInt(req.params.tripId);
+      const session = await storage.getConciergeBookingSession(tripId, user.id);
+      
+      if (!session) {
+        return res.json({ messages: [] });
+      }
+
+      const messages = await storage.getConciergeChatMessages(session.id);
+      res.json({ messages });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Export calendar (generate ICS file or Google Calendar link)
   app.post('/api/concierge/calendar/:tripId', requireAuth(), async (req, res) => {
     try {
@@ -3955,6 +3983,210 @@ END:VCALENDAR`;
       await storage.updateTripStatus(request.tripId, 'booked');
 
       res.json(updatedRequest);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get manual booking items that require agent intervention (items with status 'pending' that need manual booking)
+  app.get('/api/agent/manual-bookings', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user || !user.isAgent) {
+        return res.status(403).json({ error: "Not authorized as agent" });
+      }
+
+      // Get all concierge request items that are pending
+      const bookings = await db.select()
+        .from(conciergeRequestItems)
+        .innerJoin(conciergeRequests, eq(conciergeRequestItems.conciergeRequestId, conciergeRequests.id))
+        .innerJoin(tripItems, eq(conciergeRequestItems.tripItemId, tripItems.id))
+        .where(eq(conciergeRequestItems.status, 'pending'))
+        .orderBy(desc(conciergeRequestItems.createdAt));
+
+      const enrichedBookings = await Promise.all(bookings.map(async (b) => {
+        const request = b.concierge_requests;
+        const tripItem = b.trip_items;
+        const trip = await storage.getTripById(request.tripId);
+        const bookingUser = await storage.getUser(request.userId);
+        
+        // Determine if requires manual booking (no booking URL or not OpenTable)
+        const requiresManualBooking = !tripItem.bookingUrl || 
+          (tripItem.category === 'restaurant' && !tripItem.bookingUrl?.includes('opentable'));
+        
+        return {
+          id: b.concierge_request_items.id,
+          tripItemId: tripItem.id,
+          sessionId: request.id,
+          itemType: tripItem.category || 'excursion',
+          itemName: tripItem.title,
+          requiresManualBooking,
+          openTableAvailable: tripItem.bookingUrl?.includes('opentable') || false,
+          bookingUrl: tripItem.bookingUrl,
+          bookingNotes: b.concierge_request_items.agentNotes,
+          status: b.concierge_request_items.status,
+          tripItem: {
+            id: tripItem.id,
+            title: tripItem.title,
+            notes: tripItem.notes,
+            dateTime: tripItem.dateTime,
+          },
+          session: {
+            tripId: request.tripId,
+            userId: request.userId,
+            trip: trip ? { name: trip.name, destination: trip.destination } : undefined,
+            user: bookingUser ? { name: bookingUser.name, email: bookingUser.email } : undefined,
+          },
+        };
+      }));
+
+      res.json(enrichedBookings);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update manual booking status
+  app.patch('/api/agent/manual-bookings/:id', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user || !user.isAgent) {
+        return res.status(403).json({ error: "Not authorized as agent" });
+      }
+
+      const { status, bookingNotes, confirmationNumber } = req.body;
+      
+      const updateData: any = { status };
+      if (bookingNotes) updateData.agentNotes = bookingNotes;
+      if (confirmationNumber) updateData.confirmationCode = confirmationNumber;
+      if (status === 'completed') updateData.bookedAt = new Date();
+
+      const [updated] = await db.update(conciergeRequestItems)
+        .set(updateData)
+        .where(eq(conciergeRequestItems.id, parseInt(req.params.id)))
+        .returning();
+
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get AI chat conversations for agent review
+  app.get('/api/agent/chat-conversations', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user || !user.isAgent) {
+        return res.status(403).json({ error: "Not authorized as agent" });
+      }
+
+      // Get all sessions that have chat messages
+      const sessions = await db.select()
+        .from(conciergeBookingSessions)
+        .innerJoin(conciergeChatMessages, eq(conciergeBookingSessions.id, conciergeChatMessages.sessionId));
+
+      // Group by session and count messages
+      const sessionMap = new Map<number, {
+        sessionId: number;
+        tripId: number;
+        userId: number;
+        messageCount: number;
+        lastMessageAt: Date;
+        aiSuggestionsCount: number;
+      }>();
+
+      for (const row of sessions) {
+        const session = row.concierge_booking_sessions;
+        const message = row.concierge_chat_messages;
+        
+        if (!sessionMap.has(session.id)) {
+          sessionMap.set(session.id, {
+            sessionId: session.id,
+            tripId: session.tripId,
+            userId: session.userId,
+            messageCount: 0,
+            lastMessageAt: message.createdAt,
+            aiSuggestionsCount: 0,
+          });
+        }
+        
+        const entry = sessionMap.get(session.id)!;
+        entry.messageCount++;
+        if (message.role === 'assistant') {
+          entry.aiSuggestionsCount++;
+        }
+        if (message.createdAt > entry.lastMessageAt) {
+          entry.lastMessageAt = message.createdAt;
+        }
+      }
+
+      // Enrich with trip and user info
+      const conversations = await Promise.all(
+        Array.from(sessionMap.values()).map(async (entry) => {
+          const trip = await storage.getTripById(entry.tripId);
+          const chatUser = await storage.getUser(entry.userId);
+          return {
+            ...entry,
+            tripName: trip?.name || 'Unknown Trip',
+            userName: chatUser?.name || null,
+            lastMessageAt: entry.lastMessageAt.toISOString(),
+          };
+        })
+      );
+
+      res.json(conversations);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get chat messages for a specific session (agent view)
+  app.get('/api/agent/chat/:sessionId', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user || !user.isAgent) {
+        return res.status(403).json({ error: "Not authorized as agent" });
+      }
+
+      const sessionId = parseInt(req.params.sessionId);
+      const messages = await storage.getConciergeChatMessages(sessionId);
+      
+      // Get session info
+      const [session] = await db.select()
+        .from(conciergeBookingSessions)
+        .where(eq(conciergeBookingSessions.id, sessionId));
+
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+
+      const trip = await storage.getTripById(session.tripId);
+      const chatUser = await storage.getUser(session.userId);
+
+      res.json({
+        session: {
+          ...session,
+          trip,
+          user: chatUser,
+        },
+        messages,
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

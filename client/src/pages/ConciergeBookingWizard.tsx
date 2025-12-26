@@ -106,6 +106,28 @@ export default function ConciergeBookingWizard() {
     enabled: !!trip,
   });
 
+  const { data: chatHistory, refetch: refetchChatHistory } = useQuery<{ messages: ChatMessage[] }>({
+    queryKey: [`/api/concierge/chat-history/${tripId}`],
+    enabled: tripId > 0 && currentStep?.id === 'ai_chat',
+    staleTime: 0,
+  });
+
+  useEffect(() => {
+    if (currentStep?.id === 'ai_chat' && tripId > 0) {
+      refetchChatHistory();
+    }
+  }, [currentStep?.id, tripId, refetchChatHistory]);
+
+  useEffect(() => {
+    if (chatHistory?.messages && chatHistory.messages.length > 0) {
+      const historyLength = chatHistory.messages.length;
+      const localLength = chatMessages.length;
+      if (historyLength > localLength || localLength === 0) {
+        setChatMessages(chatHistory.messages);
+      }
+    }
+  }, [chatHistory]);
+
   const createSessionMutation = useMutation({
     mutationFn: () => apiRequest("POST", `/api/concierge/session`, { tripId }),
     onSuccess: () => {

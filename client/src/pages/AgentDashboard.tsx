@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Users, Clock, CheckCircle2, AlertCircle, ClipboardList, MapPin, Calendar, DollarSign, ChevronRight, Loader2 } from "lucide-react";
+import { ArrowLeft, Users, Clock, CheckCircle2, AlertCircle, ClipboardList, MapPin, Calendar, DollarSign, ChevronRight, Loader2, Utensils, Phone, MessageCircle, ExternalLink, Plane, Compass } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface ConciergeRequest {
   id: number;
@@ -36,10 +40,49 @@ interface ConciergeRequest {
   };
 }
 
+interface ManualBookingItem {
+  id: number;
+  tripItemId: number;
+  sessionId: number;
+  itemType: string;
+  itemName: string;
+  requiresManualBooking: boolean;
+  openTableAvailable: boolean | null;
+  bookingUrl: string | null;
+  bookingNotes: string | null;
+  status: string;
+  tripItem: {
+    id: number;
+    title: string;
+    notes: string | null;
+    dateTime: string | null;
+  };
+  session: {
+    tripId: number;
+    userId: number;
+    trip?: { name: string; destination: string };
+    user?: { name: string | null; email: string | null };
+  };
+}
+
+interface ChatConversation {
+  sessionId: number;
+  tripId: number;
+  userId: number;
+  tripName: string;
+  userName: string | null;
+  messageCount: number;
+  lastMessageAt: string;
+  aiSuggestionsCount: number;
+}
+
 export default function AgentDashboard() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("pending");
+  const [selectedBooking, setSelectedBooking] = useState<ManualBookingItem | null>(null);
+  const [bookingNotes, setBookingNotes] = useState("");
+  const [confirmationNumber, setConfirmationNumber] = useState("");
 
   const { data: agentStatus } = useQuery<{ isAgent: boolean }>({
     queryKey: ["/api/agent/status"],
@@ -55,6 +98,16 @@ export default function AgentDashboard() {
     enabled: agentStatus?.isAgent,
   });
 
+  const { data: manualBookings = [], isLoading: loadingManual } = useQuery<ManualBookingItem[]>({
+    queryKey: ["/api/agent/manual-bookings"],
+    enabled: agentStatus?.isAgent,
+  });
+
+  const { data: chatConversations = [], isLoading: loadingChats } = useQuery<ChatConversation[]>({
+    queryKey: ["/api/agent/chat-conversations"],
+    enabled: agentStatus?.isAgent,
+  });
+
   const claimMutation = useMutation({
     mutationFn: (requestId: number) => apiRequest("POST", `/api/agent/requests/${requestId}/claim`),
     onSuccess: () => {
@@ -64,6 +117,21 @@ export default function AgentDashboard() {
     },
     onError: (error: any) => {
       toast({ title: "Failed to claim request", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateBookingMutation = useMutation({
+    mutationFn: (data: { id: number; status: string; bookingNotes?: string; confirmationNumber?: string }) => 
+      apiRequest("PATCH", `/api/agent/manual-bookings/${data.id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/agent/manual-bookings"] });
+      toast({ title: "Booking updated successfully" });
+      setSelectedBooking(null);
+      setBookingNotes("");
+      setConfirmationNumber("");
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to update booking", description: error.message, variant: "destructive" });
     },
   });
 
@@ -181,26 +249,40 @@ export default function AgentDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-5 gap-2">
           <Card>
-            <CardContent className="p-3 text-center">
-              <Clock className="w-6 h-6 mx-auto mb-1 text-yellow-600" />
-              <p className="text-2xl font-bold">{pendingRequests.length}</p>
-              <p className="text-xs text-muted-foreground">Pending</p>
+            <CardContent className="p-2 text-center">
+              <Clock className="w-5 h-5 mx-auto mb-1 text-yellow-600" />
+              <p className="text-xl font-bold">{pendingRequests.length}</p>
+              <p className="text-[10px] text-muted-foreground">Pending</p>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-3 text-center">
-              <Users className="w-6 h-6 mx-auto mb-1 text-blue-600" />
-              <p className="text-2xl font-bold">{activeRequests.length}</p>
-              <p className="text-xs text-muted-foreground">In Progress</p>
+            <CardContent className="p-2 text-center">
+              <Users className="w-5 h-5 mx-auto mb-1 text-blue-600" />
+              <p className="text-xl font-bold">{activeRequests.length}</p>
+              <p className="text-[10px] text-muted-foreground">Active</p>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-3 text-center">
-              <CheckCircle2 className="w-6 h-6 mx-auto mb-1 text-green-600" />
-              <p className="text-2xl font-bold">{completedRequests.length}</p>
-              <p className="text-xs text-muted-foreground">Completed</p>
+            <CardContent className="p-2 text-center">
+              <CheckCircle2 className="w-5 h-5 mx-auto mb-1 text-green-600" />
+              <p className="text-xl font-bold">{completedRequests.length}</p>
+              <p className="text-[10px] text-muted-foreground">Done</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-2 text-center">
+              <Phone className="w-5 h-5 mx-auto mb-1 text-orange-600" />
+              <p className="text-xl font-bold">{manualBookings.filter(b => b.status === 'pending').length}</p>
+              <p className="text-[10px] text-muted-foreground">Manual</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-2 text-center">
+              <MessageCircle className="w-5 h-5 mx-auto mb-1 text-purple-600" />
+              <p className="text-xl font-bold">{chatConversations.length}</p>
+              <p className="text-[10px] text-muted-foreground">Chats</p>
             </CardContent>
           </Card>
         </div>
@@ -208,16 +290,24 @@ export default function AgentDashboard() {
 
       <div className="px-4 pt-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-3">
-            <TabsTrigger value="pending" className="flex items-center gap-1">
+          <TabsList className="w-full grid grid-cols-5 h-auto">
+            <TabsTrigger value="pending" className="flex flex-col items-center gap-0.5 py-1.5 text-xs">
               <Clock className="w-4 h-4" />
               Pending
             </TabsTrigger>
-            <TabsTrigger value="assigned" className="flex items-center gap-1">
+            <TabsTrigger value="assigned" className="flex flex-col items-center gap-0.5 py-1.5 text-xs">
               <ClipboardList className="w-4 h-4" />
-              My Tasks
+              Tasks
             </TabsTrigger>
-            <TabsTrigger value="completed" className="flex items-center gap-1">
+            <TabsTrigger value="manual" className="flex flex-col items-center gap-0.5 py-1.5 text-xs">
+              <Phone className="w-4 h-4" />
+              Manual
+            </TabsTrigger>
+            <TabsTrigger value="chats" className="flex flex-col items-center gap-0.5 py-1.5 text-xs">
+              <MessageCircle className="w-4 h-4" />
+              Chats
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="flex flex-col items-center gap-0.5 py-1.5 text-xs">
               <CheckCircle2 className="w-4 h-4" />
               Done
             </TabsTrigger>
@@ -257,6 +347,156 @@ export default function AgentDashboard() {
             )}
           </TabsContent>
 
+          <TabsContent value="manual" className="mt-4">
+            {loadingManual ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : manualBookings.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Phone className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>No manual bookings pending</p>
+                <p className="text-sm mt-1">Items requiring phone/email booking will appear here</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {manualBookings.map(booking => (
+                  <Card key={booking.id} data-testid={`card-manual-booking-${booking.id}`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          {booking.itemType === 'restaurant' ? (
+                            <Utensils className="w-5 h-5 text-orange-600" />
+                          ) : booking.itemType === 'flight' ? (
+                            <Plane className="w-5 h-5 text-blue-600" />
+                          ) : (
+                            <Compass className="w-5 h-5 text-green-600" />
+                          )}
+                          <div>
+                            <p className="font-medium">{booking.itemName}</p>
+                            <p className="text-sm text-muted-foreground capitalize">{booking.itemType}</p>
+                          </div>
+                        </div>
+                        <Badge 
+                          variant="secondary" 
+                          className={
+                            booking.status === 'completed' ? 'bg-green-100 text-green-800' :
+                            booking.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                            'bg-orange-100 text-orange-800'
+                          }
+                        >
+                          {booking.status === 'pending' ? 'Needs Booking' : 
+                           booking.status === 'in_progress' ? 'In Progress' : 'Booked'}
+                        </Badge>
+                      </div>
+                      
+                      {booking.itemType === 'restaurant' && (
+                        <div className="flex items-center gap-2 text-sm mb-2">
+                          <span className={booking.openTableAvailable ? 'text-green-600' : 'text-orange-600'}>
+                            {booking.openTableAvailable ? '✓ OpenTable Available' : '✗ No OpenTable - Manual Required'}
+                          </span>
+                        </div>
+                      )}
+
+                      {booking.tripItem.dateTime && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                          <Calendar className="w-4 h-4" />
+                          <span>{new Date(booking.tripItem.dateTime).toLocaleString()}</span>
+                        </div>
+                      )}
+
+                      {booking.bookingUrl && (
+                        <a 
+                          href={booking.bookingUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline mb-3"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          Open Booking Link
+                        </a>
+                      )}
+
+                      {booking.tripItem.notes && (
+                        <div className="bg-muted/50 rounded p-2 text-sm mb-3">
+                          <p className="font-medium text-xs text-muted-foreground mb-1">Notes:</p>
+                          <p>{booking.tripItem.notes}</p>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedBooking(booking);
+                            setBookingNotes(booking.bookingNotes || '');
+                          }}
+                          data-testid={`button-update-booking-${booking.id}`}
+                        >
+                          Update Status
+                        </Button>
+                        {booking.status === 'pending' && (
+                          <Button 
+                            size="sm"
+                            onClick={() => updateBookingMutation.mutate({ 
+                              id: booking.id, 
+                              status: 'in_progress' 
+                            })}
+                            data-testid={`button-start-booking-${booking.id}`}
+                          >
+                            Start Booking
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="chats" className="mt-4">
+            {loadingChats ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : chatConversations.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>No AI chat conversations yet</p>
+                <p className="text-sm mt-1">User conversations with AI assistant will appear here</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {chatConversations.map(convo => (
+                  <Card key={convo.sessionId} data-testid={`card-chat-${convo.sessionId}`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="font-medium">{convo.tripName}</p>
+                          <p className="text-sm text-muted-foreground">{convo.userName || 'Unknown user'}</p>
+                        </div>
+                        <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                          {convo.messageCount} messages
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span>AI Suggestions: {convo.aiSuggestionsCount}</span>
+                        <span>Last: {new Date(convo.lastMessageAt).toLocaleDateString()}</span>
+                      </div>
+                      <Link href={`/agent/chat/${convo.sessionId}`}>
+                        <Button size="sm" variant="outline" className="mt-3" data-testid={`button-view-chat-${convo.sessionId}`}>
+                          View Conversation <ChevronRight className="w-4 h-4 ml-1" />
+                        </Button>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
           <TabsContent value="completed" className="mt-4">
             {completedRequests.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
@@ -271,6 +511,62 @@ export default function AgentDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={!!selectedBooking} onOpenChange={(open) => !open && setSelectedBooking(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Booking Status</DialogTitle>
+          </DialogHeader>
+          {selectedBooking && (
+            <div className="space-y-4">
+              <div>
+                <Label>Booking: {selectedBooking.itemName}</Label>
+                <p className="text-sm text-muted-foreground capitalize">{selectedBooking.itemType}</p>
+              </div>
+              <div>
+                <Label htmlFor="confirmationNumber">Confirmation Number</Label>
+                <Input
+                  id="confirmationNumber"
+                  value={confirmationNumber}
+                  onChange={(e) => setConfirmationNumber(e.target.value)}
+                  placeholder="Enter confirmation number if available"
+                />
+              </div>
+              <div>
+                <Label htmlFor="bookingNotes">Agent Notes</Label>
+                <Textarea
+                  id="bookingNotes"
+                  value={bookingNotes}
+                  onChange={(e) => setBookingNotes(e.target.value)}
+                  placeholder="Add notes about this booking..."
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setSelectedBooking(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (selectedBooking) {
+                  updateBookingMutation.mutate({
+                    id: selectedBooking.id,
+                    status: 'completed',
+                    bookingNotes,
+                    confirmationNumber,
+                  });
+                }
+              }}
+              disabled={updateBookingMutation.isPending}
+            >
+              {updateBookingMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Mark as Booked
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
