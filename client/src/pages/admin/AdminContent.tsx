@@ -62,8 +62,27 @@ export default function AdminContent() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setPage(1);
+    setSearch("");
+  };
+
   const { data: experiencesData, isLoading, error } = useQuery<{ experiences: Experience[]; total: number; pages: number }>({
     queryKey: ["/api/admin/experiences", { search, page }],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      params.set("page", String(page));
+      const res = await fetch(`/api/admin/experiences?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch experiences");
+      return res.json();
+    },
     enabled: activeTab === "experiences",
   });
 
@@ -102,7 +121,7 @@ export default function AdminContent() {
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList className="bg-slate-100 p-1">
             <TabsTrigger value="experiences" className="data-[state=active]:bg-white data-[state=active]:shadow-sm" data-testid="tab-experiences">Experiences</TabsTrigger>
             <TabsTrigger value="destinations" className="data-[state=active]:bg-white data-[state=active]:shadow-sm" data-testid="tab-destinations">Destinations</TabsTrigger>
@@ -117,7 +136,7 @@ export default function AdminContent() {
                   <Input
                     placeholder="Search experiences..."
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-10 h-10 bg-white border-slate-200 focus:border-teal-500"
                     data-testid="input-search-experiences"
                   />

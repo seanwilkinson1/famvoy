@@ -48,8 +48,27 @@ export default function AdminTrips() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
+
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value);
+    setPage(1);
+  };
+
   const { data, isLoading, error } = useQuery<{ trips: Trip[]; total: number; pages: number }>({
     queryKey: ["/api/admin/trips", { search, page, status: statusFilter }],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      params.set("page", String(page));
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      const res = await fetch(`/api/admin/trips?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch trips");
+      return res.json();
+    },
   });
 
   const getStatusBadge = (status: string) => {
@@ -104,12 +123,12 @@ export default function AdminTrips() {
                 <Input
                   placeholder="Search trips..."
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-10 h-10 bg-white border-slate-200 focus:border-teal-500"
                   data-testid="input-search-trips"
                 />
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
                 <SelectTrigger className="w-44 h-10 bg-white border-slate-200" data-testid="select-status-filter">
                   <Filter className="h-4 w-4 mr-2 text-slate-400" />
                   <SelectValue placeholder="Filter by status" />

@@ -73,6 +73,16 @@ export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [roleFilter, setRoleFilter] = useState<string>("all");
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
+
+  const handleRoleFilterChange = (value: string) => {
+    setRoleFilter(value);
+    setPage(1);
+  };
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editDialog, setEditDialog] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -83,6 +93,15 @@ export default function AdminUsers() {
 
   const { data, isLoading, error } = useQuery<{ users: User[]; total: number; pages: number }>({
     queryKey: ["/api/admin/users", { search, page, role: roleFilter }],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      params.set("page", String(page));
+      if (roleFilter !== "all") params.set("role", roleFilter);
+      const res = await fetch(`/api/admin/users?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch users");
+      return res.json();
+    },
   });
 
   const updateUserMutation = useMutation({
@@ -148,12 +167,12 @@ export default function AdminUsers() {
                 <Input
                   placeholder="Search users..."
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-10 h-10 bg-white border-slate-200 focus:border-teal-500"
                   data-testid="input-search-users"
                 />
               </div>
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <Select value={roleFilter} onValueChange={handleRoleFilterChange}>
                 <SelectTrigger className="w-44 h-10 bg-white border-slate-200" data-testid="select-role-filter">
                   <Filter className="h-4 w-4 mr-2 text-slate-400" />
                   <SelectValue placeholder="Filter by role" />

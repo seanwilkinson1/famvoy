@@ -81,6 +81,17 @@ export default function AdminBookings() {
   const [activeTab, setActiveTab] = useState("orders");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setPage(1);
+    setSearch("");
+  };
   const [selectedBooking, setSelectedBooking] = useState<ManualBooking | null>(null);
   const [bookingDialog, setBookingDialog] = useState(false);
   const [bookingNotes, setBookingNotes] = useState("");
@@ -88,11 +99,27 @@ export default function AdminBookings() {
 
   const { data: ordersData, isLoading: loadingOrders, error: ordersError } = useQuery<{ orders: Order[]; total: number; pages: number }>({
     queryKey: ["/api/admin/orders", { search, page }],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      params.set("page", String(page));
+      const res = await fetch(`/api/admin/orders?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch orders");
+      return res.json();
+    },
     enabled: activeTab === "orders",
   });
 
   const { data: manualData, isLoading: loadingManual, error: manualError } = useQuery<{ bookings: ManualBooking[]; total: number; pages: number }>({
     queryKey: ["/api/admin/manual-bookings", { search, page }],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      params.set("page", String(page));
+      const res = await fetch(`/api/admin/manual-bookings?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch bookings");
+      return res.json();
+    },
     enabled: activeTab === "manual",
   });
 
@@ -157,7 +184,7 @@ export default function AdminBookings() {
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList className="bg-slate-100 p-1">
             <TabsTrigger value="orders" className="data-[state=active]:bg-white data-[state=active]:shadow-sm" data-testid="tab-orders">Orders</TabsTrigger>
             <TabsTrigger value="manual" className="data-[state=active]:bg-white data-[state=active]:shadow-sm" data-testid="tab-manual">Manual Bookings</TabsTrigger>
@@ -172,7 +199,7 @@ export default function AdminBookings() {
                   <Input
                     placeholder="Search orders..."
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-10 h-10 bg-white border-slate-200 focus:border-teal-500"
                     data-testid="input-search-orders"
                   />
@@ -270,7 +297,7 @@ export default function AdminBookings() {
                   <Input
                     placeholder="Search manual bookings..."
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-10 h-10 bg-white border-slate-200 focus:border-teal-500"
                     data-testid="input-search-manual"
                   />
