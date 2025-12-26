@@ -4014,26 +4014,25 @@ END:VCALENDAR`;
         const trip = await storage.getTripById(request.tripId);
         const bookingUser = await storage.getUser(request.userId);
         
-        // Determine if requires manual booking (no booking URL or not OpenTable)
-        const requiresManualBooking = !tripItem.bookingUrl || 
-          (tripItem.category === 'restaurant' && !tripItem.bookingUrl?.includes('opentable'));
+        // Determine if requires manual booking based on item type
+        const requiresManualBooking = tripItem.itemType === 'MEAL' || tripItem.itemType === 'ACTIVITY';
         
         return {
           id: b.concierge_request_items.id,
           tripItemId: tripItem.id,
           sessionId: request.id,
-          itemType: tripItem.category || 'excursion',
+          itemType: tripItem.itemType || 'ACTIVITY',
           itemName: tripItem.title,
           requiresManualBooking,
-          openTableAvailable: tripItem.bookingUrl?.includes('opentable') || false,
-          bookingUrl: tripItem.bookingUrl,
+          openTableAvailable: false,
+          bookingUrl: null,
           bookingNotes: b.concierge_request_items.agentNotes,
           status: b.concierge_request_items.status,
           tripItem: {
             id: tripItem.id,
             title: tripItem.title,
-            notes: tripItem.notes,
-            dateTime: tripItem.dateTime,
+            description: tripItem.description,
+            time: tripItem.time,
           },
           session: {
             tripId: request.tripId,
@@ -4223,11 +4222,12 @@ END:VCALENDAR`;
       const allOrders = await db.select().from(orders);
       const allPods = await db.select().from(pods);
       const pendingConcierge = await db.select().from(conciergeRequests).where(eq(conciergeRequests.status, 'pending'));
-      const pendingBookings = await db.select().from(tripItemBookingMeta).where(eq(tripItemBookingMeta.status, 'pending'));
+      const allBookingMeta = await db.select().from(tripItemBookingMeta);
+      const pendingManualBookings = allBookingMeta.filter(b => b.requiresManualBooking === true);
 
       const totalRevenue = allOrders
         .filter(o => o.status === 'completed')
-        .reduce((sum, o) => sum + (o.totalCents || 0), 0);
+        .reduce((sum, o) => sum + (o.totalInCents || 0), 0);
 
       const recentUsers = allUsers
         .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
@@ -4259,10 +4259,10 @@ END:VCALENDAR`;
         activePods: allPods.length,
         recentUsers,
         recentTrips,
-        pendingBookings: pendingBookings.slice(0, 5).map(b => ({
+        pendingBookings: pendingManualBookings.slice(0, 5).map(b => ({
           id: b.id,
-          itemName: b.itemName,
-          status: b.status,
+          tripItemId: b.tripItemId,
+          bookingPlatform: b.bookingPlatform,
           createdAt: b.createdAt,
         })),
       });
@@ -4425,21 +4425,20 @@ END:VCALENDAR`;
         .slice((pageNum - 1) * pageSize, pageNum * pageSize);
 
       const enrichedBookings = await Promise.all(paginatedBookings.map(async (booking) => {
-        const [session] = await db.select().from(conciergeBookingSessions).where(eq(conciergeBookingSessions.id, booking.sessionId));
+        // Get the trip item to find the trip
+        const [tripItem] = await db.select().from(tripItems).where(eq(tripItems.id, booking.tripItemId));
         let sessionInfo: any = { tripId: 0, userId: 0 };
-        if (session) {
-          const trip = await storage.getTripById(session.tripId);
-          const bookingUser = await storage.getUser(session.userId);
+        if (tripItem) {
+          const trip = await storage.getTripById(tripItem.tripId);
           sessionInfo = {
-            tripId: session.tripId,
-            userId: session.userId,
+            tripId: tripItem.tripId,
             trip: trip ? { name: trip.name, destination: trip.destination } : null,
-            user: bookingUser ? { name: bookingUser.name, email: bookingUser.email } : null,
           };
         }
         
         return {
           ...booking,
+          tripItem: tripItem ? { id: tripItem.id, title: tripItem.title, itemType: tripItem.itemType } : null,
           session: sessionInfo,
         };
       }));
@@ -4454,10 +4453,10 @@ END:VCALENDAR`;
   app.patch('/api/admin/manual-bookings/:id', requireAuth(), requireAdmin, async (req, res) => {
     try {
       const bookingId = parseInt(req.params.id);
-      const { status, bookingNotes, confirmationNumber } = req.body;
+      const { reservationDate, reservationTime, partySize, specialRequests } = req.body;
 
       await db.update(tripItemBookingMeta)
-        .set({ status, bookingNotes, confirmationNumber })
+        .set({ reservationDate, reservationTime, partySize, specialRequests })
         .where(eq(tripItemBookingMeta.id, bookingId));
 
       res.json({ success: true });
