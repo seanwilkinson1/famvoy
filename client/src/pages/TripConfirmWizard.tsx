@@ -113,8 +113,11 @@ export default function TripConfirmWizard() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to generate options");
-      await refetch();
+      const data = await res.json();
+      console.log("Generated new options:", data);
+      await queryClient.invalidateQueries({ queryKey: ["confirmSession", tripId] });
     } catch (error) {
+      console.error("Generate options error:", error);
       toast.error("Failed to generate booking options");
     } finally {
       setIsGenerating(false);
