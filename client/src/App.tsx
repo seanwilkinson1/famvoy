@@ -110,7 +110,7 @@ function AuthenticatedRouter() {
             </PullToRefresh>
           )}
           {location === "/" && <FloatingActionButton />}
-          <BottomNav />
+          {!isConversationPage && <BottomNav />}
         </div>
       </div>
     </GoogleMapsProvider>
