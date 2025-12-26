@@ -50,10 +50,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
+      {/* Sidebar - uses sticky positioning instead of fixed */}
       <aside
         className={cn(
-          "bg-slate-900 text-white flex flex-col transition-all duration-300 fixed h-full z-40",
+          "bg-slate-900 text-white flex flex-col transition-all duration-300 sticky top-0 h-screen shrink-0 z-40",
           collapsed ? "w-16" : "w-64"
         )}
       >
@@ -113,7 +113,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </aside>
 
       {/* Main content */}
-      <div className={cn("flex-1 flex flex-col", collapsed ? "ml-16" : "ml-64")}>
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <header className="h-16 bg-white border-b flex items-center justify-between px-6 sticky top-0 z-30">
           <div className="flex items-center gap-4 flex-1">
