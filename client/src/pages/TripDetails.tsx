@@ -1,5 +1,5 @@
 import { useRoute, useLocation } from "wouter";
-import { ChevronLeft, ChevronRight, MapPin, Calendar, Sparkles, Loader2, RefreshCw, Plus, Trash2, Edit2, X, Clock, Utensils, BedDouble, Car, Ticket, Check, ShoppingCart, CreditCard, DollarSign, ExternalLink, Star, Share2, GripVertical, Settings2, Users, CheckCircle2, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Calendar, Sparkles, Loader2, RefreshCw, Plus, Trash2, Edit2, X, Clock, Utensils, BedDouble, Car, Ticket, Check, CreditCard, DollarSign, ExternalLink, Star, Share2, GripVertical, Users, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -7,7 +7,6 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { BookingModal } from "@/components/shared/BookingModal";
-import { useAuth } from "@clerk/clerk-react";
 import { apiRequest } from "@/lib/queryClient";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -162,15 +161,6 @@ export default function TripDetails() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
   
-  const { isSignedIn } = useAuth();
-  
-  const { data: cart } = useQuery({
-    queryKey: ["cart"],
-    queryFn: () => api.cart.get(),
-    enabled: !!isSignedIn,
-  });
-  
-  const cartItemCount = cart?.items?.length || 0;
   const tripId = params?.id ? parseInt(params.id) : 0;
 
   const { data: trip, isLoading } = useQuery<Trip>({
@@ -496,27 +486,13 @@ export default function TripDetails() {
     <div className="flex h-screen flex-col bg-background md:pb-0">
       <div className="border-b border-gray-100 bg-white px-6 pt-14 md:pt-6 pb-4 shadow-sm z-10 md:max-w-5xl md:mx-auto md:w-full">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setLocation(`/pod/${trip.podId}`)} 
-              className="rounded-full bg-gray-100 p-2 active:scale-90"
-              data-testid="button-back"
-            >
-              <ChevronLeft className="h-6 w-6 text-gray-700" />
-            </button>
-            <button
-              onClick={() => setLocation("/cart")}
-              className="relative rounded-full bg-gray-100 p-2 active:scale-90"
-              data-testid="button-cart"
-            >
-              <ShoppingCart className="h-5 w-5 text-gray-700" />
-              {cartItemCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-xs font-bold rounded-full flex items-center justify-center">
-                  {cartItemCount}
-                </span>
-              )}
-            </button>
-          </div>
+          <button 
+            onClick={() => setLocation(trip.podId ? `/pod/${trip.podId}` : "/trips")} 
+            className="rounded-full bg-gray-100 p-2 active:scale-90"
+            data-testid="button-back"
+          >
+            <ChevronLeft className="h-6 w-6 text-gray-700" />
+          </button>
           <button
             onClick={() => setShowPreferencesModal(true)}
             disabled={isGenerating}
