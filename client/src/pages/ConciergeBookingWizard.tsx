@@ -743,46 +743,62 @@ export default function ConciergeBookingWizard() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between gap-1">
           {STEPS.map((step, index) => {
             const Icon = step.icon;
             const isActive = index === currentStepIndex;
             const isComplete = index < currentStepIndex;
+            const canNavigate = isComplete || index === currentStepIndex;
             
             return (
               <div 
                 key={step.id}
-                className={cn(
-                  "flex flex-col items-center gap-1",
-                  index < STEPS.length - 1 && "flex-1"
-                )}
+                className="flex-1 flex flex-col items-center"
               >
                 <div className="flex items-center w-full">
-                  <div
+                  {index > 0 && (
+                    <div 
+                      className={cn(
+                        "flex-1 h-0.5",
+                        index <= currentStepIndex ? "bg-green-500" : "bg-muted"
+                      )}
+                    />
+                  )}
+                  <button
+                    onClick={() => {
+                      if (canNavigate) {
+                        const targetStep = STEPS[index];
+                        updateSessionMutation.mutate({ currentStep: targetStep.id });
+                        setCurrentStepIndex(index);
+                      }
+                    }}
+                    disabled={!canNavigate}
                     className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
-                      isActive && "bg-primary text-primary-foreground",
-                      isComplete && "bg-green-500 text-white",
-                      !isActive && !isComplete && "bg-muted text-muted-foreground"
+                      "w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0",
+                      isActive && "bg-primary text-primary-foreground ring-2 ring-primary/30",
+                      isComplete && "bg-green-500 text-white hover:bg-green-600",
+                      !isActive && !isComplete && "bg-muted text-muted-foreground",
+                      canNavigate && "cursor-pointer"
                     )}
+                    data-testid={`button-step-${step.id}`}
                   >
                     {isComplete ? (
                       <Check className="h-5 w-5" />
                     ) : (
                       <Icon className="h-5 w-5" />
                     )}
-                  </div>
+                  </button>
                   {index < STEPS.length - 1 && (
                     <div 
                       className={cn(
-                        "flex-1 h-1 mx-2",
+                        "flex-1 h-0.5",
                         isComplete ? "bg-green-500" : "bg-muted"
                       )}
                     />
                   )}
                 </div>
                 <span className={cn(
-                  "text-xs font-medium",
+                  "text-xs font-medium mt-1.5 text-center whitespace-nowrap",
                   isActive && "text-primary",
                   isComplete && "text-green-600",
                   !isActive && !isComplete && "text-muted-foreground"
