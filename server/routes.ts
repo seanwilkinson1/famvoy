@@ -6,7 +6,7 @@ import express from "express";
 import { clerkMiddleware, getAuth, requireAuth, clerkClient } from "@clerk/express";
 import { storage } from "./storage";
 import { db } from "./db";
-import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema, insertFamilyMemberSchema, insertBookingOptionSchema, insertCartItemSchema, insertPodPostSchema, insertChatMessageSchema, conciergeBookingSessions, conciergeChatMessages, conciergeRequests, conciergeRequestItems, tripItems } from "@shared/schema";
+import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema, insertFamilyMemberSchema, insertBookingOptionSchema, insertCartItemSchema, insertPodPostSchema, insertChatMessageSchema, conciergeBookingSessions, conciergeChatMessages, conciergeRequests, conciergeRequestItems, tripItems, users, experiences, pods, podTrips, orders, podMembers, messages, orderItems, tripItemBookingMeta } from "@shared/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { z } from "zod";
 import { fromError } from "zod-validation-error";

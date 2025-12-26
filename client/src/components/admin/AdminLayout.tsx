@@ -52,20 +52,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "bg-slate-800 text-white flex flex-col transition-all duration-300 sticky top-0 h-screen shrink-0 z-40",
+          "bg-slate-900 flex flex-col transition-all duration-300 sticky top-0 h-screen shrink-0 z-40",
           collapsed ? "w-16" : "w-64"
         )}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-700">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-700/50">
           {!collapsed && (
-            <span className="text-xl font-bold text-white tracking-tight">FamVoy Admin</span>
+            <span className="text-xl font-bold text-teal-400 tracking-tight">FamVoy Admin</span>
           )}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setCollapsed(!collapsed)}
-            className="text-slate-300 hover:text-white hover:bg-slate-700"
+            className="text-slate-400 hover:text-white hover:bg-slate-800"
             data-testid="button-toggle-sidebar"
           >
             {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
@@ -85,8 +85,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                       className={cn(
                         "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 font-medium",
                         isActive
-                          ? "bg-teal-600 text-white shadow-md"
-                          : "text-slate-200 hover:bg-slate-700 hover:text-white"
+                          ? "bg-teal-500 text-white shadow-lg"
+                          : "text-slate-300 hover:bg-slate-800 hover:text-white"
                       )}
                       data-testid={`nav-${item.label.toLowerCase()}`}
                     >
@@ -101,10 +101,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
 
         {/* Back to App Link */}
-        <div className="p-4 border-t border-slate-700">
+        <div className="p-4 border-t border-slate-700/50">
           <Link href="/">
             <a className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-200 hover:bg-slate-700 hover:text-white transition-all duration-200 font-medium",
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-all duration-200 font-medium",
               collapsed && "justify-center"
             )}>
               <LogOut className="h-5 w-5 text-slate-400" />
