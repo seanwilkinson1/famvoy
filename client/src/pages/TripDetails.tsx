@@ -1438,7 +1438,7 @@ export default function TripDetails() {
 
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
+          <div className="bg-white rounded-2xl w-full max-w-sm">
             <div className="p-6 text-center">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 className="h-8 w-8 text-red-600" />
@@ -1448,27 +1448,24 @@ export default function TripDetails() {
                 This will permanently delete "{trip.name}" and all its itinerary items. This action cannot be undone.
               </p>
             </div>
-            <div className="p-4 pt-0 grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="rounded-xl border border-gray-200 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50"
-                data-testid="button-cancel-delete"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => deleteTripMutation.mutate()}
-                disabled={deleteTripMutation.isPending}
-                className="rounded-xl bg-red-600 py-3 text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50"
-                data-testid="button-confirm-delete"
-              >
-                {deleteTripMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4" />
-                )}
-                Delete
-              </button>
+            <div className="p-4 border-t border-gray-100">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50"
+                  data-testid="button-cancel-delete"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => deleteTripMutation.mutate()}
+                  disabled={deleteTripMutation.isPending}
+                  className="flex-1 rounded-xl bg-red-600 py-3 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"
+                  data-testid="button-confirm-delete"
+                >
+                  {deleteTripMutation.isPending ? "Deleting..." : "Delete"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
