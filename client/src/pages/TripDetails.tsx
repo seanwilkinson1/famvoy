@@ -18,7 +18,7 @@ const PACE_OPTIONS = [
   { value: "active", label: "Active", description: "Action-packed" },
 ];
 
-const KIDS_AGE_GROUPS = ["Infant (0-1)", "Toddler (1-3)", "Preschool (3-5)", "Elementary (5-10)", "Tween (10-13)", "Teen (13-18)"];
+const KIDS_AGE_GROUPS = ["Infant (0-1)", "Toddler (1-3)", "Preschool (3-5)", "Elementary (5-10)", "Tween (10-13)", "Teen (13-18)", "Young Adult (18-21)", "Adult (21+)"];
 
 const TRIP_INTERESTS = ["Beach & Water", "Adventure & Outdoors", "Cultural & History", "Theme Parks", "Nature & Wildlife", "Food & Dining", "Relaxation & Spa", "Shopping", "Sports", "Arts & Crafts"];
 
@@ -1239,7 +1239,7 @@ export default function TripDetails() {
 
               <div>
                 <label className="text-sm font-bold text-gray-700 mb-2 block">
-                  Kids Age Groups
+                  Age Groups
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {KIDS_AGE_GROUPS.map(age => (
