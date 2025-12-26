@@ -152,6 +152,9 @@ export default function TripDetails() {
   });
   const [bookingItem, setBookingItem] = useState<TripItem | null>(null);
   const [newDestination, setNewDestination] = useState({ destination: "", startDate: "", endDate: "" });
+  const [showEditTripModal, setShowEditTripModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [tripForm, setTripForm] = useState({ name: "", destination: "", startDate: "", endDate: "" });
   const queryClient = useQueryClient();
 
   const sensors = useSensors(
@@ -350,6 +353,44 @@ export default function TripDetails() {
     },
   });
 
+  const updateTripMutation = useMutation({
+    mutationFn: (data: { name: string; destination: string; startDate: string; endDate: string }) => 
+      api.trips.update(tripId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["trip", tripId] });
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
+      setShowEditTripModal(false);
+      toast.success("Trip updated!");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const deleteTripMutation = useMutation({
+    mutationFn: () => api.trips.delete(tripId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
+      toast.success("Trip deleted");
+      setLocation("/trips");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const openEditTripModal = () => {
+    if (trip) {
+      setTripForm({
+        name: trip.name,
+        destination: trip.destination,
+        startDate: trip.startDate,
+        endDate: trip.endDate,
+      });
+      setShowEditTripModal(true);
+    }
+  };
+
   if (!match) return null;
 
   if (isLoading) {
@@ -501,7 +542,25 @@ export default function TripDetails() {
           </button>
         </div>
 
-        <h1 className="font-heading text-2xl font-bold text-charcoal">{trip.name}</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="font-heading text-2xl font-bold text-charcoal">{trip.name}</h1>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openEditTripModal}
+              className="rounded-full bg-gray-100 p-2 hover:bg-gray-200 transition-colors"
+              data-testid="button-edit-trip"
+            >
+              <Edit2 className="h-4 w-4 text-gray-600" />
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="rounded-full bg-gray-100 p-2 hover:bg-red-100 transition-colors"
+              data-testid="button-delete-trip"
+            >
+              <Trash2 className="h-4 w-4 text-gray-600 hover:text-red-600" />
+            </button>
+          </div>
+        </div>
         <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
           <MapPin className="h-4 w-4" />
           <span>{trip.destination}</span>
@@ -1310,6 +1369,129 @@ export default function TripDetails() {
               >
                 <Sparkles className="h-4 w-4" />
                 Generate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditTripModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden">
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-heading font-bold text-lg">Edit Trip</h3>
+              <button
+                onClick={() => setShowEditTripModal(false)}
+                className="rounded-full bg-gray-100 p-2"
+                data-testid="button-close-edit-trip"
+              >
+                <X className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="text-sm font-bold text-gray-700 mb-1 block">Trip Name</label>
+                <input
+                  type="text"
+                  value={tripForm.name}
+                  onChange={(e) => setTripForm(f => ({ ...f, name: e.target.value }))}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                  placeholder="Enter trip name"
+                  data-testid="input-trip-name"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-bold text-gray-700 mb-1 block">Destination</label>
+                <input
+                  type="text"
+                  value={tripForm.destination}
+                  onChange={(e) => setTripForm(f => ({ ...f, destination: e.target.value }))}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                  placeholder="Enter destination"
+                  data-testid="input-trip-destination"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-bold text-gray-700 mb-1 block">Start Date</label>
+                  <input
+                    type="date"
+                    value={tripForm.startDate}
+                    onChange={(e) => setTripForm(f => ({ ...f, startDate: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                    data-testid="input-trip-start-date"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-bold text-gray-700 mb-1 block">End Date</label>
+                  <input
+                    type="date"
+                    value={tripForm.endDate}
+                    onChange={(e) => setTripForm(f => ({ ...f, endDate: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                    data-testid="input-trip-end-date"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="p-4 pt-2 border-t border-gray-100 flex gap-3">
+              <button
+                onClick={() => setShowEditTripModal(false)}
+                className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50"
+                data-testid="button-cancel-edit-trip"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => updateTripMutation.mutate(tripForm)}
+                disabled={updateTripMutation.isPending || !tripForm.name.trim() || !tripForm.destination.trim()}
+                className="flex-1 rounded-xl bg-primary py-3 text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50"
+                data-testid="button-save-trip"
+              >
+                {updateTripMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="font-heading font-bold text-lg mb-2">Delete Trip?</h3>
+              <p className="text-sm text-gray-500">
+                This will permanently delete "{trip.name}" and all its itinerary items. This action cannot be undone.
+              </p>
+            </div>
+            <div className="p-4 pt-0 flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50"
+                data-testid="button-cancel-delete"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteTripMutation.mutate()}
+                disabled={deleteTripMutation.isPending}
+                className="flex-1 rounded-xl bg-red-600 py-3 text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50"
+                data-testid="button-confirm-delete"
+              >
+                {deleteTripMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                Delete Trip
               </button>
             </div>
           </div>
