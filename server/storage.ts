@@ -53,6 +53,10 @@ import {
   type InsertConciergeRequest,
   type ConciergeRequestItem,
   type InsertConciergeRequestItem,
+  type ConciergeBookingSession,
+  type InsertConciergeBookingSession,
+  type ConciergeChatMessage,
+  type InsertConciergeChatMessage,
   type PodPost,
   type InsertPodPost,
   type Conversation,
@@ -90,6 +94,8 @@ import {
   tripItemOptions,
   conciergeRequests,
   conciergeRequestItems,
+  conciergeBookingSessions,
+  conciergeChatMessages,
   podPosts,
   conversations,
   conversationMembers,
@@ -275,6 +281,15 @@ export interface IStorage {
   createConciergeRequestItems(items: InsertConciergeRequestItem[]): Promise<ConciergeRequestItem[]>;
   getConciergeRequestItems(requestId: number): Promise<(ConciergeRequestItem & { tripItem: TripItem; selectedOption?: TripItemOption })[]>;
   updateConciergeRequestItem(id: number, data: Partial<ConciergeRequestItem>): Promise<ConciergeRequestItem>;
+  
+  // Concierge Booking Sessions
+  getConciergeBookingSession(tripId: number, userId: number): Promise<ConciergeBookingSession | undefined>;
+  createConciergeBookingSession(data: InsertConciergeBookingSession): Promise<ConciergeBookingSession>;
+  updateConciergeBookingSession(id: number, data: Partial<ConciergeBookingSession>): Promise<ConciergeBookingSession>;
+  
+  // Concierge Chat Messages
+  getConciergeChatMessages(sessionId: number): Promise<ConciergeChatMessage[]>;
+  createConciergeChatMessage(data: InsertConciergeChatMessage): Promise<ConciergeChatMessage>;
   
   getAgents(): Promise<User[]>;
   
@@ -1780,6 +1795,41 @@ export class DatabaseStorage implements IStorage {
       .where(eq(conciergeRequestItems.id, id))
       .returning();
     return item;
+  }
+
+  async getConciergeBookingSession(tripId: number, userId: number): Promise<ConciergeBookingSession | undefined> {
+    const [session] = await db.select()
+      .from(conciergeBookingSessions)
+      .where(and(
+        eq(conciergeBookingSessions.tripId, tripId),
+        eq(conciergeBookingSessions.userId, userId)
+      ));
+    return session || undefined;
+  }
+
+  async createConciergeBookingSession(data: InsertConciergeBookingSession): Promise<ConciergeBookingSession> {
+    const [session] = await db.insert(conciergeBookingSessions).values(data).returning();
+    return session;
+  }
+
+  async updateConciergeBookingSession(id: number, data: Partial<ConciergeBookingSession>): Promise<ConciergeBookingSession> {
+    const [session] = await db.update(conciergeBookingSessions)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(conciergeBookingSessions.id, id))
+      .returning();
+    return session;
+  }
+
+  async getConciergeChatMessages(sessionId: number): Promise<ConciergeChatMessage[]> {
+    return db.select()
+      .from(conciergeChatMessages)
+      .where(eq(conciergeChatMessages.sessionId, sessionId))
+      .orderBy(conciergeChatMessages.createdAt);
+  }
+
+  async createConciergeChatMessage(data: InsertConciergeChatMessage): Promise<ConciergeChatMessage> {
+    const [message] = await db.insert(conciergeChatMessages).values(data).returning();
+    return message;
   }
 
   async getAgents(): Promise<User[]> {

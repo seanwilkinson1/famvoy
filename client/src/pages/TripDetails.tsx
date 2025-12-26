@@ -669,7 +669,7 @@ export default function TripDetails() {
 
             {!conciergeRequest && trip.status === "confirmed" && (
               <button
-                onClick={() => setLocation(`/trip/${tripId}/book`)}
+                onClick={() => setLocation(`/trip/${tripId}/concierge`)}
                 className="mx-4 mt-4 w-[calc(100%-2rem)] p-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-between"
                 data-testid="button-book-concierge"
               >

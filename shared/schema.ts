@@ -382,6 +382,59 @@ export const conciergeRequestItems = pgTable("concierge_request_items", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const conciergeBookingSessions = pgTable("concierge_booking_sessions", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => podTrips.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  currentStep: text("current_step").default("flights").notNull(),
+  flightsSkipped: boolean("flights_skipped").default(false),
+  flightPreferences: jsonb("flight_preferences"),
+  selectedRestaurantIds: integer("selected_restaurant_ids").array(),
+  selectedExcursionIds: integer("selected_excursion_ids").array(),
+  aiChatComplete: boolean("ai_chat_complete").default(false),
+  calendarExported: boolean("calendar_exported").default(false),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const tripItemBookingMeta = pgTable("trip_item_booking_meta", {
+  id: serial("id").primaryKey(),
+  tripItemId: integer("trip_item_id").notNull().references(() => tripItems.id),
+  openTableAvailable: boolean("open_table_available"),
+  openTableUrl: text("open_table_url"),
+  skyscannerUrl: text("skyscanner_url"),
+  requiresManualBooking: boolean("requires_manual_booking").default(false),
+  bookingPlatform: text("booking_platform"),
+  reservationDate: text("reservation_date"),
+  reservationTime: text("reservation_time"),
+  partySize: integer("party_size"),
+  specialRequests: text("special_requests"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const conciergeChatMessages = pgTable("concierge_chat_messages", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").notNull().references(() => conciergeBookingSessions.id),
+  role: text("role").notNull(),
+  content: text("content").notNull(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const conciergeAiSuggestions = pgTable("concierge_ai_suggestions", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").notNull().references(() => conciergeBookingSessions.id),
+  suggestionType: text("suggestion_type").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  metadata: jsonb("metadata"),
+  userApproved: boolean("user_approved"),
+  agentReviewed: boolean("agent_reviewed").default(false),
+  agentNotes: text("agent_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const podPosts = pgTable("pod_posts", {
   id: serial("id").primaryKey(),
   podId: integer("pod_id").notNull().references(() => pods.id),
@@ -445,6 +498,10 @@ export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, cre
 export const insertOrderItemSchema = createInsertSchema(orderItems).omit({ id: true });
 export const insertConciergeRequestSchema = createInsertSchema(conciergeRequests).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertConciergeRequestItemSchema = createInsertSchema(conciergeRequestItems).omit({ id: true, createdAt: true });
+export const insertConciergeBookingSessionSchema = createInsertSchema(conciergeBookingSessions).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertTripItemBookingMetaSchema = createInsertSchema(tripItemBookingMeta).omit({ id: true, createdAt: true });
+export const insertConciergeChatMessageSchema = createInsertSchema(conciergeChatMessages).omit({ id: true, createdAt: true });
+export const insertConciergeAiSuggestionSchema = createInsertSchema(conciergeAiSuggestions).omit({ id: true, createdAt: true });
 export const insertPodPostSchema = createInsertSchema(podPosts).omit({ id: true, createdAt: true });
 export const insertConversationSchema = createInsertSchema(conversations).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertConversationMemberSchema = createInsertSchema(conversationMembers).omit({ id: true, joinedAt: true });
@@ -555,6 +612,18 @@ export type InsertConciergeRequest = z.infer<typeof insertConciergeRequestSchema
 
 export type ConciergeRequestItem = typeof conciergeRequestItems.$inferSelect;
 export type InsertConciergeRequestItem = z.infer<typeof insertConciergeRequestItemSchema>;
+
+export type ConciergeBookingSession = typeof conciergeBookingSessions.$inferSelect;
+export type InsertConciergeBookingSession = z.infer<typeof insertConciergeBookingSessionSchema>;
+
+export type TripItemBookingMeta = typeof tripItemBookingMeta.$inferSelect;
+export type InsertTripItemBookingMeta = z.infer<typeof insertTripItemBookingMetaSchema>;
+
+export type ConciergeChatMessage = typeof conciergeChatMessages.$inferSelect;
+export type InsertConciergeChatMessage = z.infer<typeof insertConciergeChatMessageSchema>;
+
+export type ConciergeAiSuggestion = typeof conciergeAiSuggestions.$inferSelect;
+export type InsertConciergeAiSuggestion = z.infer<typeof insertConciergeAiSuggestionSchema>;
 
 export type PodPost = typeof podPosts.$inferSelect;
 export type InsertPodPost = z.infer<typeof insertPodPostSchema>;

@@ -3492,6 +3492,291 @@ Return ONLY valid JSON.`;
     }
   });
 
+  // ==================== CONCIERGE BOOKING SESSION ROUTES ====================
+
+  // Create or get concierge booking session
+  app.post('/api/concierge/session', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { tripId } = req.body;
+      if (!tripId) {
+        return res.status(400).json({ error: "tripId is required" });
+      }
+
+      // Check if session already exists
+      let session = await storage.getConciergeBookingSession(tripId, user.id);
+      if (!session) {
+        session = await storage.createConciergeBookingSession({
+          tripId,
+          userId: user.id,
+          currentStep: 'flights',
+        });
+      }
+
+      res.json(session);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get concierge booking session
+  app.get('/api/concierge/session/:tripId', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const session = await storage.getConciergeBookingSession(parseInt(req.params.tripId), user.id);
+      res.json(session || null);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update concierge booking session
+  app.patch('/api/concierge/session/:tripId', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const session = await storage.getConciergeBookingSession(parseInt(req.params.tripId), user.id);
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+
+      const updateData: any = {};
+      if (req.body.currentStep !== undefined) updateData.currentStep = req.body.currentStep;
+      if (req.body.flightsSkipped !== undefined) updateData.flightsSkipped = req.body.flightsSkipped;
+      if (req.body.flightPreferences !== undefined) updateData.flightPreferences = req.body.flightPreferences;
+      if (req.body.selectedRestaurantIds !== undefined) updateData.selectedRestaurantIds = req.body.selectedRestaurantIds;
+      if (req.body.selectedExcursionIds !== undefined) updateData.selectedExcursionIds = req.body.selectedExcursionIds;
+      if (req.body.aiChatComplete !== undefined) updateData.aiChatComplete = req.body.aiChatComplete;
+      if (req.body.calendarExported !== undefined) updateData.calendarExported = req.body.calendarExported;
+      if (req.body.currentStep === 'complete') updateData.completedAt = new Date();
+
+      const updatedSession = await storage.updateConciergeBookingSession(session.id, updateData);
+      res.json(updatedSession);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Categorize trip items for concierge flow
+  app.get('/api/concierge/categorize/:tripId', requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.tripId);
+      const trip = await storage.getTripById(tripId);
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+
+      const items = await storage.getTripItems(tripId);
+      
+      const restaurants = items.filter(item => 
+        item.itemType === 'MEAL' || 
+        item.itemType === 'RESTAURANT' ||
+        item.itemType === 'DINING'
+      );
+      
+      const excursions = items.filter(item => 
+        item.itemType === 'ACTIVITY' || 
+        item.itemType === 'EXCURSION' ||
+        item.itemType === 'TOUR' ||
+        item.itemType === 'ATTRACTION'
+      );
+
+      // Generate flight info from trip dates
+      const flights = [{
+        origin: 'Your City',
+        destination: trip.destination,
+        date: trip.startDate,
+      }];
+
+      res.json({ restaurants, excursions, flights });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // AI Concierge Chat
+  app.post('/api/concierge/chat/:tripId', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const tripId = parseInt(req.params.tripId);
+      const { message } = req.body;
+
+      if (!message) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      const trip = await storage.getTripById(tripId);
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+
+      const session = await storage.getConciergeBookingSession(tripId, user.id);
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+
+      // Save user message
+      await storage.createConciergeChatMessage({
+        sessionId: session.id,
+        role: 'user',
+        content: message,
+      });
+
+      // Get trip items for context
+      const items = await storage.getTripItems(tripId);
+
+      // Generate AI response
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      
+      const systemPrompt = `You are a friendly and helpful travel concierge assistant. You're helping a family plan their trip to ${trip.destination} from ${trip.startDate} to ${trip.endDate}.
+
+Their current itinerary includes:
+${items.map(item => `- Day ${item.dayNumber}: ${item.title} (${item.itemType})`).join('\n')}
+
+Your role is to:
+1. Suggest additional activities, restaurants, or experiences that would enhance their trip
+2. Provide local tips and hidden gems
+3. Consider family-friendliness and practicality
+4. Be warm, enthusiastic, and helpful
+
+Keep responses concise but informative. If suggesting specific places, include why they would be great for families.`;
+
+      // Get previous messages for context
+      const previousMessages = await storage.getConciergeChatMessages(session.id);
+      
+      const chatMessages = [
+        { role: 'system' as const, content: systemPrompt },
+        ...previousMessages.map(m => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        })),
+        { role: 'user' as const, content: message },
+      ];
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: chatMessages,
+        temperature: 0.7,
+        max_tokens: 500,
+      });
+
+      const aiResponse = completion.choices[0].message.content || "I'm sorry, I couldn't generate a response. Please try again.";
+
+      // Save AI response
+      await storage.createConciergeChatMessage({
+        sessionId: session.id,
+        role: 'assistant',
+        content: aiResponse,
+      });
+
+      // Get all messages for response
+      const allMessages = await storage.getConciergeChatMessages(session.id);
+      res.json({ messages: allMessages });
+    } catch (error: any) {
+      console.error("Chat error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Export calendar (generate ICS file or Google Calendar link)
+  app.post('/api/concierge/calendar/:tripId', requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.tripId);
+      const trip = await storage.getTripById(tripId);
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+
+      const items = await storage.getTripItems(tripId);
+      
+      // Generate ICS content
+      const icsEvents = items.map(item => {
+        const startDate = new Date(trip.startDate);
+        startDate.setDate(startDate.getDate() + item.dayNumber - 1);
+        
+        // Parse time (e.g., "09:00 AM")
+        const timeParts = item.time.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+        if (timeParts) {
+          let hours = parseInt(timeParts[1]);
+          const minutes = parseInt(timeParts[2]);
+          const meridiem = timeParts[3]?.toUpperCase();
+          
+          if (meridiem === 'PM' && hours !== 12) hours += 12;
+          if (meridiem === 'AM' && hours === 12) hours = 0;
+          
+          startDate.setHours(hours, minutes, 0, 0);
+        }
+
+        const endDate = new Date(startDate);
+        endDate.setHours(endDate.getHours() + 2); // Default 2 hour duration
+
+        const formatDate = (date: Date) => {
+          return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        };
+
+        return `BEGIN:VEVENT
+DTSTART:${formatDate(startDate)}
+DTEND:${formatDate(endDate)}
+SUMMARY:${item.title}
+DESCRIPTION:${item.description || ''}
+LOCATION:${trip.destination}
+END:VEVENT`;
+      });
+
+      const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Podstack//Trip Calendar//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:${trip.name}
+${icsEvents.join('\n')}
+END:VCALENDAR`;
+
+      // For now, return the ICS content as a data URL
+      const base64Content = Buffer.from(icsContent).toString('base64');
+      const dataUrl = `data:text/calendar;base64,${base64Content}`;
+
+      res.json({ 
+        url: dataUrl,
+        filename: `${trip.name.replace(/\s+/g, '_')}_itinerary.ics`,
+        message: "Calendar file ready for download"
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ==================== AGENT ROUTES ====================
 
   // Check if user is an agent
