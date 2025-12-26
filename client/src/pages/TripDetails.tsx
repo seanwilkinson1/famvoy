@@ -1448,10 +1448,10 @@ export default function TripDetails() {
                 This will permanently delete "{trip.name}" and all its itinerary items. This action cannot be undone.
               </p>
             </div>
-            <div className="p-4 pt-0 flex gap-3">
+            <div className="p-4 pt-0 grid grid-cols-2 gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50"
+                className="rounded-xl border border-gray-200 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50"
                 data-testid="button-cancel-delete"
               >
                 Cancel
@@ -1459,7 +1459,7 @@ export default function TripDetails() {
               <button
                 onClick={() => deleteTripMutation.mutate()}
                 disabled={deleteTripMutation.isPending}
-                className="flex-1 rounded-xl bg-red-600 py-3 text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50"
+                className="rounded-xl bg-red-600 py-3 text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50"
                 data-testid="button-confirm-delete"
               >
                 {deleteTripMutation.isPending ? (
@@ -1467,7 +1467,7 @@ export default function TripDetails() {
                 ) : (
                   <Trash2 className="h-4 w-4" />
                 )}
-                Delete Trip
+                Delete
               </button>
             </div>
           </div>
