@@ -36,6 +36,13 @@ import AgentDashboard from "@/pages/AgentDashboard";
 import AgentRequestDetails from "@/pages/AgentRequestDetails";
 import ConciergeSuccess from "@/pages/ConciergeSuccess";
 import ConciergeBookingWizard from "@/pages/ConciergeBookingWizard";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminUsers from "@/pages/admin/AdminUsers";
+import AdminTrips from "@/pages/admin/AdminTrips";
+import AdminBookings from "@/pages/admin/AdminBookings";
+import AdminContent from "@/pages/admin/AdminContent";
+import AdminPods from "@/pages/admin/AdminPods";
+import AdminSettings from "@/pages/admin/AdminSettings";
 import { useClerkAuth } from "@/hooks/useAuth";
 import { setAuthTokenGetter } from "@/lib/api";
 
@@ -73,6 +80,23 @@ function AuthenticatedRouter() {
 
   const isExplorePage = location === "/explore";
   const isConversationPage = location.startsWith("/conversation/");
+  const isAdminPage = location.startsWith("/admin");
+
+  // Admin pages have their own layout
+  if (isAdminPage) {
+    return (
+      <Switch>
+        <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin/users" component={AdminUsers} />
+        <Route path="/admin/trips" component={AdminTrips} />
+        <Route path="/admin/bookings" component={AdminBookings} />
+        <Route path="/admin/content" component={AdminContent} />
+        <Route path="/admin/pods" component={AdminPods} />
+        <Route path="/admin/settings" component={AdminSettings} />
+        <Route component={NotFound} />
+      </Switch>
+    );
+  }
 
   return (
     <GoogleMapsProvider>

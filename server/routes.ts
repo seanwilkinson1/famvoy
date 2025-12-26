@@ -4192,5 +4192,392 @@ END:VCALENDAR`;
     }
   });
 
+  // ============ ADMIN ROUTES ============
+
+  // Admin middleware to check if user is admin
+  const requireAdmin = async (req: any, res: any, next: any) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      const user = await storage.getUserByClerkId(auth.userId);
+      if (!user || !user.isAdmin) {
+        res.status(403).json({ error: "Admin access required" });
+        return;
+      }
+      req.adminUser = user;
+      next();
+    } catch (error) {
+      res.status(500).json({ error: "Authentication error" });
+      return;
+    }
+  };
+
+  // Admin dashboard stats
+  app.get('/api/admin/stats', requireAuth(), requireAdmin, async (req, res) => {
+    try {
+      const allUsers = await db.select().from(users);
+      const allTrips = await db.select().from(podTrips);
+      const allOrders = await db.select().from(orders);
+      const allPods = await db.select().from(pods);
+      const pendingConcierge = await db.select().from(conciergeRequests).where(eq(conciergeRequests.status, 'pending'));
+      const pendingBookings = await db.select().from(tripItemBookingMeta).where(eq(tripItemBookingMeta.status, 'pending'));
+
+      const totalRevenue = allOrders
+        .filter(o => o.status === 'completed')
+        .reduce((sum, o) => sum + (o.totalCents || 0), 0);
+
+      const recentUsers = allUsers
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+        .slice(0, 5)
+        .map(u => ({
+          id: u.id,
+          name: u.name || u.firstName,
+          email: u.email,
+          createdAt: u.createdAt,
+        }));
+
+      const recentTrips = allTrips
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+        .slice(0, 5)
+        .map(t => ({
+          id: t.id,
+          name: t.name,
+          destination: t.destination,
+          status: t.status,
+          createdAt: t.createdAt,
+        }));
+
+      res.json({
+        totalUsers: allUsers.length,
+        totalTrips: allTrips.length,
+        totalOrders: allOrders.length,
+        totalRevenue,
+        pendingConcierge: pendingConcierge.length,
+        activePods: allPods.length,
+        recentUsers,
+        recentTrips,
+        pendingBookings: pendingBookings.slice(0, 5).map(b => ({
+          id: b.id,
+          itemName: b.itemName,
+          status: b.status,
+          createdAt: b.createdAt,
+        })),
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin users list
+  app.get('/api/admin/users', requireAuth(), requireAdmin, async (req, res) => {
+    try {
+      const { search = '', page = '1', role = 'all' } = req.query;
+      const pageNum = parseInt(page as string) || 1;
+      const pageSize = 20;
+
+      let allUsers = await db.select().from(users);
+
+      // Filter by role
+      if (role === 'admin') {
+        allUsers = allUsers.filter(u => u.isAdmin);
+      } else if (role === 'agent') {
+        allUsers = allUsers.filter(u => u.isAgent);
+      } else if (role === 'user') {
+        allUsers = allUsers.filter(u => !u.isAdmin && !u.isAgent);
+      }
+
+      // Search
+      if (search) {
+        const searchLower = (search as string).toLowerCase();
+        allUsers = allUsers.filter(u => 
+          (u.name?.toLowerCase().includes(searchLower)) ||
+          (u.email?.toLowerCase().includes(searchLower)) ||
+          (u.firstName?.toLowerCase().includes(searchLower)) ||
+          (u.lastName?.toLowerCase().includes(searchLower))
+        );
+      }
+
+      const total = allUsers.length;
+      const pages = Math.ceil(total / pageSize);
+      const paginatedUsers = allUsers
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+        .slice((pageNum - 1) * pageSize, pageNum * pageSize);
+
+      res.json({ users: paginatedUsers, total, pages });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update user permissions
+  app.patch('/api/admin/users/:userId', requireAuth(), requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { isAdmin, isAgent, adminRole } = req.body;
+
+      await db.update(users)
+        .set({ isAdmin, isAgent, adminRole })
+        .where(eq(users.id, userId));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin trips list
+  app.get('/api/admin/trips', requireAuth(), requireAdmin, async (req, res) => {
+    try {
+      const { search = '', page = '1', status = 'all' } = req.query;
+      const pageNum = parseInt(page as string) || 1;
+      const pageSize = 20;
+
+      let allTrips = await db.select().from(podTrips);
+
+      // Filter by status
+      if (status !== 'all') {
+        allTrips = allTrips.filter(t => t.status === status);
+      }
+
+      // Search
+      if (search) {
+        const searchLower = (search as string).toLowerCase();
+        allTrips = allTrips.filter(t => 
+          t.name?.toLowerCase().includes(searchLower) ||
+          t.destination?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      const total = allTrips.length;
+      const pages = Math.ceil(total / pageSize);
+      const paginatedTrips = allTrips
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+        .slice((pageNum - 1) * pageSize, pageNum * pageSize);
+
+      // Enrich with user and concierge info
+      const enrichedTrips = await Promise.all(paginatedTrips.map(async (trip) => {
+        const tripUser = await storage.getUser(trip.createdByUserId || 0);
+        const items = await storage.getTripItems(trip.id);
+        const [conciergeRequest] = await db.select().from(conciergeRequests).where(eq(conciergeRequests.tripId, trip.id));
+        
+        return {
+          ...trip,
+          itemCount: items.length,
+          user: tripUser ? { id: tripUser.id, name: tripUser.name, email: tripUser.email } : null,
+          conciergeRequest: conciergeRequest ? { id: conciergeRequest.id, status: conciergeRequest.status } : null,
+        };
+      }));
+
+      res.json({ trips: enrichedTrips, total, pages });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin orders list
+  app.get('/api/admin/orders', requireAuth(), requireAdmin, async (req, res) => {
+    try {
+      const { search = '', page = '1' } = req.query;
+      const pageNum = parseInt(page as string) || 1;
+      const pageSize = 20;
+
+      let allOrders = await db.select().from(orders);
+
+      const total = allOrders.length;
+      const pages = Math.ceil(total / pageSize);
+      const paginatedOrders = allOrders
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+        .slice((pageNum - 1) * pageSize, pageNum * pageSize);
+
+      const enrichedOrders = await Promise.all(paginatedOrders.map(async (order) => {
+        const orderUser = await storage.getUser(order.userId || 0);
+        const orderItemsData = await db.select().from(orderItems).where(eq(orderItems.orderId, order.id));
+        
+        return {
+          ...order,
+          user: orderUser ? { name: orderUser.name, email: orderUser.email } : null,
+          items: orderItemsData,
+        };
+      }));
+
+      res.json({ orders: enrichedOrders, total, pages });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin manual bookings list
+  app.get('/api/admin/manual-bookings', requireAuth(), requireAdmin, async (req, res) => {
+    try {
+      const { search = '', page = '1' } = req.query;
+      const pageNum = parseInt(page as string) || 1;
+      const pageSize = 20;
+
+      let allBookings = await db.select().from(tripItemBookingMeta);
+
+      const total = allBookings.length;
+      const pages = Math.ceil(total / pageSize);
+      const paginatedBookings = allBookings
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+        .slice((pageNum - 1) * pageSize, pageNum * pageSize);
+
+      const enrichedBookings = await Promise.all(paginatedBookings.map(async (booking) => {
+        const [session] = await db.select().from(conciergeBookingSessions).where(eq(conciergeBookingSessions.id, booking.sessionId));
+        let sessionInfo: any = { tripId: 0, userId: 0 };
+        if (session) {
+          const trip = await storage.getTripById(session.tripId);
+          const bookingUser = await storage.getUser(session.userId);
+          sessionInfo = {
+            tripId: session.tripId,
+            userId: session.userId,
+            trip: trip ? { name: trip.name, destination: trip.destination } : null,
+            user: bookingUser ? { name: bookingUser.name, email: bookingUser.email } : null,
+          };
+        }
+        
+        return {
+          ...booking,
+          session: sessionInfo,
+        };
+      }));
+
+      res.json({ bookings: enrichedBookings, total, pages });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update manual booking (admin)
+  app.patch('/api/admin/manual-bookings/:id', requireAuth(), requireAdmin, async (req, res) => {
+    try {
+      const bookingId = parseInt(req.params.id);
+      const { status, bookingNotes, confirmationNumber } = req.body;
+
+      await db.update(tripItemBookingMeta)
+        .set({ status, bookingNotes, confirmationNumber })
+        .where(eq(tripItemBookingMeta.id, bookingId));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin experiences list
+  app.get('/api/admin/experiences', requireAuth(), requireAdmin, async (req, res) => {
+    try {
+      const { search = '', page = '1' } = req.query;
+      const pageNum = parseInt(page as string) || 1;
+      const pageSize = 20;
+
+      let allExperiences = await db.select().from(experiences);
+
+      if (search) {
+        const searchLower = (search as string).toLowerCase();
+        allExperiences = allExperiences.filter(e => 
+          e.title?.toLowerCase().includes(searchLower) ||
+          e.locationName?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      const total = allExperiences.length;
+      const pages = Math.ceil(total / pageSize);
+      const paginatedExperiences = allExperiences
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+        .slice((pageNum - 1) * pageSize, pageNum * pageSize);
+
+      const enrichedExperiences = await Promise.all(paginatedExperiences.map(async (exp) => {
+        const expUser = await storage.getUser(exp.userId);
+        return {
+          ...exp,
+          user: expUser ? { name: expUser.name, email: expUser.email } : null,
+        };
+      }));
+
+      res.json({ experiences: enrichedExperiences, total, pages });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete experience (admin)
+  app.delete('/api/admin/experiences/:id', requireAuth(), requireAdmin, async (req, res) => {
+    try {
+      const expId = parseInt(req.params.id);
+      await db.delete(experiences).where(eq(experiences.id, expId));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Feature experience (admin)
+  app.post('/api/admin/experiences/:id/feature', requireAuth(), requireAdmin, async (req, res) => {
+    try {
+      res.json({ success: true, message: "Featured experiences not implemented yet" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin pods list
+  app.get('/api/admin/pods', requireAuth(), requireAdmin, async (req, res) => {
+    try {
+      const { search = '', page = '1' } = req.query;
+      const pageNum = parseInt(page as string) || 1;
+      const pageSize = 20;
+
+      let allPods = await db.select().from(pods);
+
+      if (search) {
+        const searchLower = (search as string).toLowerCase();
+        allPods = allPods.filter(p => 
+          p.name?.toLowerCase().includes(searchLower) ||
+          p.description?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      const total = allPods.length;
+      const pages = Math.ceil(total / pageSize);
+      const paginatedPods = allPods
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+        .slice((pageNum - 1) * pageSize, pageNum * pageSize);
+
+      const enrichedPods = await Promise.all(paginatedPods.map(async (pod) => {
+        const podMessages = await db.select().from(messages).where(eq(messages.podId, pod.id));
+        const creator = pod.creatorId ? await storage.getUser(pod.creatorId) : null;
+        
+        return {
+          ...pod,
+          messageCount: podMessages.length,
+          creator: creator ? { id: creator.id, name: creator.name, email: creator.email } : null,
+        };
+      }));
+
+      res.json({ pods: enrichedPods, total, pages });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update pod (admin)
+  app.patch('/api/admin/pods/:id', requireAuth(), requireAdmin, async (req, res) => {
+    try {
+      const podId = parseInt(req.params.id);
+      const { isPublic } = req.body;
+
+      await db.update(pods)
+        .set({ isPublic })
+        .where(eq(pods.id, podId));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }
