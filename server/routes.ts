@@ -3658,8 +3658,11 @@ Return ONLY valid JSON.`;
       // Get trip items for context
       const items = await storage.getTripItems(tripId);
 
-      // Generate AI response
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      // Generate AI response using Replit AI Integrations
+      const openai = new OpenAI({
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      });
       
       const systemPrompt = `You are a friendly and helpful travel concierge assistant. You're helping a family plan their trip to ${trip.destination} from ${trip.startDate} to ${trip.endDate}.
 
