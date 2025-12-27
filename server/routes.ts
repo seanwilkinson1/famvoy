@@ -6,7 +6,7 @@ import express from "express";
 import { clerkMiddleware, getAuth, requireAuth, clerkClient } from "@clerk/express";
 import { storage } from "./storage";
 import { db } from "./db";
-import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema, insertFamilyMemberSchema, insertBookingOptionSchema, insertCartItemSchema, insertPodPostSchema, insertChatMessageSchema, conciergeBookingSessions, conciergeChatMessages, conciergeRequests, conciergeRequestItems, tripItems, users, experiences, pods, podTrips, orders, podMembers, messages, orderItems, tripItemBookingMeta } from "@shared/schema";
+import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema, insertFamilyMemberSchema, insertBookingOptionSchema, insertCartItemSchema, insertPodPostSchema, insertChatMessageSchema, conciergeBookingSessions, conciergeChatMessages, conciergeRequests, conciergeRequestItems, tripItems, users, experiences, pods, podTrips, orders, podMembers, messages, orderItems, tripItemBookingMeta, savedExperiences, comments, podExperiences } from "@shared/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { z } from "zod";
 import { fromError } from "zod-validation-error";
@@ -4506,6 +4506,19 @@ END:VCALENDAR`;
   app.delete('/api/admin/experiences/:id', requireAuth(), requireAdmin, async (req, res) => {
     try {
       const expId = parseInt(req.params.id);
+      
+      // Remove all related records first to avoid foreign key violations
+      await db.delete(savedExperiences).where(eq(savedExperiences.experienceId, expId));
+      await db.delete(comments).where(eq(comments.experienceId, expId));
+      await db.delete(podExperiences).where(eq(podExperiences.experienceId, expId));
+      
+      // Clear experience references from messages (set to null instead of delete)
+      await db.update(messages).set({ sharedExperienceId: null }).where(eq(messages.sharedExperienceId, expId));
+      
+      // Clear experience references from trip items (set to null instead of delete)
+      await db.update(tripItems).set({ experienceId: null }).where(eq(tripItems.experienceId, expId));
+      
+      // Now delete the experience
       await db.delete(experiences).where(eq(experiences.id, expId));
       res.json({ success: true });
     } catch (error: any) {
