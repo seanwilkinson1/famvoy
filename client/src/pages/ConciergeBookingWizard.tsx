@@ -151,12 +151,18 @@ export default function ConciergeBookingWizard() {
 
   const exportCalendarMutation = useMutation({
     mutationFn: () => apiRequest("POST", `/api/concierge/calendar/${tripId}`),
-    onSuccess: (data: { url: string } | { message: string }) => {
+    onSuccess: (data: { url: string; filename?: string } | { message: string }) => {
       if ('url' in data && data.url) {
-        window.open(data.url, '_blank');
+        // Create a proper download link for the ICS file
+        const link = document.createElement('a');
+        link.href = data.url;
+        link.download = data.filename || 'trip_itinerary.ics';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       }
       updateSessionMutation.mutate({ calendarExported: true });
-      toast.success("Calendar export ready!");
+      toast.success("Calendar file downloaded!");
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to export calendar");
