@@ -59,8 +59,21 @@ export default function AdminPods() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
+
   const { data, isLoading } = useQuery<{ pods: Pod[]; total: number; pages: number }>({
     queryKey: ["/api/admin/pods", { search, page }],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      params.set("page", String(page));
+      const res = await fetch(`/api/admin/pods?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch pods");
+      return res.json();
+    },
   });
 
   const togglePublicMutation = useMutation({
@@ -92,7 +105,7 @@ export default function AdminPods() {
               <Input
                 placeholder="Search pods..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-9"
                 data-testid="input-search-pods"
               />

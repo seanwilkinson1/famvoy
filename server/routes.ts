@@ -4560,11 +4560,13 @@ END:VCALENDAR`;
 
       const enrichedPods = await Promise.all(paginatedPods.map(async (pod) => {
         const podMessages = await db.select().from(messages).where(eq(messages.podId, pod.id));
+        const podMembersList = await db.select().from(podMembers).where(eq(podMembers.podId, pod.id));
         const creator = pod.creatorId ? await storage.getUser(pod.creatorId) : null;
         
         return {
           ...pod,
           messageCount: podMessages.length,
+          memberCount: podMembersList.length,
           creator: creator ? { id: creator.id, name: creator.name, email: creator.email } : null,
         };
       }));
