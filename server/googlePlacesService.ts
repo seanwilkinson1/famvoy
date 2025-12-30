@@ -207,9 +207,8 @@ export async function searchPlacesForTripItem(
   const provider = providerMap[itemType] || "Google Maps";
 
   return places.slice(0, 3).map((place) => {
-    const bookingUrl = itemType === "STAY"
-      ? `https://www.google.com/travel/hotels/entity/${place.placeId}`
-      : `https://www.google.com/maps/place/?q=place_id:${place.placeId}`;
+    const encodedName = encodeURIComponent(place.name);
+    const bookingUrl = `https://www.google.com/maps/search/?api=1&query=${encodedName}&query_place_id=${place.placeId}`;
 
     return {
       title: place.name,
