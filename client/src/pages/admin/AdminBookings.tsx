@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -21,38 +21,91 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { format } from "date-fns";
 import {
   Search,
   Loader2,
   ChevronLeft,
   ChevronRight,
-  DollarSign,
+  ChevronDown,
+  ChevronUp,
   Phone,
   CheckCircle2,
   Clock,
   AlertCircle,
-  ShoppingCart,
+  Plane,
+  Utensils,
+  MapPin,
+  Calendar,
+  Users,
+  MessageSquare,
+  Sparkles,
+  ExternalLink,
 } from "lucide-react";
 
-interface Order {
+interface ConciergeBooking {
   id: number;
-  userId: number;
-  stripeCheckoutSessionId: string;
-  status: string;
-  totalCents: number;
+  tripId: number;
+  currentStep: string;
+  isComplete: boolean;
+  completedAt: string | null;
   createdAt: string;
-  user: {
+  flightsSkipped: boolean;
+  flightPreferences: Record<string, any> | null;
+  calendarExported: boolean;
+  trip: {
+    id: number;
+    name: string;
+    destination: string;
+    startDate: string | null;
+    endDate: string | null;
+    status: string;
+  } | null;
+  customer: {
+    id: number;
     name: string | null;
     email: string | null;
-  };
-  items: Array<{
+    avatar: string | null;
+  } | null;
+  restaurants: Array<{
     id: number;
     title: string;
-    priceCents: number;
+    description: string | null;
+    time: string | null;
+    reservationDate: string | null;
+    reservationTime: string | null;
+    partySize: number | null;
+    specialRequests: string | null;
+    requiresManualBooking: boolean | null;
+    openTableUrl: string | null;
+  }>;
+  excursions: Array<{
+    id: number;
+    title: string;
+    description: string | null;
+    time: string | null;
+    requiresManualBooking: boolean | null;
+    bookingPlatform: string | null;
+  }>;
+  totalItems: number;
+  aiChatComplete: boolean;
+  chatMessageCount: number;
+  aiSuggestions: Array<{
+    type: string;
+    title: string;
+    description: string | null;
+    approved: boolean | null;
+    agentReviewed: boolean | null;
+    agentNotes: string | null;
   }>;
 }
 
@@ -78,9 +131,10 @@ interface ManualBooking {
 export default function AdminBookings() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("orders");
+  const [activeTab, setActiveTab] = useState("concierge");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [expandedBookings, setExpandedBookings] = useState<Set<number>>(new Set());
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
@@ -92,22 +146,33 @@ export default function AdminBookings() {
     setPage(1);
     setSearch("");
   };
+
+  const toggleExpanded = (id: number) => {
+    const newExpanded = new Set(expandedBookings);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedBookings(newExpanded);
+  };
+
   const [selectedBooking, setSelectedBooking] = useState<ManualBooking | null>(null);
   const [bookingDialog, setBookingDialog] = useState(false);
   const [bookingNotes, setBookingNotes] = useState("");
   const [confirmationNumber, setConfirmationNumber] = useState("");
 
-  const { data: ordersData, isLoading: loadingOrders, error: ordersError } = useQuery<{ orders: Order[]; total: number; pages: number }>({
-    queryKey: ["/api/admin/orders", { search, page }],
+  const { data: conciergeData, isLoading: loadingConcierge, error: conciergeError } = useQuery<{ bookings: ConciergeBooking[]; total: number; pages: number }>({
+    queryKey: ["/api/admin/concierge-bookings", { search, page }],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
       params.set("page", String(page));
-      const res = await fetch(`/api/admin/orders?${params.toString()}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch orders");
+      const res = await fetch(`/api/admin/concierge-bookings?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch concierge bookings");
       return res.json();
     },
-    enabled: activeTab === "orders",
+    enabled: activeTab === "concierge",
   });
 
   const { data: manualData, isLoading: loadingManual, error: manualError } = useQuery<{ bookings: ManualBooking[]; total: number; pages: number }>({
@@ -168,116 +233,281 @@ export default function AdminBookings() {
     }
   };
 
+  const formatTripDates = (startDate: string | null, endDate: string | null) => {
+    if (!startDate) return "No dates";
+    const start = new Date(startDate);
+    const end = endDate ? new Date(endDate) : null;
+    if (end) {
+      return `${format(start, "MMM d")} - ${format(end, "MMM d, yyyy")}`;
+    }
+    return format(start, "MMM d, yyyy");
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900" data-testid="text-bookings-title">Booking Management</h1>
-            <p className="text-slate-500 mt-1">Manage orders and manual bookings</p>
+            <p className="text-slate-500 mt-1">Manage concierge bookings and manual reservations</p>
           </div>
-          <div className="flex items-center gap-2 bg-amber-50 text-amber-700 px-4 py-2 rounded-lg">
-            <ShoppingCart className="h-5 w-5" />
-            <span className="font-semibold">{ordersData?.total || 0}</span>
-            <span className="text-amber-600">Total Orders</span>
+          <div className="flex items-center gap-2 bg-teal-50 text-teal-700 px-4 py-2 rounded-lg">
+            <Sparkles className="h-5 w-5" />
+            <span className="font-semibold">{conciergeData?.total || 0}</span>
+            <span className="text-teal-600">Concierge Bookings</span>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList className="bg-slate-100 p-1">
-            <TabsTrigger value="orders" className="data-[state=active]:bg-white data-[state=active]:shadow-sm" data-testid="tab-orders">Orders</TabsTrigger>
-            <TabsTrigger value="manual" className="data-[state=active]:bg-white data-[state=active]:shadow-sm" data-testid="tab-manual">Manual Bookings</TabsTrigger>
+            <TabsTrigger value="concierge" className="data-[state=active]:bg-white data-[state=active]:shadow-sm" data-testid="tab-concierge">
+              <Sparkles className="h-4 w-4 mr-2" />
+              Concierge Bookings
+            </TabsTrigger>
+            <TabsTrigger value="manual" className="data-[state=active]:bg-white data-[state=active]:shadow-sm" data-testid="tab-manual">
+              <Phone className="h-4 w-4 mr-2" />
+              Manual Bookings
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="orders" className="space-y-4">
-            {/* Filters Bar */}
+          <TabsContent value="concierge" className="space-y-4">
             <Card className="border-slate-200 shadow-sm">
               <CardContent className="p-4">
                 <div className="relative max-w-sm">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                   <Input
-                    placeholder="Search orders..."
+                    placeholder="Search by trip, destination, or customer..."
                     value={search}
                     onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-10 h-10 bg-white border-slate-200 focus:border-teal-500"
-                    data-testid="input-search-orders"
+                    data-testid="input-search-concierge"
                   />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Orders Table */}
             <Card className="border-slate-200 shadow-sm">
               <CardContent className="p-0">
-                {loadingOrders ? (
+                {loadingConcierge ? (
                   <div className="flex items-center justify-center h-64">
                     <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
                   </div>
-                ) : ordersError ? (
+                ) : conciergeError ? (
                   <div className="flex flex-col items-center justify-center h-64 text-slate-500">
-                    <ShoppingCart className="h-12 w-12 mb-4 text-slate-300" />
-                    <p className="font-medium">Unable to load orders</p>
+                    <Sparkles className="h-12 w-12 mb-4 text-slate-300" />
+                    <p className="font-medium">Unable to load concierge bookings</p>
                     <p className="text-sm">You may not have admin permissions</p>
                   </div>
                 ) : (
                   <>
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-slate-50 hover:bg-slate-50">
-                          <TableHead className="font-semibold text-slate-700">Order ID</TableHead>
-                          <TableHead className="font-semibold text-slate-700">Customer</TableHead>
-                          <TableHead className="font-semibold text-slate-700">Items</TableHead>
-                          <TableHead className="font-semibold text-slate-700">Total</TableHead>
-                          <TableHead className="font-semibold text-slate-700">Status</TableHead>
-                          <TableHead className="font-semibold text-slate-700">Date</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {ordersData?.orders?.map((order) => (
-                          <TableRow key={order.id} className="hover:bg-slate-50" data-testid={`row-order-${order.id}`}>
-                            <TableCell className="font-mono text-slate-900">#{order.id}</TableCell>
-                            <TableCell>
-                              <div>
-                                <p className="font-medium text-slate-900">{order.user?.name || "Unknown"}</p>
-                                <p className="text-sm text-slate-500">{order.user?.email}</p>
+                    <div className="divide-y divide-slate-100">
+                      {conciergeData?.bookings?.map((booking) => (
+                        <Collapsible key={booking.id} open={expandedBookings.has(booking.id)}>
+                          <div className="p-4 hover:bg-slate-50" data-testid={`row-concierge-${booking.id}`}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center">
+                                  <MapPin className="h-6 w-6 text-teal-600" />
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-slate-900">{booking.trip?.name || "Unknown Trip"}</p>
+                                  <p className="text-sm text-slate-500">{booking.trip?.destination}</p>
+                                </div>
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <span className="text-slate-900">{order.items?.length || 0}</span>
-                              <span className="text-slate-500 ml-1">items</span>
-                            </TableCell>
-                            <TableCell className="font-medium text-slate-900">
-                              <div className="flex items-center gap-1">
-                                <DollarSign className="h-4 w-4 text-slate-400" />
-                                {(order.totalCents / 100).toFixed(2)}
+                              <div className="flex items-center gap-6">
+                                <div className="text-right">
+                                  <p className="font-medium text-slate-900">{booking.customer?.name || "Unknown"}</p>
+                                  <p className="text-sm text-slate-500">{booking.customer?.email}</p>
+                                </div>
+                                <div className="text-right">
+                                  <div className="flex items-center gap-1 text-slate-600">
+                                    <Calendar className="h-4 w-4" />
+                                    <span className="text-sm">{formatTripDates(booking.trip?.startDate || null, booking.trip?.endDate || null)}</span>
+                                  </div>
+                                  <p className="text-sm text-slate-500">{booking.totalItems} items</p>
+                                </div>
+                                <div>
+                                  {booking.isComplete ? (
+                                    <Badge className="bg-emerald-100 text-emerald-700">
+                                      <CheckCircle2 className="h-3 w-3 mr-1" />Complete
+                                    </Badge>
+                                  ) : (
+                                    <Badge className="bg-amber-100 text-amber-700">
+                                      <Clock className="h-3 w-3 mr-1" />In Progress
+                                    </Badge>
+                                  )}
+                                </div>
+                                <CollapsibleTrigger asChild>
+                                  <Button variant="ghost" size="sm" onClick={() => toggleExpanded(booking.id)} data-testid={`button-expand-${booking.id}`}>
+                                    {expandedBookings.has(booking.id) ? (
+                                      <ChevronUp className="h-5 w-5" />
+                                    ) : (
+                                      <ChevronDown className="h-5 w-5" />
+                                    )}
+                                  </Button>
+                                </CollapsibleTrigger>
                               </div>
-                            </TableCell>
-                            <TableCell>{getStatusBadge(order.status)}</TableCell>
-                            <TableCell className="text-slate-600">{new Date(order.createdAt).toLocaleDateString()}</TableCell>
-                          </TableRow>
-                        ))}
-                        {(!ordersData?.orders || ordersData.orders.length === 0) && (
-                          <TableRow>
-                            <TableCell colSpan={6} className="h-32 text-center text-slate-500">
-                              No orders found
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
+                            </div>
+                          </div>
+                          <CollapsibleContent>
+                            <div className="px-4 pb-4 bg-slate-50 border-t border-slate-100">
+                              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-4">
+                                <Card className="border-slate-200">
+                                  <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                      <Plane className="h-4 w-4 text-blue-500" />
+                                      Flight Preferences
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="pt-0">
+                                    {booking.flightsSkipped ? (
+                                      <p className="text-sm text-slate-500">Flights skipped</p>
+                                    ) : booking.flightPreferences ? (
+                                      <div className="text-sm space-y-1">
+                                        {Object.entries(booking.flightPreferences).map(([key, value]) => (
+                                          <div key={key} className="flex justify-between">
+                                            <span className="text-slate-500 capitalize">{key.replace(/_/g, ' ')}:</span>
+                                            <span className="text-slate-900">{String(value)}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-slate-500">No preferences set</p>
+                                    )}
+                                  </CardContent>
+                                </Card>
 
-                    {/* Pagination */}
+                                <Card className="border-slate-200">
+                                  <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                      <Utensils className="h-4 w-4 text-orange-500" />
+                                      Restaurants to Book ({booking.restaurants.length})
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="pt-0">
+                                    {booking.restaurants.length === 0 ? (
+                                      <p className="text-sm text-slate-500">No restaurants selected</p>
+                                    ) : (
+                                      <div className="space-y-3">
+                                        {booking.restaurants.map((restaurant) => (
+                                          <div key={restaurant.id} className="p-2 bg-white rounded border border-slate-100">
+                                            <p className="font-medium text-slate-900 text-sm">{restaurant.title}</p>
+                                            <div className="mt-1 text-xs space-y-0.5">
+                                              {restaurant.time && (
+                                                <p className="text-slate-500">Time: {restaurant.time}</p>
+                                              )}
+                                              {restaurant.partySize && (
+                                                <p className="text-slate-500 flex items-center gap-1">
+                                                  <Users className="h-3 w-3" /> Party of {restaurant.partySize}
+                                                </p>
+                                              )}
+                                              {restaurant.specialRequests && (
+                                                <p className="text-slate-600 italic">"{restaurant.specialRequests}"</p>
+                                              )}
+                                              {restaurant.openTableUrl && (
+                                                <a href={restaurant.openTableUrl} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:underline flex items-center gap-1">
+                                                  <ExternalLink className="h-3 w-3" /> OpenTable
+                                                </a>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </CardContent>
+                                </Card>
+
+                                <Card className="border-slate-200">
+                                  <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                      <MapPin className="h-4 w-4 text-green-500" />
+                                      Excursions to Book ({booking.excursions.length})
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="pt-0">
+                                    {booking.excursions.length === 0 ? (
+                                      <p className="text-sm text-slate-500">No excursions selected</p>
+                                    ) : (
+                                      <div className="space-y-3">
+                                        {booking.excursions.map((excursion) => (
+                                          <div key={excursion.id} className="p-2 bg-white rounded border border-slate-100">
+                                            <p className="font-medium text-slate-900 text-sm">{excursion.title}</p>
+                                            {excursion.time && (
+                                              <p className="text-xs text-slate-500 mt-1">Time: {excursion.time}</p>
+                                            )}
+                                            {excursion.bookingPlatform && (
+                                              <p className="text-xs text-slate-500">Platform: {excursion.bookingPlatform}</p>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </CardContent>
+                                </Card>
+                              </div>
+
+                              {booking.aiSuggestions.length > 0 && (
+                                <Card className="mt-4 border-slate-200">
+                                  <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                      <MessageSquare className="h-4 w-4 text-purple-500" />
+                                      AI Suggestions Approved ({booking.aiSuggestions.length})
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="pt-0">
+                                    <div className="space-y-2">
+                                      {booking.aiSuggestions.map((suggestion, idx) => (
+                                        <div key={idx} className="p-2 bg-white rounded border border-slate-100">
+                                          <div className="flex items-center gap-2">
+                                            <Badge variant="outline" className="text-xs">{suggestion.type}</Badge>
+                                            <span className="font-medium text-sm text-slate-900">{suggestion.title}</span>
+                                          </div>
+                                          {suggestion.description && (
+                                            <p className="text-xs text-slate-500 mt-1">{suggestion.description}</p>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              )}
+
+                              <div className="mt-4 flex items-center gap-4 text-sm text-slate-500">
+                                <span>Created: {format(new Date(booking.createdAt), "MMM d, yyyy h:mm a")}</span>
+                                {booking.completedAt && (
+                                  <span>Completed: {format(new Date(booking.completedAt), "MMM d, yyyy h:mm a")}</span>
+                                )}
+                                <span className="flex items-center gap-1">
+                                  <MessageSquare className="h-3 w-3" />
+                                  {booking.chatMessageCount} AI messages
+                                </span>
+                                {booking.calendarExported && (
+                                  <Badge variant="outline" className="text-xs">
+                                    <Calendar className="h-3 w-3 mr-1" />Calendar Exported
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      ))}
+                      {(!conciergeData?.bookings || conciergeData.bookings.length === 0) && (
+                        <div className="h-32 flex items-center justify-center text-slate-500">
+                          No concierge bookings found
+                        </div>
+                      )}
+                    </div>
+
                     <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100">
                       <p className="text-sm text-slate-500">
-                        Showing {ordersData?.orders?.length || 0} of {ordersData?.total || 0} orders
+                        Showing {conciergeData?.bookings?.length || 0} of {conciergeData?.total || 0} bookings
                       </p>
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" className="h-8" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
                           <ChevronLeft className="h-4 w-4" />
                         </Button>
                         <span className="text-sm text-slate-600 px-2">Page {page}</span>
-                        <Button variant="outline" size="sm" className="h-8" onClick={() => setPage(p => p + 1)} disabled={page >= (ordersData?.pages || 1)}>
+                        <Button variant="outline" size="sm" className="h-8" onClick={() => setPage(p => p + 1)} disabled={page >= (conciergeData?.pages || 1)}>
                           <ChevronRight className="h-4 w-4" />
                         </Button>
                       </div>
@@ -289,7 +519,6 @@ export default function AdminBookings() {
           </TabsContent>
 
           <TabsContent value="manual" className="space-y-4">
-            {/* Filters Bar */}
             <Card className="border-slate-200 shadow-sm">
               <CardContent className="p-4">
                 <div className="relative max-w-sm">
@@ -305,7 +534,6 @@ export default function AdminBookings() {
               </CardContent>
             </Card>
 
-            {/* Manual Bookings Table */}
             <Card className="border-slate-200 shadow-sm">
               <CardContent className="p-0">
                 {loadingManual ? (
@@ -376,7 +604,6 @@ export default function AdminBookings() {
                       </TableBody>
                     </Table>
 
-                    {/* Pagination */}
                     <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100">
                       <p className="text-sm text-slate-500">
                         Showing {manualData?.bookings?.length || 0} of {manualData?.total || 0} bookings

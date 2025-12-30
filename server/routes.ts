@@ -6,7 +6,7 @@ import express from "express";
 import { clerkMiddleware, getAuth, requireAuth, clerkClient } from "@clerk/express";
 import { storage } from "./storage";
 import { db } from "./db";
-import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema, insertFamilyMemberSchema, insertBookingOptionSchema, insertCartItemSchema, insertPodPostSchema, insertChatMessageSchema, conciergeBookingSessions, conciergeChatMessages, conciergeRequests, conciergeRequestItems, tripItems, users, experiences, pods, podTrips, orders, podMembers, messages, orderItems, tripItemBookingMeta, savedExperiences, comments, podExperiences } from "@shared/schema";
+import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema, insertFamilyMemberSchema, insertBookingOptionSchema, insertCartItemSchema, insertPodPostSchema, insertChatMessageSchema, conciergeBookingSessions, conciergeChatMessages, conciergeAiSuggestions, conciergeRequests, conciergeRequestItems, tripItems, users, experiences, pods, podTrips, orders, podMembers, messages, orderItems, tripItemBookingMeta, savedExperiences, comments, podExperiences } from "@shared/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { z } from "zod";
 import { fromError } from "zod-validation-error";
@@ -4586,6 +4586,257 @@ END:VCALENDAR`;
       await db.update(pods)
         .set({ isPublic })
         .where(eq(pods.id, podId));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin concierge bookings - shows completed sessions for concierge team
+  app.get('/api/admin/concierge-bookings', requireAuth(), requireAdmin, async (req, res) => {
+    try {
+      const { search = '', page = '1', status = 'all' } = req.query;
+      const pageNum = parseInt(page as string) || 1;
+      const pageSize = 20;
+
+      // Get all sessions with trip and user info
+      let allSessions = await db.select({
+        session: conciergeBookingSessions,
+        trip: podTrips,
+        user: users,
+      })
+      .from(conciergeBookingSessions)
+      .leftJoin(podTrips, eq(conciergeBookingSessions.tripId, podTrips.id))
+      .leftJoin(users, eq(conciergeBookingSessions.userId, users.id))
+      .orderBy(desc(conciergeBookingSessions.createdAt));
+
+      // Filter by status
+      if (status === 'complete') {
+        allSessions = allSessions.filter(s => s.session.completedAt !== null);
+      } else if (status === 'pending') {
+        allSessions = allSessions.filter(s => s.session.completedAt === null);
+      }
+
+      // Search filter
+      if (search) {
+        const searchLower = (search as string).toLowerCase();
+        allSessions = allSessions.filter(s =>
+          s.trip?.name?.toLowerCase().includes(searchLower) ||
+          s.trip?.destination?.toLowerCase().includes(searchLower) ||
+          s.user?.name?.toLowerCase().includes(searchLower) ||
+          s.user?.email?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      const total = allSessions.length;
+      const pages = Math.ceil(total / pageSize);
+      const paginatedSessions = allSessions.slice((pageNum - 1) * pageSize, pageNum * pageSize);
+
+      // Enrich with booking details
+      const enrichedBookings = await Promise.all(paginatedSessions.map(async ({ session, trip, user }) => {
+        // Get trip items for this trip
+        const items = trip ? await db.select().from(tripItems).where(eq(tripItems.tripId, trip.id)) : [];
+        
+        // Get booking metadata for trip items
+        const bookingMeta = await Promise.all(items.map(async (item) => {
+          const meta = await db.select().from(tripItemBookingMeta).where(eq(tripItemBookingMeta.tripItemId, item.id));
+          return { item, meta: meta[0] || null };
+        }));
+
+        // Get selected restaurants (from selectedRestaurantIds)
+        const selectedRestaurants = session.selectedRestaurantIds ?
+          bookingMeta.filter(b => session.selectedRestaurantIds?.includes(b.item.id)) : [];
+
+        // Get selected excursions (from selectedExcursionIds)
+        const selectedExcursions = session.selectedExcursionIds ?
+          bookingMeta.filter(b => session.selectedExcursionIds?.includes(b.item.id)) : [];
+
+        // Get AI chat messages for context
+        const chatMessages = await db.select()
+          .from(conciergeChatMessages)
+          .where(eq(conciergeChatMessages.sessionId, session.id))
+          .orderBy(conciergeChatMessages.createdAt);
+
+        // Get AI suggestions
+        const suggestions = await db.select()
+          .from(conciergeAiSuggestions)
+          .where(eq(conciergeAiSuggestions.sessionId, session.id));
+
+        return {
+          id: session.id,
+          tripId: session.tripId,
+          currentStep: session.currentStep,
+          isComplete: session.completedAt !== null,
+          completedAt: session.completedAt,
+          createdAt: session.createdAt,
+          flightsSkipped: session.flightsSkipped,
+          flightPreferences: session.flightPreferences,
+          calendarExported: session.calendarExported,
+          trip: trip ? {
+            id: trip.id,
+            name: trip.name,
+            destination: trip.destination,
+            startDate: trip.startDate,
+            endDate: trip.endDate,
+            status: trip.status,
+          } : null,
+          customer: user ? {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            avatar: user.avatar,
+          } : null,
+          restaurants: selectedRestaurants.map(r => ({
+            id: r.item.id,
+            title: r.item.title,
+            description: r.item.description,
+            time: r.item.time,
+            reservationDate: r.meta?.reservationDate,
+            reservationTime: r.meta?.reservationTime,
+            partySize: r.meta?.partySize,
+            specialRequests: r.meta?.specialRequests,
+            requiresManualBooking: r.meta?.requiresManualBooking,
+            openTableUrl: r.meta?.openTableUrl,
+          })),
+          excursions: selectedExcursions.map(e => ({
+            id: e.item.id,
+            title: e.item.title,
+            description: e.item.description,
+            time: e.item.time,
+            requiresManualBooking: e.meta?.requiresManualBooking,
+            bookingPlatform: e.meta?.bookingPlatform,
+          })),
+          totalItems: items.length,
+          aiChatComplete: session.aiChatComplete,
+          chatMessageCount: chatMessages.length,
+          aiSuggestions: suggestions.filter(s => s.userApproved).map(s => ({
+            type: s.suggestionType,
+            title: s.title,
+            description: s.description,
+            approved: s.userApproved,
+            agentReviewed: s.agentReviewed,
+            agentNotes: s.agentNotes,
+          })),
+        };
+      }));
+
+      res.json({ bookings: enrichedBookings, total, pages });
+    } catch (error: any) {
+      console.error('Admin concierge bookings error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get single concierge booking details
+  app.get('/api/admin/concierge-bookings/:id', requireAuth(), requireAdmin, async (req, res) => {
+    try {
+      const bookingId = parseInt(req.params.id);
+      
+      const [result] = await db.select({
+        session: conciergeBookingSessions,
+        trip: podTrips,
+        user: users,
+      })
+      .from(conciergeBookingSessions)
+      .leftJoin(podTrips, eq(conciergeBookingSessions.tripId, podTrips.id))
+      .leftJoin(users, eq(conciergeBookingSessions.userId, users.id))
+      .where(eq(conciergeBookingSessions.id, bookingId));
+
+      if (!result) {
+        return res.status(404).json({ error: 'Booking not found' });
+      }
+
+      const { session, trip, user } = result;
+
+      // Get all trip items with booking meta
+      const items = trip ? await db.select().from(tripItems).where(eq(tripItems.tripId, trip.id)) : [];
+      const bookingMeta = await Promise.all(items.map(async (item) => {
+        const meta = await db.select().from(tripItemBookingMeta).where(eq(tripItemBookingMeta.tripItemId, item.id));
+        return { item, meta: meta[0] || null };
+      }));
+
+      // Get AI chat messages
+      const chatMessages = await db.select()
+        .from(conciergeChatMessages)
+        .where(eq(conciergeChatMessages.sessionId, session.id))
+        .orderBy(conciergeChatMessages.createdAt);
+
+      // Get AI suggestions
+      const suggestions = await db.select()
+        .from(conciergeAiSuggestions)
+        .where(eq(conciergeAiSuggestions.sessionId, session.id));
+
+      res.json({
+        id: session.id,
+        tripId: session.tripId,
+        currentStep: session.currentStep,
+        isComplete: session.completedAt !== null,
+        completedAt: session.completedAt,
+        createdAt: session.createdAt,
+        flightsSkipped: session.flightsSkipped,
+        flightPreferences: session.flightPreferences,
+        calendarExported: session.calendarExported,
+        trip: trip ? {
+          id: trip.id,
+          name: trip.name,
+          destination: trip.destination,
+          startDate: trip.startDate,
+          endDate: trip.endDate,
+          status: trip.status,
+        } : null,
+        customer: user ? {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+        } : null,
+        allItems: bookingMeta.map(b => ({
+          id: b.item.id,
+          itemType: b.item.itemType,
+          title: b.item.title,
+          description: b.item.description,
+          time: b.item.time,
+          dayNumber: b.item.dayNumber,
+          dayTitle: b.item.dayTitle,
+          isSelected: session.selectedRestaurantIds?.includes(b.item.id) || session.selectedExcursionIds?.includes(b.item.id),
+          reservationDate: b.meta?.reservationDate,
+          reservationTime: b.meta?.reservationTime,
+          partySize: b.meta?.partySize,
+          specialRequests: b.meta?.specialRequests,
+          requiresManualBooking: b.meta?.requiresManualBooking,
+          openTableUrl: b.meta?.openTableUrl,
+          bookingPlatform: b.meta?.bookingPlatform,
+        })),
+        chatHistory: chatMessages.map(m => ({
+          role: m.role,
+          content: m.content,
+          createdAt: m.createdAt,
+        })),
+        aiSuggestions: suggestions.map(s => ({
+          type: s.suggestionType,
+          title: s.title,
+          description: s.description,
+          approved: s.userApproved,
+          agentReviewed: s.agentReviewed,
+          agentNotes: s.agentNotes,
+        })),
+      });
+    } catch (error: any) {
+      console.error('Admin concierge booking detail error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update concierge booking (mark items as reviewed, add notes)
+  app.patch('/api/admin/concierge-bookings/:id/suggestions/:suggestionId', requireAuth(), requireAdmin, async (req, res) => {
+    try {
+      const suggestionId = parseInt(req.params.suggestionId);
+      const { agentReviewed, agentNotes } = req.body;
+
+      await db.update(conciergeAiSuggestions)
+        .set({ agentReviewed, agentNotes })
+        .where(eq(conciergeAiSuggestions.id, suggestionId));
 
       res.json({ success: true });
     } catch (error: any) {
