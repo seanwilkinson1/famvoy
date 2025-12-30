@@ -137,7 +137,7 @@ export default function ConciergeBookingWizard() {
   const sendChatMutation = useMutation({
     mutationFn: async (message: string) => {
       const response = await apiRequest("POST", `/api/concierge/chat/${tripId}`, { message });
-      return response as { messages: ChatMessage[] };
+      return await response.json() as { messages: ChatMessage[] };
     },
     onSuccess: (response) => {
       setChatMessages(response.messages);
@@ -584,6 +584,7 @@ export default function ConciergeBookingWizard() {
               data-testid="input-chat-message"
             />
             <Button 
+              type="button"
               onClick={handleSendChat} 
               disabled={!chatMessage.trim() || isLoadingChat}
               data-testid="button-send-chat"
