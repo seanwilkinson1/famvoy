@@ -57,6 +57,8 @@ import {
   type InsertConciergeBookingSession,
   type ConciergeChatMessage,
   type InsertConciergeChatMessage,
+  type ConciergeAiSuggestion,
+  type InsertConciergeAiSuggestion,
   type PodPost,
   type InsertPodPost,
   type Conversation,
@@ -96,6 +98,7 @@ import {
   conciergeRequestItems,
   conciergeBookingSessions,
   conciergeChatMessages,
+  conciergeAiSuggestions,
   podPosts,
   conversations,
   conversationMembers,
@@ -290,6 +293,11 @@ export interface IStorage {
   // Concierge Chat Messages
   getConciergeChatMessages(sessionId: number): Promise<ConciergeChatMessage[]>;
   createConciergeChatMessage(data: InsertConciergeChatMessage): Promise<ConciergeChatMessage>;
+  
+  // Concierge AI Suggestions
+  getConciergeAiSuggestions(sessionId: number): Promise<ConciergeAiSuggestion[]>;
+  createConciergeAiSuggestion(data: InsertConciergeAiSuggestion): Promise<ConciergeAiSuggestion>;
+  updateConciergeAiSuggestion(id: number, data: Partial<ConciergeAiSuggestion>): Promise<ConciergeAiSuggestion>;
   
   getAgents(): Promise<User[]>;
   
@@ -1830,6 +1838,26 @@ export class DatabaseStorage implements IStorage {
   async createConciergeChatMessage(data: InsertConciergeChatMessage): Promise<ConciergeChatMessage> {
     const [message] = await db.insert(conciergeChatMessages).values(data).returning();
     return message;
+  }
+
+  async getConciergeAiSuggestions(sessionId: number): Promise<ConciergeAiSuggestion[]> {
+    return db.select()
+      .from(conciergeAiSuggestions)
+      .where(eq(conciergeAiSuggestions.sessionId, sessionId))
+      .orderBy(conciergeAiSuggestions.createdAt);
+  }
+
+  async createConciergeAiSuggestion(data: InsertConciergeAiSuggestion): Promise<ConciergeAiSuggestion> {
+    const [suggestion] = await db.insert(conciergeAiSuggestions).values(data).returning();
+    return suggestion;
+  }
+
+  async updateConciergeAiSuggestion(id: number, data: Partial<ConciergeAiSuggestion>): Promise<ConciergeAiSuggestion> {
+    const [suggestion] = await db.update(conciergeAiSuggestions)
+      .set(data)
+      .where(eq(conciergeAiSuggestions.id, id))
+      .returning();
+    return suggestion;
   }
 
   async getAgents(): Promise<User[]> {

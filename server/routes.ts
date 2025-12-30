@@ -3739,9 +3739,53 @@ Their itinerary has ${items.length} activities planned across multiple days.`;
         content: aiResponse,
       });
 
-      // Get all messages for response
+      // Extract structured suggestions from the AI response
+      let extractedSuggestions: Array<{type: string, title: string, description: string}> = [];
+      try {
+        const extractionPrompt = `Analyze this travel concierge response and extract any actionable suggestions.
+
+AI Response: "${aiResponse}"
+
+Return a JSON array of suggestions. Each suggestion should have:
+- type: one of "ACTIVITY", "DINING", "TRANSPORTATION", "SPECIAL_OCCASION", "ACCOMMODATION", "TIP"
+- title: short actionable title (5-8 words)
+- description: brief description (1 sentence)
+
+If there are no clear suggestions, return an empty array [].
+Only return valid JSON, no other text.`;
+
+        const extractionCompletion = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: extractionPrompt }],
+          temperature: 0.3,
+          max_tokens: 500,
+        });
+
+        const extractionText = extractionCompletion.choices[0].message.content || '[]';
+        const jsonMatch = extractionText.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          extractedSuggestions = JSON.parse(jsonMatch[0]);
+        }
+      } catch (extractError) {
+        console.error("Suggestion extraction error:", extractError);
+      }
+
+      // Save extracted suggestions to database
+      const savedSuggestions = await Promise.all(extractedSuggestions.map(async (s) => {
+        return await storage.createConciergeAiSuggestion({
+          sessionId: session.id,
+          suggestionType: s.type,
+          title: s.title,
+          description: s.description,
+          userApproved: null,
+          agentReviewed: false,
+        });
+      }));
+
+      // Get all messages and pending suggestions for response
       const allMessages = await storage.getConciergeChatMessages(session.id);
-      res.json({ messages: allMessages });
+      const pendingSuggestions = await storage.getConciergeAiSuggestions(session.id);
+      res.json({ messages: allMessages, suggestions: pendingSuggestions });
     } catch (error: any) {
       console.error("Chat error:", error);
       res.status(500).json({ error: error.message });
@@ -3764,11 +3808,30 @@ Their itinerary has ${items.length} activities planned across multiple days.`;
       const session = await storage.getConciergeBookingSession(tripId, user.id);
       
       if (!session) {
-        return res.json({ messages: [] });
+        return res.json({ messages: [], suggestions: [] });
       }
 
       const messages = await storage.getConciergeChatMessages(session.id);
-      res.json({ messages });
+      const suggestions = await storage.getConciergeAiSuggestions(session.id);
+      res.json({ messages, suggestions });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Approve or reject a suggestion
+  app.patch('/api/concierge/suggestions/:id', requireAuth(), async (req, res) => {
+    try {
+      const auth = getAuth(req);
+      if (!auth?.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const suggestionId = parseInt(req.params.id);
+      const { userApproved } = req.body;
+
+      const updated = await storage.updateConciergeAiSuggestion(suggestionId, { userApproved });
+      res.json(updated);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -4760,13 +4823,15 @@ END:VCALENDAR`;
           totalItems: items.length,
           aiChatComplete: session.aiChatComplete,
           chatMessageCount: chatMessages.length,
-          aiSuggestions: suggestions.filter(s => s.userApproved).map(s => ({
+          aiSuggestions: suggestions.map(s => ({
+            id: s.id,
             type: s.suggestionType,
             title: s.title,
             description: s.description,
-            approved: s.userApproved,
+            userApproved: s.userApproved,
             agentReviewed: s.agentReviewed,
             agentNotes: s.agentNotes,
+            createdAt: s.createdAt,
           })),
         };
       }));
@@ -4864,10 +4929,11 @@ END:VCALENDAR`;
           createdAt: m.createdAt,
         })),
         aiSuggestions: suggestions.map(s => ({
-          type: s.suggestionType,
+          id: s.id,
+          suggestionType: s.suggestionType,
           title: s.title,
           description: s.description,
-          approved: s.userApproved,
+          userApproved: s.userApproved,
           agentReviewed: s.agentReviewed,
           agentNotes: s.agentNotes,
         })),

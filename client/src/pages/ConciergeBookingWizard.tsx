@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   ChevronLeft, ChevronRight, Plane, Utensils, Ticket, MessageSquare, Calendar, 
   Check, Loader2, ExternalLink, AlertCircle, Sparkles, MapPin, Clock, Users,
-  Send, CalendarPlus, SkipForward
+  Send, CalendarPlus, SkipForward, ThumbsUp, ThumbsDown, X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -64,6 +64,26 @@ interface ChatMessage {
   createdAt: string;
 }
 
+interface AiSuggestion {
+  id: number;
+  sessionId: number;
+  suggestionType: string;
+  title: string;
+  description: string | null;
+  userApproved: boolean | null;
+  agentReviewed: boolean;
+  createdAt: string;
+}
+
+const SUGGESTION_ICONS: Record<string, React.ReactNode> = {
+  ACTIVITY: "🎯",
+  DINING: "🍽️",
+  TRANSPORTATION: "🚗",
+  SPECIAL_OCCASION: "🎉",
+  ACCOMMODATION: "🏨",
+  TIP: "💡",
+};
+
 const STEPS = [
   { id: "flights", label: "Flights", icon: Plane },
   { id: "restaurants", label: "Restaurants", icon: Utensils },
@@ -82,6 +102,7 @@ export default function ConciergeBookingWizard() {
   const [selectedExcursions, setSelectedExcursions] = useState<number[]>([]);
   const [chatMessage, setChatMessage] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [suggestions, setSuggestions] = useState<AiSuggestion[]>([]);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
   
   const tripId = params?.id ? parseInt(params.id) : 0;
@@ -106,7 +127,7 @@ export default function ConciergeBookingWizard() {
     enabled: !!trip,
   });
 
-  const { data: chatHistory } = useQuery<{ messages: ChatMessage[] }>({
+  const { data: chatHistory } = useQuery<{ messages: ChatMessage[]; suggestions: AiSuggestion[] }>({
     queryKey: [`/api/concierge/chat-history/${tripId}`],
     enabled: tripId > 0 && currentStep?.id === 'ai_chat',
     staleTime: 30000,
@@ -117,7 +138,10 @@ export default function ConciergeBookingWizard() {
     if (chatHistory?.messages && chatHistory.messages.length > 0 && chatMessages.length === 0 && !isLoadingChat) {
       setChatMessages(chatHistory.messages);
     }
-  }, [chatHistory, chatMessages.length, isLoadingChat]);
+    if (chatHistory?.suggestions && chatHistory.suggestions.length > 0 && suggestions.length === 0) {
+      setSuggestions(chatHistory.suggestions);
+    }
+  }, [chatHistory, chatMessages.length, suggestions.length, isLoadingChat]);
 
   const createSessionMutation = useMutation({
     mutationFn: () => apiRequest("POST", `/api/concierge/session`, { tripId }),
@@ -137,15 +161,32 @@ export default function ConciergeBookingWizard() {
   const sendChatMutation = useMutation({
     mutationFn: async (message: string) => {
       const response = await apiRequest("POST", `/api/concierge/chat/${tripId}`, { message });
-      return await response.json() as { messages: ChatMessage[] };
+      return await response.json() as { messages: ChatMessage[]; suggestions: AiSuggestion[] };
     },
     onSuccess: (response) => {
       setChatMessages(response.messages);
+      if (response.suggestions) {
+        setSuggestions(response.suggestions);
+      }
       setIsLoadingChat(false);
     },
     onError: () => {
       setIsLoadingChat(false);
       toast.error("Failed to send message");
+    },
+  });
+
+  const approveSuggestionMutation = useMutation({
+    mutationFn: async ({ id, approved }: { id: number; approved: boolean }) => {
+      const response = await apiRequest("PATCH", `/api/concierge/suggestions/${id}`, { userApproved: approved });
+      return await response.json() as AiSuggestion;
+    },
+    onSuccess: (updatedSuggestion) => {
+      setSuggestions(prev => prev.map(s => s.id === updatedSuggestion.id ? updatedSuggestion : s));
+      toast.success(updatedSuggestion.userApproved ? "Added to your requests!" : "Suggestion dismissed");
+    },
+    onError: () => {
+      toast.error("Failed to update suggestion");
     },
   });
 
@@ -520,17 +561,35 @@ export default function ConciergeBookingWizard() {
               <div className="text-center py-8 text-muted-foreground">
                 <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p>Start a conversation to get personalized suggestions</p>
-                <div className="mt-4 space-y-2">
-                  <p className="text-sm font-medium">Try asking about:</p>
+                <div className="mt-4 space-y-3">
+                  <p className="text-sm font-medium">Tell us about your trip:</p>
                   <div className="flex flex-wrap gap-2 justify-center">
-                    {["Best local restaurants", "Kid-friendly activities", "Hidden gems", "Day trip ideas"].map(suggestion => (
+                    {[
+                      { emoji: "🍽️", text: "Dietary needs", prompt: "We have dietary restrictions. Can you help us find suitable restaurants? We need..." },
+                      { emoji: "🎉", text: "Celebrating", prompt: "We're celebrating a special occasion! It's a..." },
+                      { emoji: "♿", text: "Accessibility", prompt: "We have accessibility requirements. Can you help us find suitable options? We need..." },
+                      { emoji: "👶", text: "With kids", prompt: "We're traveling with young kids. What are the best family-friendly activities?" },
+                    ].map(item => (
                       <Button
-                        key={suggestion}
+                        key={item.text}
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          setChatMessage(suggestion);
-                        }}
+                        className="gap-1"
+                        onClick={() => setChatMessage(item.prompt)}
+                        data-testid={`button-quick-${item.text.replace(/\s+/g, '-')}`}
+                      >
+                        <span>{item.emoji}</span> {item.text}
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2 justify-center pt-2">
+                    {["Best local restaurants", "Hidden gems", "Day trip ideas", "Must-see attractions"].map(suggestion => (
+                      <Button
+                        key={suggestion}
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => setChatMessage(suggestion)}
                         data-testid={`button-suggestion-${suggestion.replace(/\s+/g, '-')}`}
                       >
                         {suggestion}
@@ -562,6 +621,70 @@ export default function ConciergeBookingWizard() {
             {isLoadingChat && (
               <div className="p-4 rounded-2xl bg-muted max-w-[80%]">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            
+            {/* Suggestion Cards */}
+            {suggestions.filter(s => s.userApproved === null).length > 0 && (
+              <div className="mt-4 space-y-3">
+                <p className="text-sm font-medium text-muted-foreground">Would you like us to arrange any of these?</p>
+                {suggestions.filter(s => s.userApproved === null).map((suggestion) => (
+                  <Card key={suggestion.id} className="border-purple-200 bg-purple-50/50">
+                    <CardContent className="p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                          <span className="text-2xl">{SUGGESTION_ICONS[suggestion.suggestionType] || "💡"}</span>
+                          <div>
+                            <p className="font-medium text-sm">{suggestion.title}</p>
+                            {suggestion.description && (
+                              <p className="text-xs text-muted-foreground mt-0.5">{suggestion.description}</p>
+                            )}
+                            <Badge variant="secondary" className="mt-1 text-xs">
+                              {suggestion.suggestionType.replace(/_/g, ' ')}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 hover:bg-green-100 hover:text-green-600"
+                            onClick={() => approveSuggestionMutation.mutate({ id: suggestion.id, approved: true })}
+                            data-testid={`button-approve-${suggestion.id}`}
+                          >
+                            <ThumbsUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600"
+                            onClick={() => approveSuggestionMutation.mutate({ id: suggestion.id, approved: false })}
+                            data-testid={`button-reject-${suggestion.id}`}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+            
+            {/* Approved suggestions summary */}
+            {suggestions.filter(s => s.userApproved === true).length > 0 && (
+              <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                <p className="text-sm font-medium text-green-700 mb-2">
+                  <Check className="h-4 w-4 inline mr-1" />
+                  Your requests ({suggestions.filter(s => s.userApproved === true).length})
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {suggestions.filter(s => s.userApproved === true).map(s => (
+                    <Badge key={s.id} className="bg-green-100 text-green-700 hover:bg-green-200">
+                      {SUGGESTION_ICONS[s.suggestionType]} {s.title}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             )}
           </div>

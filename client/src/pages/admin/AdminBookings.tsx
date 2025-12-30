@@ -39,6 +39,7 @@ import {
   ChevronDown,
   ChevronUp,
   Phone,
+  Check,
   CheckCircle2,
   Clock,
   AlertCircle,
@@ -100,10 +101,11 @@ interface ConciergeBooking {
   aiChatComplete: boolean;
   chatMessageCount: number;
   aiSuggestions: Array<{
-    type: string;
+    id: number;
+    suggestionType: string;
     title: string;
     description: string | null;
-    approved: boolean | null;
+    userApproved: boolean | null;
     agentReviewed: boolean | null;
     agentNotes: string | null;
   }>;
@@ -479,22 +481,66 @@ export default function AdminBookings() {
                                   <CardHeader className="pb-2">
                                     <CardTitle className="text-sm font-medium flex items-center gap-2">
                                       <MessageSquare className="h-4 w-4 text-purple-500" />
-                                      AI Suggestions Approved ({booking.aiSuggestions.length})
+                                      Customer Requests ({booking.aiSuggestions.filter((s: any) => s.userApproved === true).length} approved, {booking.aiSuggestions.filter((s: any) => s.userApproved === null).length} pending)
                                     </CardTitle>
                                   </CardHeader>
                                   <CardContent className="pt-0">
                                     <div className="space-y-2">
-                                      {booking.aiSuggestions.map((suggestion, idx) => (
-                                        <div key={idx} className="p-2 bg-white rounded border border-slate-100">
-                                          <div className="flex items-center gap-2">
-                                            <Badge variant="outline" className="text-xs">{suggestion.type}</Badge>
-                                            <span className="font-medium text-sm text-slate-900">{suggestion.title}</span>
+                                      {booking.aiSuggestions.filter((s: any) => s.userApproved === true).map((suggestion: any) => (
+                                        <div key={suggestion.id} className="p-3 bg-green-50 rounded-lg border border-green-200">
+                                          <div className="flex items-start justify-between">
+                                            <div>
+                                              <div className="flex items-center gap-2 mb-1">
+                                                <Badge className="bg-green-100 text-green-700 text-xs">
+                                                  <CheckCircle2 className="h-3 w-3 mr-1" />Approved
+                                                </Badge>
+                                                <Badge variant="outline" className="text-xs">{suggestion.suggestionType.replace(/_/g, ' ')}</Badge>
+                                              </div>
+                                              <p className="font-medium text-sm text-slate-900">{suggestion.title}</p>
+                                              {suggestion.description && (
+                                                <p className="text-xs text-slate-600 mt-1">{suggestion.description}</p>
+                                              )}
+                                              {suggestion.agentNotes && (
+                                                <p className="text-xs text-purple-600 mt-1 italic">Agent note: {suggestion.agentNotes}</p>
+                                              )}
+                                            </div>
+                                            <div className="flex gap-1">
+                                              {suggestion.agentReviewed ? (
+                                                <Badge className="bg-purple-100 text-purple-700 text-xs">
+                                                  <Check className="h-3 w-3 mr-1" />Reviewed
+                                                </Badge>
+                                              ) : (
+                                                <Badge className="bg-amber-100 text-amber-700 text-xs">
+                                                  <Clock className="h-3 w-3 mr-1" />Action Needed
+                                                </Badge>
+                                              )}
+                                            </div>
                                           </div>
-                                          {suggestion.description && (
-                                            <p className="text-xs text-slate-500 mt-1">{suggestion.description}</p>
-                                          )}
                                         </div>
                                       ))}
+                                      {booking.aiSuggestions.filter((s: any) => s.userApproved === null).length > 0 && (
+                                        <div className="mt-2 pt-2 border-t border-slate-200">
+                                          <p className="text-xs text-slate-500 mb-2">Pending customer decision:</p>
+                                          {booking.aiSuggestions.filter((s: any) => s.userApproved === null).map((suggestion: any) => (
+                                            <div key={suggestion.id} className="p-2 bg-slate-50 rounded border border-slate-200 mb-1">
+                                              <div className="flex items-center gap-2">
+                                                <Badge variant="outline" className="text-xs bg-slate-100">{suggestion.suggestionType.replace(/_/g, ' ')}</Badge>
+                                                <span className="text-sm text-slate-600">{suggestion.title}</span>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                      {booking.aiSuggestions.filter((s: any) => s.userApproved === false).length > 0 && (
+                                        <div className="mt-2 pt-2 border-t border-slate-200">
+                                          <p className="text-xs text-slate-400 mb-2">Declined by customer:</p>
+                                          {booking.aiSuggestions.filter((s: any) => s.userApproved === false).map((suggestion: any) => (
+                                            <div key={suggestion.id} className="p-2 bg-slate-50 rounded border border-slate-100 mb-1 opacity-60">
+                                              <span className="text-sm text-slate-500 line-through">{suggestion.title}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
                                     </div>
                                   </CardContent>
                                 </Card>
