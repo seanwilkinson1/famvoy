@@ -389,10 +389,18 @@ export default function AdminBookings() {
                                       <p className="text-sm text-slate-500">No restaurants selected</p>
                                     ) : (
                                       <div className="space-y-3">
-                                        {booking.restaurants.map((restaurant) => (
+                                        {booking.restaurants.map((restaurant: any) => (
                                           <div key={restaurant.id} className="p-2 bg-white rounded border border-slate-100">
-                                            <p className="font-medium text-slate-900 text-sm">{restaurant.title}</p>
+                                            <div className="flex items-center justify-between">
+                                              <p className="font-medium text-slate-900 text-sm">{restaurant.title}</p>
+                                              {restaurant.isConfirmed && (
+                                                <Badge className="bg-emerald-100 text-emerald-700 text-xs">Confirmed</Badge>
+                                              )}
+                                            </div>
                                             <div className="mt-1 text-xs space-y-0.5">
+                                              {restaurant.rating && (
+                                                <p className="text-amber-600">★ {restaurant.rating}</p>
+                                              )}
                                               {restaurant.time && (
                                                 <p className="text-slate-500">Time: {restaurant.time}</p>
                                               )}
@@ -404,7 +412,12 @@ export default function AdminBookings() {
                                               {restaurant.specialRequests && (
                                                 <p className="text-slate-600 italic">"{restaurant.specialRequests}"</p>
                                               )}
-                                              {restaurant.openTableUrl && (
+                                              {restaurant.bookingUrl && (
+                                                <a href={restaurant.bookingUrl} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:underline flex items-center gap-1">
+                                                  <ExternalLink className="h-3 w-3" /> Book Now
+                                                </a>
+                                              )}
+                                              {restaurant.openTableUrl && !restaurant.bookingUrl && (
                                                 <a href={restaurant.openTableUrl} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:underline flex items-center gap-1">
                                                   <ExternalLink className="h-3 w-3" /> OpenTable
                                                 </a>
@@ -429,15 +442,30 @@ export default function AdminBookings() {
                                       <p className="text-sm text-slate-500">No excursions selected</p>
                                     ) : (
                                       <div className="space-y-3">
-                                        {booking.excursions.map((excursion) => (
+                                        {booking.excursions.map((excursion: any) => (
                                           <div key={excursion.id} className="p-2 bg-white rounded border border-slate-100">
-                                            <p className="font-medium text-slate-900 text-sm">{excursion.title}</p>
-                                            {excursion.time && (
-                                              <p className="text-xs text-slate-500 mt-1">Time: {excursion.time}</p>
-                                            )}
-                                            {excursion.bookingPlatform && (
-                                              <p className="text-xs text-slate-500">Platform: {excursion.bookingPlatform}</p>
-                                            )}
+                                            <div className="flex items-center justify-between">
+                                              <p className="font-medium text-slate-900 text-sm">{excursion.title}</p>
+                                              {excursion.isConfirmed && (
+                                                <Badge className="bg-emerald-100 text-emerald-700 text-xs">Confirmed</Badge>
+                                              )}
+                                            </div>
+                                            <div className="mt-1 text-xs space-y-0.5">
+                                              {excursion.rating && (
+                                                <p className="text-amber-600">★ {excursion.rating}</p>
+                                              )}
+                                              {excursion.time && (
+                                                <p className="text-slate-500">Time: {excursion.time}</p>
+                                              )}
+                                              {excursion.bookingPlatform && (
+                                                <p className="text-slate-500">Platform: {excursion.bookingPlatform}</p>
+                                              )}
+                                              {excursion.bookingUrl && (
+                                                <a href={excursion.bookingUrl} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:underline flex items-center gap-1">
+                                                  <ExternalLink className="h-3 w-3" /> Book Now
+                                                </a>
+                                              )}
+                                            </div>
                                           </div>
                                         ))}
                                       </div>

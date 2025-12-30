@@ -3593,13 +3593,50 @@ Return ONLY valid JSON.`;
 
       const items = await storage.getTripItems(tripId);
       
-      const restaurants = items.filter(item => 
+      // Enrich items with confirmed option details if available
+      const enrichedItems = await Promise.all(items.map(async (item) => {
+        if (item.selectedOptionId && item.confirmationState === 'locked') {
+          // Get the selected/confirmed option details
+          const options = await storage.getTripItemOptions(item.id);
+          const selectedOption = options.find(o => o.id === item.selectedOptionId);
+          if (selectedOption) {
+            return {
+              ...item,
+              title: selectedOption.title || item.title,
+              description: selectedOption.description || item.description,
+              confirmedOption: {
+                id: selectedOption.id,
+                title: selectedOption.title,
+                description: selectedOption.description,
+                priceEstimate: selectedOption.priceEstimate,
+                rating: selectedOption.rating,
+                bookingUrl: selectedOption.bookingUrl,
+                imageUrl: selectedOption.image,
+              },
+              lockedOption: {
+                id: selectedOption.id,
+                title: selectedOption.title,
+                description: selectedOption.description,
+                priceEstimate: selectedOption.priceEstimate,
+                rating: selectedOption.rating,
+                bookingUrl: selectedOption.bookingUrl,
+                image: selectedOption.image,
+                address: (selectedOption.metadata as any)?.address,
+              },
+              isConfirmed: true,
+            };
+          }
+        }
+        return { ...item, confirmedOption: null, lockedOption: null, isConfirmed: false };
+      }));
+      
+      const restaurants = enrichedItems.filter(item => 
         item.itemType === 'MEAL' || 
         item.itemType === 'RESTAURANT' ||
         item.itemType === 'DINING'
       );
       
-      const excursions = items.filter(item => 
+      const excursions = enrichedItems.filter(item => 
         item.itemType === 'ACTIVITY' || 
         item.itemType === 'EXCURSION' ||
         item.itemType === 'TOUR' ||
@@ -4638,10 +4675,15 @@ END:VCALENDAR`;
         // Get trip items for this trip
         const items = trip ? await db.select().from(tripItems).where(eq(tripItems.tripId, trip.id)) : [];
         
-        // Get booking metadata for trip items
+        // Get booking metadata and locked options for trip items
         const bookingMeta = await Promise.all(items.map(async (item) => {
           const meta = await db.select().from(tripItemBookingMeta).where(eq(tripItemBookingMeta.tripItemId, item.id));
-          return { item, meta: meta[0] || null };
+          let lockedOption = null;
+          if (item.selectedOptionId && item.confirmationState === 'locked') {
+            const options = await storage.getTripItemOptions(item.id);
+            lockedOption = options.find(o => o.id === item.selectedOptionId) || null;
+          }
+          return { item, meta: meta[0] || null, lockedOption };
         }));
 
         // Get selected restaurants (from selectedRestaurantIds)
@@ -4689,8 +4731,8 @@ END:VCALENDAR`;
           } : null,
           restaurants: selectedRestaurants.map(r => ({
             id: r.item.id,
-            title: r.item.title,
-            description: r.item.description,
+            title: r.lockedOption?.title || r.item.title,
+            description: r.lockedOption?.description || r.item.description,
             time: r.item.time,
             reservationDate: r.meta?.reservationDate,
             reservationTime: r.meta?.reservationTime,
@@ -4698,14 +4740,22 @@ END:VCALENDAR`;
             specialRequests: r.meta?.specialRequests,
             requiresManualBooking: r.meta?.requiresManualBooking,
             openTableUrl: r.meta?.openTableUrl,
+            bookingUrl: r.lockedOption?.bookingUrl,
+            image: r.lockedOption?.image,
+            rating: r.lockedOption?.rating,
+            isConfirmed: !!r.lockedOption,
           })),
           excursions: selectedExcursions.map(e => ({
             id: e.item.id,
-            title: e.item.title,
-            description: e.item.description,
+            title: e.lockedOption?.title || e.item.title,
+            description: e.lockedOption?.description || e.item.description,
             time: e.item.time,
             requiresManualBooking: e.meta?.requiresManualBooking,
             bookingPlatform: e.meta?.bookingPlatform,
+            bookingUrl: e.lockedOption?.bookingUrl,
+            image: e.lockedOption?.image,
+            rating: e.lockedOption?.rating,
+            isConfirmed: !!e.lockedOption,
           })),
           totalItems: items.length,
           aiChatComplete: session.aiChatComplete,
