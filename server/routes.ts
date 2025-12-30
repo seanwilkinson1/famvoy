@@ -4825,7 +4825,7 @@ END:VCALENDAR`;
           chatMessageCount: chatMessages.length,
           aiSuggestions: suggestions.map(s => ({
             id: s.id,
-            type: s.suggestionType,
+            suggestionType: s.suggestionType,
             title: s.title,
             description: s.description,
             userApproved: s.userApproved,
