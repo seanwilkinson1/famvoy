@@ -99,6 +99,7 @@ import {
   conciergeBookingSessions,
   conciergeChatMessages,
   conciergeAiSuggestions,
+  tripItemBookingMeta,
   podPosts,
   conversations,
   conversationMembers,
@@ -1343,9 +1344,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTrip(tripId: number): Promise<void> {
-    // Get trip items to delete their options
+    // Get trip items to delete their options and booking meta
     const items = await db.select({ id: tripItems.id }).from(tripItems).where(eq(tripItems.tripId, tripId));
     const itemIds = items.map(i => i.id);
+    
+    // Get concierge booking sessions for this trip
+    const bookingSessions = await db.select({ id: conciergeBookingSessions.id })
+      .from(conciergeBookingSessions)
+      .where(eq(conciergeBookingSessions.tripId, tripId));
+    const sessionIds = bookingSessions.map(s => s.id);
+    
+    // Delete concierge AI suggestions for these sessions
+    if (sessionIds.length > 0) {
+      await db.delete(conciergeAiSuggestions).where(inArray(conciergeAiSuggestions.sessionId, sessionIds));
+    }
+    
+    // Delete concierge chat messages for these sessions
+    if (sessionIds.length > 0) {
+      await db.delete(conciergeChatMessages).where(inArray(conciergeChatMessages.sessionId, sessionIds));
+    }
+    
+    // Delete concierge booking sessions
+    await db.delete(conciergeBookingSessions).where(eq(conciergeBookingSessions.tripId, tripId));
     
     // Delete concierge request items first (via concierge requests)
     const requests = await db.select({ id: conciergeRequests.id }).from(conciergeRequests).where(eq(conciergeRequests.tripId, tripId));
@@ -1358,6 +1378,11 @@ export class DatabaseStorage implements IStorage {
     
     // Delete trip confirmation sessions
     await db.delete(tripConfirmationSessions).where(eq(tripConfirmationSessions.tripId, tripId));
+    
+    // Delete trip item booking meta
+    if (itemIds.length > 0) {
+      await db.delete(tripItemBookingMeta).where(inArray(tripItemBookingMeta.tripItemId, itemIds));
+    }
     
     // Delete trip item options
     if (itemIds.length > 0) {
