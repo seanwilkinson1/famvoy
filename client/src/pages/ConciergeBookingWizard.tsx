@@ -13,6 +13,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -104,6 +114,7 @@ export default function ConciergeBookingWizard() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [suggestions, setSuggestions] = useState<AiSuggestion[]>([]);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   
   const tripId = params?.id ? parseInt(params.id) : 0;
   const currentStep = STEPS[currentStepIndex];
@@ -818,7 +829,7 @@ export default function ConciergeBookingWizard() {
             Back
           </Button>
           <Button 
-            onClick={handleComplete}
+            onClick={() => setShowConfirmDialog(true)}
             className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
             data-testid="button-complete-wizard"
           >
@@ -937,6 +948,33 @@ export default function ConciergeBookingWizard() {
           {renderCurrentStep()}
         </div>
       </div>
+
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Submit Booking Request?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your booking request will be sent to our concierge team for review. They will begin making reservations and bookings on your behalf.
+              {selectedRestaurants.length > 0 && (
+                <span className="block mt-2">• {selectedRestaurants.length} restaurant reservation(s)</span>
+              )}
+              {selectedExcursions.length > 0 && (
+                <span className="block">• {selectedExcursions.length} excursion booking(s)</span>
+              )}
+              <span className="block mt-2 font-medium">You can still edit your booking after submission.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleComplete}
+              className="bg-gradient-to-r from-green-500 to-emerald-500"
+            >
+              Submit Booking
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

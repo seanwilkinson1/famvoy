@@ -181,7 +181,10 @@ export default function TripDetails() {
 
   const { data: conciergeRequest } = useQuery<ConciergeRequestData | null>({
     queryKey: [`/api/trips/${tripId}/concierge`],
-    queryFn: () => apiRequest("GET", `/api/trips/${tripId}/concierge`),
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/trips/${tripId}/concierge`);
+      return res.json();
+    },
     enabled: !!trip && (trip.status === "confirmed" || trip.status === "booking_in_progress" || trip.status === "booked"),
   });
 
@@ -685,34 +688,38 @@ export default function TripDetails() {
             )}
 
             {conciergeRequest && (
-              <button
-                onClick={() => setLocation(`/trip/${tripId}/concierge`)}
-                className="mx-4 mt-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm w-[calc(100%-2rem)] text-left hover:border-purple-200 hover:shadow-md transition-all"
-                data-testid="button-concierge-status"
+              <div
+                className="mx-4 mt-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm w-[calc(100%-2rem)]"
+                data-testid="card-concierge-status"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Users className="h-5 w-5 text-purple-600" />
                     <h4 className="font-bold text-charcoal">Concierge Booking</h4>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "text-xs font-medium px-2 py-1 rounded-full",
-                      conciergeRequest.status === 'completed' || conciergeRequest.status === 'booked' ? "bg-green-100 text-green-700" :
-                      conciergeRequest.status === 'in_progress' ? "bg-blue-100 text-blue-700" :
-                      "bg-yellow-100 text-yellow-700"
-                    )}>
-                      {conciergeRequest.status === 'completed' || conciergeRequest.status === 'booked' ? 'Booked' :
-                       conciergeRequest.status === 'in_progress' ? 'In Progress' : 'Pending'}
-                    </span>
-                    <ChevronRight className="h-4 w-4 text-gray-400" />
-                  </div>
+                  <span className={cn(
+                    "text-xs font-medium px-2 py-1 rounded-full",
+                    conciergeRequest.status === 'completed' || conciergeRequest.status === 'booked' ? "bg-green-100 text-green-700" :
+                    conciergeRequest.status === 'in_progress' ? "bg-blue-100 text-blue-700" :
+                    "bg-amber-100 text-amber-700"
+                  )}>
+                    {conciergeRequest.status === 'completed' || conciergeRequest.status === 'booked' ? 'Booked' :
+                     conciergeRequest.status === 'in_progress' ? 'In Progress' : 'In Review'}
+                  </span>
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
-                  {conciergeRequest.status === 'pending' ? 'Continue your booking setup' :
-                   conciergeRequest.status === 'in_progress' ? 'View booking progress' : 'View booking details'}
+                  {conciergeRequest.status === 'pending' ? 'Your booking is being reviewed by our concierge team' :
+                   conciergeRequest.status === 'in_progress' ? 'Our team is working on your bookings' : 'View your booking details'}
                 </p>
-              </button>
+                <button
+                  onClick={() => setLocation(`/trip/${tripId}/concierge`)}
+                  className="mt-3 w-full py-2 px-4 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                  data-testid="button-edit-concierge"
+                >
+                  <Users className="h-4 w-4" />
+                  {conciergeRequest.status === 'pending' ? 'Edit Booking' : 'View Details'}
+                </button>
+              </div>
             )}
 
             <div className="mx-4 mt-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
