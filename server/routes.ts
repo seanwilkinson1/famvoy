@@ -3848,8 +3848,32 @@ Only return valid JSON, no other text.`;
 
       const items = await storage.getTripItems(tripId);
       
-      // Generate ICS content
-      const icsEvents = items.map(item => {
+      // Helper to escape ICS text fields
+      const escapeIcsText = (text: string): string => {
+        if (!text) return '';
+        return text
+          .replace(/\\/g, '\\\\')
+          .replace(/;/g, '\\;')
+          .replace(/,/g, '\\,')
+          .replace(/\n/g, '\\n');
+      };
+
+      // Format date for ICS (YYYYMMDDTHHMMSS format, local time)
+      const formatIcsDate = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${year}${month}${day}T${hours}${minutes}${seconds}`;
+      };
+
+      const now = new Date();
+      const dtstamp = formatIcsDate(now);
+      
+      // Generate ICS content with proper CRLF line endings
+      const icsEvents = items.map((item, index) => {
         const startDate = new Date(trip.startDate);
         startDate.setDate(startDate.getDate() + item.dayNumber - 1);
         
@@ -3869,29 +3893,36 @@ Only return valid JSON, no other text.`;
         const endDate = new Date(startDate);
         endDate.setHours(endDate.getHours() + 2); // Default 2 hour duration
 
-        const formatDate = (date: Date) => {
-          return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-        };
+        const uid = `trip-${tripId}-item-${item.id}@famvoy.app`;
 
-        return `BEGIN:VEVENT
-DTSTART:${formatDate(startDate)}
-DTEND:${formatDate(endDate)}
-SUMMARY:${item.title}
-DESCRIPTION:${item.description || ''}
-LOCATION:${trip.destination}
-END:VEVENT`;
+        const lines = [
+          'BEGIN:VEVENT',
+          `UID:${uid}`,
+          `DTSTAMP:${dtstamp}`,
+          `DTSTART:${formatIcsDate(startDate)}`,
+          `DTEND:${formatIcsDate(endDate)}`,
+          `SUMMARY:${escapeIcsText(item.title)}`,
+          `DESCRIPTION:${escapeIcsText(item.description || '')}`,
+          `LOCATION:${escapeIcsText(trip.destination)}`,
+          'END:VEVENT'
+        ];
+        return lines.join('\r\n');
       });
 
-      const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Podstack//Trip Calendar//EN
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-X-WR-CALNAME:${trip.name}
-${icsEvents.join('\n')}
-END:VCALENDAR`;
+      const icsLines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//FamVoy//Trip Calendar//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        `X-WR-CALNAME:${escapeIcsText(trip.name)}`,
+        ...icsEvents,
+        'END:VCALENDAR'
+      ];
+      
+      const icsContent = icsLines.join('\r\n');
 
-      // For now, return the ICS content as a data URL
+      // Return the ICS content as a data URL
       const base64Content = Buffer.from(icsContent).toString('base64');
       const dataUrl = `data:text/calendar;base64,${base64Content}`;
 
