@@ -31,38 +31,36 @@ export function BottomNav() {
   return (
     <nav 
       ref={navRef}
-      className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white border-t border-gray-200"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/80 px-6 pb-8 pt-4 backdrop-blur-lg md:hidden"
     >
-      <div className="px-4 pb-8 pt-2">
-        <div className="mx-auto flex max-w-md items-center justify-between">
-          {tabs.map((tab) => {
-            const isActive = location === tab.href;
-            return (
-              <Link key={tab.href} href={tab.href}>
-                <div className="flex flex-col items-center gap-1 cursor-pointer px-3 py-1">
-                  <div
-                    className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-full transition-all",
-                      isActive
-                        ? "bg-primary text-white"
-                        : "text-gray-400 hover:text-gray-600"
-                    )}
-                  >
-                    <tab.icon className="h-5 w-5" />
-                  </div>
-                  <span
-                    className={cn(
-                      "text-[10px] font-medium transition-colors",
-                      isActive ? "text-primary" : "text-gray-400"
-                    )}
-                  >
-                    {tab.label}
-                  </span>
+      <div className="mx-auto flex max-w-md justify-between">
+        {tabs.map((tab) => {
+          const isActive = location === tab.href;
+          return (
+            <Link key={tab.href} href={tab.href}>
+              <div className="group flex flex-col items-center gap-1 cursor-pointer">
+                <div
+                  className={cn(
+                    "relative flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 translate-y-[-4px]"
+                      : "text-gray-400 hover:text-gray-600 group-active:scale-90"
+                  )}
+                >
+                  <tab.icon className={cn("h-6 w-6", isActive && "stroke-[2.5px]")} />
                 </div>
-              </Link>
-            );
-          })}
-        </div>
+                <span
+                  className={cn(
+                    "text-[10px] font-medium transition-colors",
+                    isActive ? "text-primary" : "text-gray-400"
+                  )}
+                >
+                  {tab.label}
+                </span>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </nav>
   );

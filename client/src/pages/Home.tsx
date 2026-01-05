@@ -1,4 +1,5 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
+import { ActivityFeed } from "@/components/shared/ActivityFeed";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
@@ -6,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
 import { useState, useEffect, useMemo } from "react";
-import { MapPin, Users, Search } from "lucide-react";
+import { MapPin, Users } from "lucide-react";
 import { Link } from "wouter";
 
 const filters = ["All", "Nearby", "Free", "1–2 hrs", "Indoor", "Outdoor", "Toddler-friendly"];
@@ -136,19 +137,12 @@ export default function Home() {
     });
   }, [formattedExperiences, activeFilter, userLocation]);
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 17) return "Good afternoon";
-    return "Good evening";
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 pb-32 md:pb-8">
+    <div className="min-h-screen bg-background pb-32 md:pb-8">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100 px-6 pt-14 md:pt-8 pb-4 md:max-w-6xl md:mx-auto">
-        <p className="text-sm font-medium text-gray-500">{getGreeting()}</p>
-        <h1 className="text-2xl font-bold text-gray-900">
+      <div className="sticky top-0 z-40 bg-background/80 px-6 pt-14 md:pt-8 pb-4 backdrop-blur-md md:backdrop-blur-none md:max-w-6xl md:mx-auto">
+        <p className="text-sm font-medium text-gray-500">Good morning,</p>
+        <h1 className="font-heading text-2xl font-bold text-gray-900">
           {currentUser?.name || "Loading..."} 👋
         </h1>
         
@@ -165,7 +159,7 @@ export default function Home() {
           <TabsContent value="discover" className="mt-4">
             {/* Filters */}
             <ScrollArea className="w-full whitespace-nowrap">
-              <div className="flex w-max space-x-2 pb-4">
+              <div className="flex w-max space-x-3 pb-4">
                 {filters.map((filter) => {
                   const isActive = activeFilter === filter;
                   return (
@@ -173,10 +167,10 @@ export default function Home() {
                       key={filter}
                       onClick={() => setActiveFilter(filter)}
                       className={cn(
-                        "rounded-full px-4 py-2 text-sm font-medium transition-all",
+                        "rounded-full px-4 py-2 text-sm font-medium transition-all active:scale-95",
                         isActive
-                          ? "bg-gray-900 text-white"
-                          : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
+                          ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                          : "bg-white text-gray-600 shadow-sm hover:bg-gray-50"
                       )}
                       data-testid={`filter-${filter.toLowerCase().replace(/\s/g, '-')}`}
                     >
@@ -189,7 +183,7 @@ export default function Home() {
               <ScrollBar orientation="horizontal" className="hidden" />
             </ScrollArea>
 
-            <div className="space-y-6">
+            <div className="space-y-8">
               {isLoading ? (
                 <div className="text-center py-8 text-gray-400">Loading experiences...</div>
               ) : (
@@ -198,7 +192,7 @@ export default function Home() {
                   {activeFilter === "All" && (
                     <section>
                       <div className="mb-4 flex items-center justify-between">
-                        <h2 className="text-lg font-bold text-gray-900">Suggestions for Today</h2>
+                        <h2 className="font-heading text-lg font-bold text-gray-900">Suggestions for Today</h2>
                         <button className="text-sm font-medium text-primary" data-testid="button-see-all">See all</button>
                       </div>
                       <ScrollArea className="w-full whitespace-nowrap">
@@ -214,7 +208,7 @@ export default function Home() {
 
                   {/* Results section */}
                   <section>
-                    <h2 className="mb-4 text-lg font-bold text-gray-900">
+                    <h2 className="mb-4 font-heading text-lg font-bold text-gray-900">
                       {activeFilter === "All" 
                         ? "Popular with Families Like Yours" 
                         : `${activeFilter} Experiences`}
@@ -232,12 +226,11 @@ export default function Home() {
                       </div>
                     )}
                     {filteredExperiences.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Search className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-                        <p className="text-gray-400">No experiences match this filter</p>
+                      <div className="text-center py-8 text-gray-400">
+                        No experiences match this filter
                       </div>
                     ) : (
-                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {filteredExperiences.map((exp) => (
                           <ExperienceCard key={`filtered-${exp.id}`} experience={exp} />
                         ))}
@@ -255,7 +248,7 @@ export default function Home() {
             ) : formattedFollowingExperiences.length === 0 ? (
               <div className="text-center py-12">
                 <Users className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                <h3 className="text-lg font-bold text-gray-900 mb-2">No posts yet</h3>
+                <h3 className="font-heading text-lg font-bold text-gray-900 mb-2">No posts yet</h3>
                 <p className="text-gray-500 text-sm mb-4">
                   Follow families to see their experiences here
                 </p>
@@ -266,7 +259,7 @@ export default function Home() {
                 </Link>
               </div>
             ) : (
-              <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:space-y-0">
+              <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
                 {formattedFollowingExperiences.map((exp: any) => (
                   <div key={exp.id}>
                     {/* Creator info */}
@@ -279,7 +272,7 @@ export default function Home() {
                             className="h-10 w-10 rounded-full object-cover"
                           />
                         ) : (
-                          <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold text-sm">
                             {(exp.creator?.name || "?").charAt(0).toUpperCase()}
                           </div>
                         )}
