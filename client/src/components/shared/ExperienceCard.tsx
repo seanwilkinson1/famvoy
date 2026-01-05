@@ -1,4 +1,4 @@
-import { Heart, Clock, DollarSign, Users, MapPin, Star, CheckCircle2, Sun, TreePine, Waves, UtensilsCrossed, Palette, Mountain } from "lucide-react";
+import { Heart, Clock, DollarSign, Users, MapPin, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Link } from "wouter";
@@ -11,15 +11,6 @@ interface ExperienceCardProps {
   className?: string;
   horizontal?: boolean;
 }
-
-const categoryConfig: Record<string, { icon: typeof Sun; className: string }> = {
-  outdoor: { icon: Sun, className: "badge-outdoor" },
-  indoor: { icon: Palette, className: "badge-indoor" },
-  food: { icon: UtensilsCrossed, className: "badge-food" },
-  adventure: { icon: Mountain, className: "badge-adventure" },
-  nature: { icon: TreePine, className: "badge-outdoor" },
-  water: { icon: Waves, className: "badge-adventure" },
-};
 
 export function ExperienceCard({ experience, className, horizontal = false }: ExperienceCardProps) {
   const [isSaved, setIsSaved] = useState(false);
@@ -48,34 +39,27 @@ export function ExperienceCard({ experience, className, horizontal = false }: Ex
     },
   });
 
-  const category = experience.category?.toLowerCase() || "outdoor";
-  const categoryInfo = categoryConfig[category] || categoryConfig.outdoor;
-  const CategoryIcon = categoryInfo.icon;
-
   return (
     <Link href={`/experience/${experience.id}`}>
       <div
         className={cn(
-          "group relative overflow-hidden bg-white shadow-sm card-depth cursor-pointer",
-          horizontal ? "w-[300px] flex-shrink-0 rounded-[2rem]" : "w-full rounded-[2rem]",
+          "group relative overflow-hidden bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow cursor-pointer",
+          horizontal ? "w-[280px] flex-shrink-0" : "w-full",
           className
         )}
-        style={{
-          borderRadius: horizontal ? "2rem 2rem 2.5rem 1.5rem" : "2rem 2.5rem 2rem 2.5rem",
-        }}
         data-testid={`card-experience-${experience.id}`}
       >
-        {/* Image with parallax effect */}
+        {/* Image */}
         <div 
           className={cn(
-            "relative w-full overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 flex-shrink-0 parallax-container",
-            horizontal ? "h-[180px]" : "aspect-[4/3]"
+            "relative w-full overflow-hidden bg-gray-100",
+            horizontal ? "h-[160px]" : "aspect-[4/3]"
           )}
         >
           <img
             src={experience.image || 'https://images.unsplash.com/photo-1609220136736-443140cffec6?w=800'}
             alt={experience.title}
-            className="absolute inset-0 h-full w-full object-cover object-center"
+            className="absolute inset-0 h-full w-full object-cover"
             loading="lazy"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
@@ -83,100 +67,72 @@ export function ExperienceCard({ experience, className, horizontal = false }: Ex
             }}
           />
           
-          {/* Gradient overlay for text readability */}
-          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/50 to-transparent" />
-          
-          {/* Category badge with frosted glass */}
-          <div className={cn(
-            "absolute left-4 top-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold glass",
-            categoryInfo.className
-          )}>
-            <CategoryIcon className="h-3.5 w-3.5" />
-            <span className="capitalize">{experience.category || "Outdoor"}</span>
+          {/* Category badge */}
+          <div className="absolute left-3 top-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-semibold text-gray-700 capitalize">
+            {experience.category || "Outdoor"}
           </div>
 
-          {/* Title overlay with frosted glass */}
-          <div className="absolute inset-x-0 bottom-0 p-4">
-            <div className="glass-dark rounded-2xl px-4 py-3">
-              <h3 className="font-heading text-lg font-bold text-white leading-tight" data-testid={`text-title-${experience.id}`}>
-                {experience.title}
-              </h3>
-            </div>
-          </div>
+          {/* Save Button */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              saveMutation.mutate();
+            }}
+            className="absolute right-3 top-3 rounded-full bg-white/90 p-2 backdrop-blur-sm transition-transform hover:scale-110 active:scale-90"
+            data-testid={`button-save-${experience.id}`}
+          >
+            <Heart
+              className={cn(
+                "h-4 w-4 transition-all",
+                isSaved ? "fill-red-500 text-red-500" : "text-gray-600",
+                isHeartAnimating && "scale-125"
+              )}
+            />
+          </button>
         </div>
 
-        {/* Save Button with bounce animation */}
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            saveMutation.mutate();
-          }}
-          className="absolute right-4 top-4 rounded-full bg-white/90 p-2.5 backdrop-blur-sm transition-all hover:bg-white hover:scale-110 active:scale-90 z-10 shadow-lg"
-          data-testid={`button-save-${experience.id}`}
-        >
-          <Heart
-            className={cn(
-              "h-5 w-5 transition-all",
-              isSaved ? "fill-primary text-primary" : "text-gray-600",
-              isHeartAnimating && "heart-bounce"
-            )}
-          />
-        </button>
-
         {/* Content */}
-        <div className="p-5">
-          {/* Meta Row with illustrated icons */}
-          <div className="mb-4 flex flex-wrap items-center gap-3 text-sm font-medium text-gray-600">
-            {experience.distance !== undefined && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary font-semibold">
-                <MapPin className="h-4 w-4" />
-                {experience.distance.toFixed(1)} mi
-              </div>
-            )}
-            <div className="flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-gray-400" />
+        <div className="p-4">
+          {/* Title */}
+          <h3 className="font-semibold text-gray-900 text-base leading-snug mb-2 line-clamp-2" data-testid={`text-title-${experience.id}`}>
+            {experience.title}
+          </h3>
+
+          {/* Meta Row */}
+          <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
+            <span className="flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" />
               {experience.duration}
-            </div>
-            <div className="flex items-center gap-1.5">
-              <DollarSign className="h-4 w-4 text-gray-400" />
+            </span>
+            <span className="flex items-center gap-1">
+              <DollarSign className="h-3.5 w-3.5" />
               {experience.cost}
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Users className="h-4 w-4 text-gray-400" />
+            </span>
+            <span className="flex items-center gap-1">
+              <Users className="h-3.5 w-3.5" />
               {experience.ages}
-            </div>
+            </span>
           </div>
 
           {/* Family Row */}
           <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-            <div className="flex items-center gap-2.5">
-              <div className="relative">
-                <img
-                  src={experience.familyAvatar || experience.image}
-                  alt={experience.family || "Family"}
-                  className="h-8 w-8 rounded-full object-cover ring-2 ring-white shadow-sm"
-                />
-                <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-400 ring-2 ring-white" />
-              </div>
-              <span className="text-sm font-medium text-gray-600">
+            <div className="flex items-center gap-2">
+              <img
+                src={experience.familyAvatar || experience.image}
+                alt={experience.family || "Family"}
+                className="h-6 w-6 rounded-full object-cover"
+              />
+              <span className="text-xs text-gray-600 truncate max-w-[100px]">
                 {experience.family || "Family"}
               </span>
             </div>
-            <div className="flex items-center gap-4 text-sm font-medium text-gray-500">
-              {experience.rating !== undefined && experience.rating > 0 && (
-                <div className="flex items-center gap-1" data-testid={`rating-${experience.id}`}>
-                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                  <span className="font-semibold text-gray-700">{experience.rating.toFixed(1)}</span>
-                </div>
-              )}
-              {experience.checkinCount !== undefined && experience.checkinCount > 0 && (
-                <div className="flex items-center gap-1" data-testid={`checkin-count-${experience.id}`}>
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span>{experience.checkinCount}</span>
-                </div>
-              )}
-            </div>
+            {experience.rating !== undefined && experience.rating > 0 && (
+              <div className="flex items-center gap-1" data-testid={`rating-${experience.id}`}>
+                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                <span className="text-xs font-medium text-gray-700">{experience.rating.toFixed(1)}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
