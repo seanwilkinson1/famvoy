@@ -2,12 +2,13 @@ import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { ActivityFeed } from "@/components/shared/ActivityFeed";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
 import { useState, useEffect, useMemo } from "react";
-import { MapPin, Users } from "lucide-react";
+import { MapPin, Users, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 
 const filters = ["All", "Nearby", "Free", "1–2 hrs", "Indoor", "Outdoor", "Toddler-friendly"];
@@ -94,13 +95,27 @@ export default function Home() {
   const { data: experiences = [], isLoading } = useQuery({
     queryKey: ["experiences"],
     queryFn: api.experiences.getAll,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: followingExperiences = [], isLoading: followingLoading } = useQuery({
     queryKey: ["followingExperiences"],
     queryFn: api.following.getExperiences,
     enabled: !!currentUser,
+  });
+
+  const { data: suggestedFamilies = [] } = useQuery({
+    queryKey: ["suggestedFamilies"],
+    queryFn: () => api.families.discover(),
+    enabled: !!currentUser,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: suggestedPods = [] } = useQuery({
+    queryKey: ["suggestedPods"],
+    queryFn: api.pods.discover,
+    enabled: !!currentUser,
+    staleTime: 5 * 60 * 1000,
   });
 
   const formattedExperiences = experiences.map(exp => formatExperience(exp as any));
@@ -206,37 +221,138 @@ export default function Home() {
                     </section>
                   )}
 
-                  {/* Results section */}
-                  <section>
-                    <h2 className="mb-4 font-heading text-lg font-bold text-gray-900">
-                      {activeFilter === "All" 
-                        ? "Popular with Families Like Yours" 
-                        : `${activeFilter} Experiences`}
-                    </h2>
-                    {activeFilter === "Nearby" && locationError && (
-                      <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
-                        <MapPin className="inline h-4 w-4 mr-1" />
-                        Location access denied. Enable location to see nearby experiences.
+                  {/* Popular with Families - horizontal scroll */}
+                  {activeFilter === "All" && (
+                    <section>
+                      <div className="mb-4 flex items-center justify-between">
+                        <h2 className="font-heading text-lg font-bold text-gray-900">Popular with Families Like Yours</h2>
+                        <button className="text-sm font-medium text-primary flex items-center gap-1" data-testid="button-see-all-popular">
+                          See all <ChevronRight className="h-4 w-4" />
+                        </button>
                       </div>
-                    )}
-                    {activeFilter === "Nearby" && !userLocation && !locationError && (
-                      <div className="mb-4 rounded-xl bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">
-                        <MapPin className="inline h-4 w-4 mr-1" />
-                        Getting your location...
+                      <ScrollArea className="w-full whitespace-nowrap">
+                        <div className="flex w-max space-x-4 pb-4">
+                          {formattedExperiences.slice(3, 9).map((exp) => (
+                            <ExperienceCard key={`popular-${exp.id}`} experience={exp} horizontal />
+                          ))}
+                        </div>
+                        <ScrollBar orientation="horizontal" className="hidden" />
+                      </ScrollArea>
+                    </section>
+                  )}
+
+                  {/* People You Might Know */}
+                  {activeFilter === "All" && suggestedFamilies.length > 0 && (
+                    <section>
+                      <div className="mb-4 flex items-center justify-between">
+                        <h2 className="font-heading text-lg font-bold text-gray-900">People You Might Know</h2>
+                        <Link href="/explore">
+                          <button className="text-sm font-medium text-primary flex items-center gap-1" data-testid="button-see-all-people">
+                            See all <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </Link>
                       </div>
-                    )}
-                    {filteredExperiences.length === 0 ? (
-                      <div className="text-center py-8 text-gray-400">
-                        No experiences match this filter
+                      <ScrollArea className="w-full whitespace-nowrap">
+                        <div className="flex w-max space-x-4 pb-4">
+                          {suggestedFamilies.slice(0, 8).map((family) => (
+                            <Link key={family.id} href={`/family/${family.id}`}>
+                              <div 
+                                className="w-32 flex-shrink-0 bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer text-center"
+                                data-testid={`card-family-${family.id}`}
+                              >
+                                <Avatar className="h-16 w-16 mx-auto mb-3 ring-2 ring-gray-100">
+                                  <AvatarImage src={family.avatar || undefined} />
+                                  <AvatarFallback className="bg-gradient-to-br from-warm-coral to-warm-coral/70 text-white text-lg font-bold">
+                                    {(family.name || "?")[0]}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <p className="font-semibold text-gray-900 text-sm truncate">{family.name}</p>
+                                {family.location && (
+                                  <p className="text-xs text-gray-500 truncate mt-0.5">{family.location}</p>
+                                )}
+                                {family.kids && (
+                                  <p className="text-xs text-gray-400 mt-1">{family.kids}</p>
+                                )}
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                        <ScrollBar orientation="horizontal" className="hidden" />
+                      </ScrollArea>
+                    </section>
+                  )}
+
+                  {/* Pods You Might Like */}
+                  {activeFilter === "All" && suggestedPods.length > 0 && (
+                    <section>
+                      <div className="mb-4 flex items-center justify-between">
+                        <h2 className="font-heading text-lg font-bold text-gray-900">Pods You Might Like</h2>
+                        <Link href="/pods">
+                          <button className="text-sm font-medium text-primary flex items-center gap-1" data-testid="button-see-all-pods">
+                            See all <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </Link>
                       </div>
-                    ) : (
-                      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        {filteredExperiences.map((exp) => (
-                          <ExperienceCard key={`filtered-${exp.id}`} experience={exp} />
-                        ))}
-                      </div>
-                    )}
-                  </section>
+                      <ScrollArea className="w-full whitespace-nowrap">
+                        <div className="flex w-max space-x-4 pb-4">
+                          {suggestedPods.slice(0, 8).map((pod) => (
+                            <Link key={pod.id} href={`/pods/${pod.id}`}>
+                              <div 
+                                className="w-48 flex-shrink-0 bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
+                                data-testid={`card-pod-${pod.id}`}
+                              >
+                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-warm-teal to-warm-teal/70 flex items-center justify-center mb-3">
+                                  <Users className="h-6 w-6 text-white" />
+                                </div>
+                                <p className="font-semibold text-gray-900 text-sm truncate">{pod.name}</p>
+                                {pod.description && (
+                                  <p className="text-xs text-gray-500 line-clamp-2 mt-1">{pod.description}</p>
+                                )}
+                                <div className="flex items-center gap-2 mt-3">
+                                  <span className="text-xs text-gray-400">
+                                    {pod.isPublic ? "Public" : "Private"}
+                                  </span>
+                                </div>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                        <ScrollBar orientation="horizontal" className="hidden" />
+                      </ScrollArea>
+                    </section>
+                  )}
+
+                  {/* Filtered Results - only show when filter is not "All" */}
+                  {activeFilter !== "All" && (
+                    <section>
+                      <h2 className="mb-4 font-heading text-lg font-bold text-gray-900">
+                        {`${activeFilter} Experiences`}
+                      </h2>
+                      {activeFilter === "Nearby" && locationError && (
+                        <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+                          <MapPin className="inline h-4 w-4 mr-1" />
+                          Location access denied. Enable location to see nearby experiences.
+                        </div>
+                      )}
+                      {activeFilter === "Nearby" && !userLocation && !locationError && (
+                        <div className="mb-4 rounded-xl bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">
+                          <MapPin className="inline h-4 w-4 mr-1" />
+                          Getting your location...
+                        </div>
+                      )}
+                      {filteredExperiences.length === 0 ? (
+                        <div className="text-center py-8 text-gray-400">
+                          No experiences match this filter
+                        </div>
+                      ) : (
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                          {filteredExperiences.map((exp) => (
+                            <ExperienceCard key={`filtered-${exp.id}`} experience={exp} />
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  )}
                 </>
               )}
             </div>
