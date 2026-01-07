@@ -296,7 +296,7 @@ export default function Home() {
                       <ScrollArea className="w-full whitespace-nowrap">
                         <div className="flex w-max space-x-4 pb-4">
                           {suggestedPods.slice(0, 8).map((pod) => (
-                            <Link key={pod.id} href={`/pods/${pod.id}`}>
+                            <Link key={pod.id} href={`/pod/${pod.id}`}>
                               <div 
                                 className="w-48 flex-shrink-0 bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
                                 data-testid={`card-pod-${pod.id}`}
