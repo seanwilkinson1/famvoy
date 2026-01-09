@@ -116,8 +116,7 @@ export function TopHeader() {
 
       {searchOpen && (
         <div
-          className="fixed inset-0 z-50 bg-background animate-fade-in-up"
-          style={{ animationDelay: '0s', opacity: 1 }}
+          className="fixed inset-0 z-50 bg-background"
         >
           <div className="flex flex-col h-full">
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50">
@@ -200,8 +199,7 @@ export function TopHeader() {
                     <button
                       key={`user-${u.id}`}
                       onClick={() => handleResultClick("user", u.id)}
-                      className="w-full flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors text-left animate-fade-in-up"
-                      style={{ animationDelay: `${i * 0.03}s` }}
+                      className="w-full flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors text-left"
                       data-testid={`result-user-${u.id}`}
                     >
                       <Avatar className="h-14 w-14 ring-2 ring-border/30">
@@ -231,8 +229,7 @@ export function TopHeader() {
                     <button
                       key={`pod-${pod.id}`}
                       onClick={() => handleResultClick("pod", pod.id)}
-                      className="w-full flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors text-left animate-fade-in-up"
-                      style={{ animationDelay: `${(filteredUsers.length + i) * 0.03}s` }}
+                      className="w-full flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors text-left"
                       data-testid={`result-pod-${pod.id}`}
                     >
                       <div className="h-14 w-14 rounded-2xl bg-teal-gradient flex items-center justify-center ring-2 ring-border/30">

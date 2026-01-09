@@ -157,7 +157,7 @@ export default function Home() {
       <div className="sticky top-0 z-40 bg-background/80 px-6 pt-14 md:pt-8 pb-4 backdrop-blur-md md:backdrop-blur-none md:max-w-6xl md:mx-auto">
         <p className="text-sm font-medium text-muted-foreground">Good morning,</p>
         <h1 className="font-heading text-3xl font-medium text-foreground tracking-tight">
-          {currentUser?.name || "Loading..."} <span className="inline-block animate-fade-in-up">👋</span>
+          {currentUser?.name || "Loading..."} 👋
         </h1>
         
         {/* Main Tabs for Discover / Following */}
