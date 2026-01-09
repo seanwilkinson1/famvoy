@@ -43,15 +43,9 @@ export function ExperienceCard({ experience, className, horizontal = false, inde
       <div
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        style={{
-          animation: `fadeInUp 0.4s ease-out ${index * 0.05}s forwards`,
-          opacity: 0,
-          transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
-          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-        }}
         className={cn(
-          "group relative overflow-hidden rounded-3xl bg-card cursor-pointer",
-          isHovered ? "card-shadow-hover" : "card-shadow",
+          "group relative overflow-hidden rounded-3xl bg-card cursor-pointer transition-all duration-300",
+          isHovered ? "card-shadow-hover -translate-y-1" : "card-shadow",
           horizontal ? "w-[300px] flex-shrink-0" : "w-full",
           className
         )}
@@ -67,8 +61,10 @@ export function ExperienceCard({ experience, className, horizontal = false, inde
           <img
             src={experience.image || 'https://images.unsplash.com/photo-1609220136736-443140cffec6?w=800'}
             alt={experience.title}
-            className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500"
-            style={{ transform: isHovered ? 'scale(1.05)' : 'scale(1)' }}
+            className={cn(
+              "absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500",
+              isHovered && "scale-105"
+            )}
             loading="lazy"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
@@ -78,8 +74,10 @@ export function ExperienceCard({ experience, className, horizontal = false, inde
           
           {/* Gradient Overlay */}
           <div 
-            className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent transition-opacity duration-300"
-            style={{ opacity: isHovered ? 1 : 0 }}
+            className={cn(
+              "absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent transition-opacity duration-300",
+              isHovered ? "opacity-100" : "opacity-0"
+            )}
           />
           
           {/* Category Badge */}
