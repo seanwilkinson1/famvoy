@@ -1,7 +1,7 @@
-import { House, Compass, Airplane, UsersThree, ChatCircle } from "@phosphor-icons/react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useEffect, useRef } from "react";
+import { HomeIcon, ExploreIcon, TripsIcon, PodsIcon, ChatIcon } from "@/components/icons/NavIcons";
 
 export function BottomNav() {
   const [location] = useLocation();
@@ -21,11 +21,11 @@ export function BottomNav() {
   }, []);
 
   const tabs = [
-    { href: "/", icon: House, label: "Home" },
-    { href: "/explore", icon: Compass, label: "Explore" },
-    { href: "/trips", icon: Airplane, label: "Trips" },
-    { href: "/pods", icon: UsersThree, label: "Pods" },
-    { href: "/chat", icon: ChatCircle, label: "Chat" },
+    { href: "/", Icon: HomeIcon, label: "Home" },
+    { href: "/explore", Icon: ExploreIcon, label: "Explore" },
+    { href: "/trips", Icon: TripsIcon, label: "Trips" },
+    { href: "/pods", Icon: PodsIcon, label: "Pods" },
+    { href: "/chat", Icon: ChatIcon, label: "Chat" },
   ];
 
   return (
@@ -47,7 +47,7 @@ export function BottomNav() {
                       : "text-muted-foreground hover:text-foreground group-active:scale-90"
                   )}
                 >
-                  <tab.icon weight={isActive ? "fill" : "bold"} className="h-6 w-6" />
+                  <tab.Icon filled={isActive} className="h-6 w-6" />
                 </div>
                 <span
                   className={cn(
