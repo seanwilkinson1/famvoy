@@ -1,5 +1,4 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -182,8 +181,8 @@ export default function Home() {
           
           <TabsContent value="discover" className="mt-6">
             {/* Filters */}
-            <ScrollArea className="w-full whitespace-nowrap -mx-6">
-              <div className="flex w-max space-x-2 pb-4 pl-6 pr-6">
+            <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
+              <div className="flex w-max space-x-2 pb-4 px-6">
                 {filters.map((filter) => {
                   const isActive = activeFilter === filter;
                   return (
@@ -204,8 +203,7 @@ export default function Home() {
                   );
                 })}
               </div>
-              <ScrollBar orientation="horizontal" className="hidden" />
-            </ScrollArea>
+            </div>
 
             <div className="space-y-10 mt-2">
               {isLoading ? (
@@ -224,14 +222,13 @@ export default function Home() {
                           See all <CaretRight weight="bold" className="h-4 w-4" />
                         </button>
                       </div>
-                      <ScrollArea className="w-full whitespace-nowrap -mx-6">
-                        <div className="flex w-max space-x-4 pb-4 pl-6 pr-6">
+                      <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
+                        <div className="flex w-max space-x-4 pb-4 px-6">
                           {formattedExperiences.slice(0, 4).map((exp, i) => (
                             <ExperienceCard key={exp.id} experience={exp} horizontal index={i} />
                           ))}
                         </div>
-                        <ScrollBar orientation="horizontal" className="hidden" />
-                      </ScrollArea>
+                      </div>
                     </section>
                   )}
 
@@ -247,14 +244,13 @@ export default function Home() {
                           See all <CaretRight weight="bold" className="h-4 w-4" />
                         </button>
                       </div>
-                      <ScrollArea className="w-full whitespace-nowrap -mx-6">
-                        <div className="flex w-max space-x-4 pb-4 pl-6 pr-6">
+                      <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
+                        <div className="flex w-max space-x-4 pb-4 px-6">
                           {formattedExperiences.slice(2, 8).map((exp, i) => (
                             <ExperienceCard key={`popular-${exp.id}`} experience={exp} horizontal index={i} />
                           ))}
                         </div>
-                        <ScrollBar orientation="horizontal" className="hidden" />
-                      </ScrollArea>
+                      </div>
                     </section>
                   )}
 
@@ -272,8 +268,8 @@ export default function Home() {
                           </button>
                         </Link>
                       </div>
-                      <ScrollArea className="w-full whitespace-nowrap -mx-6">
-                        <div className="flex w-max space-x-4 pb-4 pl-6 pr-6">
+                      <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
+                        <div className="flex w-max space-x-4 pb-4 px-6">
                           {suggestedFamilies.slice(0, 8).map((family, i) => (
                             <Link key={family.id} href={`/family/${family.id}`}>
                               <div 
@@ -297,8 +293,7 @@ export default function Home() {
                             </Link>
                           ))}
                         </div>
-                        <ScrollBar orientation="horizontal" className="hidden" />
-                      </ScrollArea>
+                      </div>
                     </section>
                   )}
 
@@ -316,8 +311,8 @@ export default function Home() {
                           </button>
                         </Link>
                       </div>
-                      <ScrollArea className="w-full whitespace-nowrap -mx-6">
-                        <div className="flex w-max space-x-4 pb-4 pl-6 pr-6">
+                      <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
+                        <div className="flex w-max space-x-4 pb-4 px-6">
                           {suggestedPods.slice(0, 8).map((pod, i) => (
                             <Link key={pod.id} href={`/pod/${pod.id}`}>
                               <div 
@@ -343,8 +338,7 @@ export default function Home() {
                             </Link>
                           ))}
                         </div>
-                        <ScrollBar orientation="horizontal" className="hidden" />
-                      </ScrollArea>
+                      </div>
                     </section>
                   )}
 
