@@ -855,7 +855,7 @@ export default function ConciergeBookingWizard() {
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      <div className="border-b border-gray-100 bg-white px-6 pt-14 md:pt-6 pb-4 shadow-sm z-10">
+      <div className="sticky top-0 border-b border-gray-100 bg-white px-6 pt-14 md:pt-6 pb-4 shadow-sm z-20">
         <div className="flex items-center gap-3 mb-4">
           <button 
             onClick={() => setLocation(`/trip/${tripId}`)} 
