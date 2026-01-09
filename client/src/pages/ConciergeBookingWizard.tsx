@@ -938,7 +938,7 @@ export default function ConciergeBookingWizard() {
         </div>
       </div>
 
-      <div className="pt-40 md:pt-32 p-6 pb-24">
+      <div className="pt-44 md:pt-36 p-6 pb-24">
         <div className="max-w-2xl mx-auto">
           {renderCurrentStep()}
         </div>
