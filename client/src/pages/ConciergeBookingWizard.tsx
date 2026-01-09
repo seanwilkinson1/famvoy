@@ -550,7 +550,7 @@ export default function ConciergeBookingWizard() {
 
   const renderAiChatStep = () => (
     <div className="space-y-6">
-      <div className="text-center space-y-2 pt-[30px] pb-[30px]">
+      <div className="text-center space-y-2 pt-[50px] pb-[50px]">
         <div className="w-16 h-16 mx-auto bg-gradient-to-r from-primary to-teal-600 rounded-full flex items-center justify-center">
           <Sparkles className="h-8 w-8 text-white" />
         </div>
