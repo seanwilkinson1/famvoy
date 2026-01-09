@@ -500,10 +500,10 @@ export default function TripDetails() {
             onClick={() => setShowPreferencesModal(true)}
             disabled={isGenerating}
             className={cn(
-              "flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold transition-all",
+              "flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition-all",
               trip.items.length > 0
-                ? "bg-purple-50 text-purple-600"
-                : "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                ? "bg-primary/10 text-primary"
+                : "bg-gradient-to-r from-primary to-teal-600 text-white"
             )}
             data-testid="button-generate-ai"
           >
@@ -553,13 +553,18 @@ export default function TripDetails() {
 
       <div className="flex-1 overflow-y-auto pb-24">
         {trip.aiSummary && (
-          <div className="mx-4 mt-4 p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border border-purple-100">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="h-4 w-4 text-purple-500" />
-              <span className="text-sm font-bold text-purple-700">AI Summary</span>
+          <details className="mx-4 mt-4 group">
+            <summary className="flex items-center justify-between p-3 bg-muted/50 rounded-2xl cursor-pointer hover:bg-muted transition-colors list-none" data-testid="accordion-trip-insights">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-muted-foreground">Trip Insights</span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90" />
+            </summary>
+            <div className="mt-2 p-4 bg-card rounded-2xl border border-border/50">
+              <p className="text-sm text-muted-foreground leading-relaxed">{trip.aiSummary}</p>
             </div>
-            <p className="text-sm text-purple-900/80 leading-relaxed">{trip.aiSummary}</p>
-          </div>
+          </details>
         )}
 
         {trip.items.length > 0 && trip.status === "draft" && (
@@ -626,15 +631,15 @@ export default function TripDetails() {
                 </div>
               </div>
             ) : (
-              <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl">
+              <div className="mx-4 mt-4 p-4 bg-card rounded-2xl border border-border/50 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-white">
-                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                      <Check className="h-6 w-6" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                      <Check className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-lg">Trip Confirmed!</h3>
-                      <p className="text-sm opacity-90">Ready to book with concierge</p>
+                      <h3 className="font-semibold text-charcoal">Trip Confirmed</h3>
+                      <p className="text-sm text-muted-foreground">Ready to book with concierge</p>
                     </div>
                   </div>
                   <button
@@ -661,7 +666,7 @@ export default function TripDetails() {
                         }
                       }
                     }}
-                    className="shrink-0 bg-white/20 text-white p-2.5 rounded-xl hover:bg-white/30 transition-colors"
+                    className="shrink-0 bg-muted text-muted-foreground p-2.5 rounded-xl hover:bg-muted/80 transition-colors"
                     data-testid="button-share-trip"
                   >
                     <Share2 className="h-5 w-5" />
@@ -673,33 +678,33 @@ export default function TripDetails() {
             {!conciergeRequest && trip.status === "confirmed" && (
               <button
                 onClick={() => setLocation(`/trip/${tripId}/concierge`)}
-                className="mx-4 mt-4 w-[calc(100%-2rem)] p-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-between"
+                className="mx-4 mt-4 w-[calc(100%-2rem)] p-4 bg-gradient-to-r from-primary to-teal-600 rounded-2xl flex items-center justify-between shadow-md hover:shadow-lg transition-shadow"
                 data-testid="button-book-concierge"
               >
                 <div className="text-white text-left">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-0.5">
                     <Users className="h-5 w-5" />
-                    <h3 className="font-bold text-lg">Book with Concierge</h3>
+                    <h3 className="font-semibold">Book with Concierge</h3>
                   </div>
-                  <p className="text-sm opacity-90">Let our travel agent book everything for you</p>
+                  <p className="text-sm text-white/80">Let our travel agent handle everything</p>
                 </div>
-                <ChevronRight className="h-6 w-6 text-white shrink-0" />
+                <ChevronRight className="h-5 w-5 text-white/80 shrink-0" />
               </button>
             )}
 
             {conciergeRequest && (
               <div
-                className="mx-4 mt-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm w-[calc(100%-2rem)]"
+                className="mx-4 mt-4 p-4 bg-card rounded-2xl border border-border/50 shadow-sm w-[calc(100%-2rem)]"
                 data-testid="card-concierge-status"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-purple-600" />
-                    <h4 className="font-bold text-charcoal">Concierge Booking</h4>
+                    <Users className="h-5 w-5 text-primary" />
+                    <h4 className="font-semibold text-charcoal">Concierge Booking</h4>
                   </div>
                   <span className={cn(
                     "text-xs font-medium px-2 py-1 rounded-full",
-                    conciergeRequest.status === 'completed' || conciergeRequest.status === 'booked' ? "bg-green-100 text-green-700" :
+                    conciergeRequest.status === 'completed' || conciergeRequest.status === 'booked' ? "bg-primary/10 text-primary" :
                     conciergeRequest.status === 'in_progress' ? "bg-blue-100 text-blue-700" :
                     "bg-amber-100 text-amber-700"
                   )}>
@@ -707,13 +712,13 @@ export default function TripDetails() {
                      conciergeRequest.status === 'in_progress' ? 'In Progress' : 'In Review'}
                   </span>
                 </div>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   {conciergeRequest.status === 'pending' ? 'Your booking is being reviewed by our concierge team' :
                    conciergeRequest.status === 'in_progress' ? 'Our team is working on your bookings' : 'View your booking details'}
                 </p>
                 <button
                   onClick={() => setLocation(`/trip/${tripId}/concierge`)}
-                  className="mt-3 w-full py-2 px-4 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                  className="mt-3 w-full py-2 px-4 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"
                   data-testid="button-edit-concierge"
                 >
                   <Users className="h-4 w-4" />
@@ -722,14 +727,14 @@ export default function TripDetails() {
               </div>
             )}
 
-            <div className="mx-4 mt-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+            <div className="mx-4 mt-4 p-4 bg-card rounded-2xl border border-border/50 shadow-sm">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <MapPin className="h-5 w-5 text-blue-600" />
+                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                  <MapPin className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-charcoal">{trip.destination}</h4>
-                  <p className="text-sm text-gray-500">
+                  <h4 className="font-semibold text-charcoal">{trip.destination}</h4>
+                  <p className="text-sm text-muted-foreground">
                     {trip.items.length} activities across {numDays} days
                   </p>
                 </div>
@@ -750,7 +755,7 @@ export default function TripDetails() {
             </p>
             <button
               onClick={() => setShowPreferencesModal(true)}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-sm font-bold text-white"
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-md"
               data-testid="button-generate-empty"
             >
               <Sparkles className="h-4 w-4" />
@@ -762,11 +767,11 @@ export default function TripDetails() {
         {isGenerating && (
           <div className="flex flex-col items-center justify-center h-64 p-6">
             <div className="relative">
-              <Sparkles className="h-16 w-16 text-purple-500 animate-pulse" />
-              <div className="absolute inset-0 h-16 w-16 rounded-full bg-purple-500/20 animate-ping" />
+              <Sparkles className="h-16 w-16 text-primary animate-pulse" />
+              <div className="absolute inset-0 h-16 w-16 rounded-full bg-primary/20 animate-ping" />
             </div>
             <p className="mt-4 font-heading font-bold text-charcoal">Creating your itinerary...</p>
-            <p className="text-sm text-gray-500 mt-1">This may take a moment</p>
+            <p className="text-sm text-muted-foreground mt-1">This may take a moment</p>
           </div>
         )}
 
@@ -812,13 +817,13 @@ export default function TripDetails() {
                         <button
                           onClick={() => regenerateDayMutation.mutate(dayNumber)}
                           disabled={isRegenerating}
-                          className="rounded-full bg-purple-50 p-2 hover:bg-purple-100"
+                          className="rounded-full bg-primary/10 p-2 hover:bg-primary/20"
                           data-testid={`button-regenerate-day-${dayNumber}`}
                         >
                           {isRegenerating ? (
-                            <Loader2 className="h-4 w-4 text-purple-500 animate-spin" />
+                            <Loader2 className="h-4 w-4 text-primary animate-spin" />
                           ) : (
-                            <RefreshCw className="h-4 w-4 text-purple-500" />
+                            <RefreshCw className="h-4 w-4 text-primary" />
                           )}
                         </button>
                       </div>
