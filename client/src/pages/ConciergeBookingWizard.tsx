@@ -12,7 +12,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -388,78 +387,76 @@ export default function ConciergeBookingWizard() {
         </p>
       </div>
 
-      <ScrollArea className="h-[400px]">
-        <div className="space-y-3 pr-4">
-          {restaurants.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Utensils className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>No restaurants in your itinerary</p>
-            </div>
-          ) : (
-            restaurants.map((restaurant) => {
-              const isSelected = selectedRestaurants.includes(restaurant.id);
-              const hasOpenTable = restaurant.lockedOption?.bookingUrl?.includes("opentable");
-              
-              return (
-                <Card 
-                  key={restaurant.id}
-                  className={cn(
-                    "cursor-pointer transition-all",
-                    isSelected && "ring-2 ring-primary"
-                  )}
-                  onClick={() => {
-                    setSelectedRestaurants(prev => 
-                      prev.includes(restaurant.id) 
-                        ? prev.filter(id => id !== restaurant.id)
-                        : [...prev, restaurant.id]
-                    );
-                  }}
-                  data-testid={`card-restaurant-${restaurant.id}`}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <Checkbox 
-                        checked={isSelected}
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="font-medium">{restaurant.lockedOption?.title || restaurant.title}</p>
-                          {hasOpenTable ? (
-                            <Badge variant="secondary" className="bg-green-100 text-green-800">
-                              OpenTable
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                              Manual
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                          <Clock className="h-3 w-3" />
-                          <span>Day {restaurant.dayNumber} at {restaurant.time}</span>
-                        </div>
-                        {restaurant.lockedOption?.address && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
-                            <span>{restaurant.lockedOption.address}</span>
-                          </div>
-                        )}
-                        {!hasOpenTable && isSelected && (
-                          <div className="mt-2 p-2 bg-yellow-50 rounded-lg text-sm text-yellow-800">
-                            <AlertCircle className="h-4 w-4 inline mr-1" />
-                            This reservation will be made manually by our team
-                          </div>
+      <div className="space-y-3">
+        {restaurants.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Utensils className="h-12 w-12 mx-auto mb-2 opacity-50" />
+            <p>No restaurants in your itinerary</p>
+          </div>
+        ) : (
+          restaurants.map((restaurant) => {
+            const isSelected = selectedRestaurants.includes(restaurant.id);
+            const hasOpenTable = restaurant.lockedOption?.bookingUrl?.includes("opentable");
+            
+            return (
+              <Card 
+                key={restaurant.id}
+                className={cn(
+                  "cursor-pointer transition-all",
+                  isSelected && "ring-2 ring-primary"
+                )}
+                onClick={() => {
+                  setSelectedRestaurants(prev => 
+                    prev.includes(restaurant.id) 
+                      ? prev.filter(id => id !== restaurant.id)
+                      : [...prev, restaurant.id]
+                  );
+                }}
+                data-testid={`card-restaurant-${restaurant.id}`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Checkbox 
+                      checked={isSelected}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium">{restaurant.lockedOption?.title || restaurant.title}</p>
+                        {hasOpenTable ? (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800">
+                            OpenTable
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                            Manual
+                          </Badge>
                         )}
                       </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                        <Clock className="h-3 w-3" />
+                        <span>Day {restaurant.dayNumber} at {restaurant.time}</span>
+                      </div>
+                      {restaurant.lockedOption?.address && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <MapPin className="h-3 w-3" />
+                          <span>{restaurant.lockedOption.address}</span>
+                        </div>
+                      )}
+                      {!hasOpenTable && isSelected && (
+                        <div className="mt-2 p-2 bg-yellow-50 rounded-lg text-sm text-yellow-800">
+                          <AlertCircle className="h-4 w-4 inline mr-1" />
+                          This reservation will be made manually by our team
+                        </div>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })
-          )}
-        </div>
-      </ScrollArea>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
+      </div>
 
       <div className="flex gap-3">
         <Button variant="outline" onClick={handlePrevStep} data-testid="button-restaurants-back">
@@ -486,22 +483,21 @@ export default function ConciergeBookingWizard() {
         </p>
       </div>
 
-      <ScrollArea className="h-[400px]">
-        <div className="space-y-3 pr-4">
-          {excursions.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Ticket className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>No excursions in your itinerary</p>
-            </div>
-          ) : (
-            excursions.map((excursion) => {
-              const isSelected = selectedExcursions.includes(excursion.id);
-              
-              return (
-                <Card 
-                  key={excursion.id}
-                  className={cn(
-                    "cursor-pointer transition-all",
+      <div className="space-y-3">
+        {excursions.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Ticket className="h-12 w-12 mx-auto mb-2 opacity-50" />
+            <p>No excursions in your itinerary</p>
+          </div>
+        ) : (
+          excursions.map((excursion) => {
+            const isSelected = selectedExcursions.includes(excursion.id);
+            
+            return (
+              <Card 
+                key={excursion.id}
+                className={cn(
+                  "cursor-pointer transition-all",
                     isSelected && "ring-2 ring-primary"
                   )}
                   onClick={() => {
@@ -537,8 +533,7 @@ export default function ConciergeBookingWizard() {
               );
             })
           )}
-        </div>
-      </ScrollArea>
+      </div>
 
       <div className="flex gap-3">
         <Button variant="outline" onClick={handlePrevStep} data-testid="button-excursions-back">
@@ -554,9 +549,9 @@ export default function ConciergeBookingWizard() {
   );
 
   const renderAiChatStep = () => (
-    <div className="space-y-4 h-[600px] flex flex-col">
+    <div className="space-y-6">
       <div className="text-center space-y-2">
-        <div className="w-16 h-16 mx-auto bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+        <div className="w-16 h-16 mx-auto bg-gradient-to-r from-primary to-teal-600 rounded-full flex items-center justify-center">
           <Sparkles className="h-8 w-8 text-white" />
         </div>
         <h2 className="text-2xl font-bold">How can we make your trip better?</h2>
@@ -565,8 +560,8 @@ export default function ConciergeBookingWizard() {
         </p>
       </div>
 
-      <Card className="flex-1 flex flex-col overflow-hidden">
-        <ScrollArea className="flex-1 p-4">
+      <Card>
+        <CardContent className="p-4">
           <div className="space-y-4">
             {(!chatMessages || chatMessages.length === 0) && (
               <div className="text-center py-8 text-muted-foreground">
@@ -622,8 +617,8 @@ export default function ConciergeBookingWizard() {
               >
                 {msg.role === "assistant" && (
                   <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="h-4 w-4 text-purple-500" />
-                    <span className="text-sm font-medium text-purple-500">AI Concierge</span>
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-primary">AI Concierge</span>
                   </div>
                 )}
                 <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -640,7 +635,7 @@ export default function ConciergeBookingWizard() {
               <div className="mt-4 space-y-3">
                 <p className="text-sm font-medium text-muted-foreground">Would you like us to arrange any of these?</p>
                 {suggestions.filter(s => s.userApproved === null).map((suggestion) => (
-                  <Card key={suggestion.id} className="border-purple-200 bg-purple-50/50">
+                  <Card key={suggestion.id} className="border-primary/20 bg-primary/5">
                     <CardContent className="p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-3">
@@ -699,7 +694,7 @@ export default function ConciergeBookingWizard() {
               </div>
             )}
           </div>
-        </ScrollArea>
+        </CardContent>
         
         <div className="p-4 border-t">
           <div className="flex gap-2">
