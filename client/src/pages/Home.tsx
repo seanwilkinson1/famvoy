@@ -152,7 +152,7 @@ export default function Home() {
   }, [formattedExperiences, activeFilter, userLocation]);
 
   return (
-    <div className="min-h-screen bg-background pb-32 md:pb-8">
+    <div className="min-h-screen bg-background md:pb-8" style={{ paddingBottom: 'calc(var(--bottom-nav-height, 80px) + 2rem)' }}>
       {/* Header */}
       <div className="sticky top-0 z-40 bg-background/80 px-6 pt-14 md:pt-8 pb-4 backdrop-blur-md md:backdrop-blur-none md:max-w-6xl md:mx-auto">
         <p className="text-sm font-medium text-muted-foreground">Good morning,</p>
@@ -277,7 +277,7 @@ export default function Home() {
                           {suggestedFamilies.slice(0, 8).map((family, i) => (
                             <Link key={family.id} href={`/family/${family.id}`}>
                               <div 
-                                className="w-36 flex-shrink-0 bg-card rounded-3xl p-5 shadow-md hover:shadow-lg transition-all cursor-pointer text-center hover:-translate-y-1"
+                                className="w-36 flex-shrink-0 bg-card rounded-3xl p-5 card-shadow hover:card-shadow-hover transition-all cursor-pointer text-center hover:-translate-y-1"
                                 data-testid={`card-family-${family.id}`}
                               >
                                 <Avatar className="h-18 w-18 mx-auto mb-3 ring-3 ring-border/30">
@@ -321,7 +321,7 @@ export default function Home() {
                           {suggestedPods.slice(0, 8).map((pod, i) => (
                             <Link key={pod.id} href={`/pod/${pod.id}`}>
                               <div 
-                                className="w-52 flex-shrink-0 bg-card rounded-3xl p-5 shadow-md hover:shadow-lg transition-all cursor-pointer hover:-translate-y-1"
+                                className="w-52 flex-shrink-0 bg-card rounded-3xl p-5 card-shadow hover:card-shadow-hover transition-all cursor-pointer hover:-translate-y-1"
                                 data-testid={`card-pod-${pod.id}`}
                               >
                                 <div className="h-14 w-14 rounded-2xl bg-teal-gradient flex items-center justify-center mb-4 shadow-sm">
