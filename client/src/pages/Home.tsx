@@ -183,7 +183,7 @@ export default function Home() {
           <TabsContent value="discover" className="mt-6">
             {/* Filters */}
             <ScrollArea className="w-full whitespace-nowrap -mx-6">
-              <div className="flex w-max space-x-2 pb-4 px-6">
+              <div className="flex w-max space-x-2 pb-4 pl-6 pr-6">
                 {filters.map((filter) => {
                   const isActive = activeFilter === filter;
                   return (
@@ -225,7 +225,7 @@ export default function Home() {
                         </button>
                       </div>
                       <ScrollArea className="w-full whitespace-nowrap -mx-6">
-                        <div className="flex w-max space-x-4 pb-4 px-6">
+                        <div className="flex w-max space-x-4 pb-4 pl-6 pr-6">
                           {formattedExperiences.slice(0, 4).map((exp, i) => (
                             <ExperienceCard key={exp.id} experience={exp} horizontal index={i} />
                           ))}
@@ -248,7 +248,7 @@ export default function Home() {
                         </button>
                       </div>
                       <ScrollArea className="w-full whitespace-nowrap -mx-6">
-                        <div className="flex w-max space-x-4 pb-4 px-6">
+                        <div className="flex w-max space-x-4 pb-4 pl-6 pr-6">
                           {formattedExperiences.slice(2, 8).map((exp, i) => (
                             <ExperienceCard key={`popular-${exp.id}`} experience={exp} horizontal index={i} />
                           ))}
@@ -273,7 +273,7 @@ export default function Home() {
                         </Link>
                       </div>
                       <ScrollArea className="w-full whitespace-nowrap -mx-6">
-                        <div className="flex w-max space-x-4 pb-4 px-6">
+                        <div className="flex w-max space-x-4 pb-4 pl-6 pr-6">
                           {suggestedFamilies.slice(0, 8).map((family, i) => (
                             <Link key={family.id} href={`/family/${family.id}`}>
                               <div 
@@ -317,7 +317,7 @@ export default function Home() {
                         </Link>
                       </div>
                       <ScrollArea className="w-full whitespace-nowrap -mx-6">
-                        <div className="flex w-max space-x-4 pb-4 px-6">
+                        <div className="flex w-max space-x-4 pb-4 pl-6 pr-6">
                           {suggestedPods.slice(0, 8).map((pod, i) => (
                             <Link key={pod.id} href={`/pod/${pod.id}`}>
                               <div 
