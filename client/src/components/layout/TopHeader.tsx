@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MagnifyingGlass, Bell, Heart, UsersThree, User, SpinnerGap, X, ArrowLeft } from "@phosphor-icons/react";
+import { MagnifyingGlass, Bell, UsersThree, SpinnerGap, X, ArrowLeft } from "@phosphor-icons/react";
 import { Link, useLocation } from "wouter";
 import { useUser } from "@clerk/clerk-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -78,12 +78,7 @@ export function TopHeader() {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-lg border-b border-border/50">
         <div className="flex items-center justify-between px-5 py-4">
           <Link href="/">
-            <div className="flex items-center gap-2.5 cursor-pointer" data-testid="link-logo">
-              <div className="w-10 h-10 rounded-2xl bg-teal-gradient flex items-center justify-center shadow-sm">
-                <Heart weight="fill" className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-heading font-medium text-foreground tracking-tight">FamVoy</span>
-            </div>
+            <span className="text-2xl font-heading font-semibold text-foreground tracking-tight cursor-pointer" data-testid="link-logo">FamVoy</span>
           </Link>
 
           <div className="flex items-center gap-2">
