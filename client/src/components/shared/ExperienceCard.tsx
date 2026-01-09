@@ -5,7 +5,6 @@ import { Link } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { ExperienceWithFamily } from "@/lib/types";
-import { motion } from "framer-motion";
 
 interface ExperienceCardProps {
   experience: ExperienceWithFamily & { distance?: number; rating?: number; ratingCount?: number; checkinCount?: number };
@@ -41,19 +40,17 @@ export function ExperienceCard({ experience, className, horizontal = false, inde
 
   return (
     <Link href={`/experience/${experience.id}`}>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ 
-          duration: 0.4, 
-          delay: index * 0.05,
-          ease: [0.25, 0.46, 0.45, 0.94]
+      <div
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        style={{
+          animation: `fadeInUp 0.4s ease-out ${index * 0.05}s forwards`,
+          opacity: 0,
+          transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
+          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
         }}
-        whileHover={{ y: -4 }}
-        onHoverStart={() => setIsHovered(true)}
-        onHoverEnd={() => setIsHovered(false)}
         className={cn(
-          "group relative overflow-hidden rounded-3xl bg-card transition-premium cursor-pointer",
+          "group relative overflow-hidden rounded-3xl bg-card cursor-pointer",
           isHovered ? "card-shadow-hover" : "card-shadow",
           horizontal ? "w-[300px] flex-shrink-0" : "w-full",
           className
@@ -67,12 +64,11 @@ export function ExperienceCard({ experience, className, horizontal = false, inde
             horizontal ? "h-[180px]" : "aspect-[4/3]"
           )}
         >
-          <motion.img
+          <img
             src={experience.image || 'https://images.unsplash.com/photo-1609220136736-443140cffec6?w=800'}
             alt={experience.title}
-            className="absolute inset-0 h-full w-full object-cover object-center"
-            animate={{ scale: isHovered ? 1.05 : 1 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500"
+            style={{ transform: isHovered ? 'scale(1.05)' : 'scale(1)' }}
             loading="lazy"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
@@ -81,7 +77,10 @@ export function ExperienceCard({ experience, className, horizontal = false, inde
           />
           
           {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div 
+            className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent transition-opacity duration-300"
+            style={{ opacity: isHovered ? 1 : 0 }}
+          />
           
           {/* Category Badge */}
           {experience.category && (
@@ -92,21 +91,20 @@ export function ExperienceCard({ experience, className, horizontal = false, inde
         </div>
 
         {/* Save Button */}
-        <motion.button
+        <button
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             saveMutation.mutate();
           }}
-          whileTap={{ scale: 0.85 }}
-          className="absolute right-3 top-3 rounded-full bg-white/95 p-2.5 backdrop-blur-sm transition-all hover:bg-white z-10 card-shadow"
+          className="absolute right-3 top-3 rounded-full bg-white/95 p-2.5 backdrop-blur-sm transition-all hover:bg-white hover:scale-110 active:scale-90 z-10 card-shadow"
           data-testid={`button-save-${experience.id}`}
         >
           <Heart
             weight={isSaved ? "fill" : "regular"}
             className={cn("h-5 w-5 transition-colors", isSaved ? "text-secondary" : "text-foreground/60")}
           />
-        </motion.button>
+        </button>
 
         {/* Content */}
         <div className="p-5">
@@ -165,7 +163,7 @@ export function ExperienceCard({ experience, className, horizontal = false, inde
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
     </Link>
   );
 }
