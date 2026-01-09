@@ -214,7 +214,7 @@ export default function Home() {
                 <>
                   {/* Suggestions - only show when "All" filter is active */}
                   {activeFilter === "All" && (
-                    <section className="animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+                    <section>
                       <div className="mb-5 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Sparkle weight="fill" className="h-5 w-5 text-secondary" />
@@ -237,7 +237,7 @@ export default function Home() {
 
                   {/* Popular with Families - horizontal scroll */}
                   {activeFilter === "All" && (
-                    <section className="animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                    <section>
                       <div className="mb-5 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Fire weight="fill" className="h-5 w-5 text-secondary" />
@@ -260,7 +260,7 @@ export default function Home() {
 
                   {/* People You Might Know */}
                   {activeFilter === "All" && suggestedFamilies.length > 0 && (
-                    <section className="animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+                    <section>
                       <div className="mb-5 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Heart weight="fill" className="h-5 w-5 text-secondary" />
@@ -277,8 +277,7 @@ export default function Home() {
                           {suggestedFamilies.slice(0, 8).map((family, i) => (
                             <Link key={family.id} href={`/family/${family.id}`}>
                               <div 
-                                className="w-36 flex-shrink-0 bg-card rounded-3xl p-5 card-shadow hover:card-shadow-hover transition-all cursor-pointer text-center hover:-translate-y-1 animate-fade-in-up"
-                                style={{ animationDelay: `${0.3 + i * 0.05}s` }}
+                                className="w-36 flex-shrink-0 bg-card rounded-3xl p-5 shadow-md hover:shadow-lg transition-all cursor-pointer text-center hover:-translate-y-1"
                                 data-testid={`card-family-${family.id}`}
                               >
                                 <Avatar className="h-18 w-18 mx-auto mb-3 ring-3 ring-border/30">
@@ -305,7 +304,7 @@ export default function Home() {
 
                   {/* Pods You Might Like */}
                   {activeFilter === "All" && suggestedPods.length > 0 && (
-                    <section className="animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+                    <section>
                       <div className="mb-5 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <UsersThree weight="fill" className="h-5 w-5 text-primary" />
@@ -322,8 +321,7 @@ export default function Home() {
                           {suggestedPods.slice(0, 8).map((pod, i) => (
                             <Link key={pod.id} href={`/pod/${pod.id}`}>
                               <div 
-                                className="w-52 flex-shrink-0 bg-card rounded-3xl p-5 card-shadow hover:card-shadow-hover transition-all cursor-pointer hover:-translate-y-1 animate-fade-in-up"
-                                style={{ animationDelay: `${0.4 + i * 0.05}s` }}
+                                className="w-52 flex-shrink-0 bg-card rounded-3xl p-5 shadow-md hover:shadow-lg transition-all cursor-pointer hover:-translate-y-1"
                                 data-testid={`card-pod-${pod.id}`}
                               >
                                 <div className="h-14 w-14 rounded-2xl bg-teal-gradient flex items-center justify-center mb-4 shadow-sm">
@@ -407,7 +405,7 @@ export default function Home() {
             ) : (
               <div className="space-y-6 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
                 {formattedFollowingExperiences.map((exp: any, i) => (
-                  <div key={exp.id} className="animate-fade-in-up" style={{ animationDelay: `${i * 0.05}s` }}>
+                  <div key={exp.id}>
                     {/* Creator info */}
                     <Link href={`/family/${exp.creator?.id}`}>
                       <div className="flex items-center gap-3 mb-4 cursor-pointer group">
