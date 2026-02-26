@@ -2,7 +2,7 @@ import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { FamilySwipeCard, SwipeButtons } from "@/components/shared/FamilySwipeCard";
 import { MatchModal } from "@/components/shared/MatchModal";
 import { ExploreMap, MapBounds } from "@/components/shared/ExploreMap";
-import { useGoogleMapsContext } from "@/components/shared/GoogleMapsProvider";
+import { GoogleMapsProvider, useGoogleMapsContext } from "@/components/shared/GoogleMapsProvider";
 import { Search, Navigation, Map, Users, Compass, X, ChevronDown, MessageCircle, MapPin, Filter, SlidersHorizontal, Locate, Clock, DollarSign, Star, CheckCircle2, ArrowRight, Loader2, Plane, MapPinned, Eye, EyeOff, Check } from "lucide-react";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -116,7 +116,7 @@ function FilterBottomSheet({ isOpen, onClose, title, description, children, onCl
   );
 }
 
-export default function Explore() {
+function ExploreInner() {
   const [activeTab, setActiveTab] = useState<ExploreTab>("map");
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -810,5 +810,13 @@ export default function Explore() {
         podId={matchedPodId}
       />
     </div>
+  );
+}
+
+export default function Explore() {
+  return (
+    <GoogleMapsProvider>
+      <ExploreInner />
+    </GoogleMapsProvider>
   );
 }

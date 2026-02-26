@@ -39,6 +39,32 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "wouter"],
+          "vendor-clerk": ["@clerk/clerk-react"],
+          "vendor-query": ["@tanstack/react-query"],
+          "vendor-maps": ["@react-google-maps/api"],
+          "vendor-motion": ["framer-motion"],
+          "vendor-ui": [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-select",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-toast",
+            "@radix-ui/react-scroll-area",
+            "@radix-ui/react-avatar",
+            "@radix-ui/react-checkbox",
+            "@radix-ui/react-switch",
+            "@radix-ui/react-label",
+            "@radix-ui/react-separator",
+            "@radix-ui/react-slot",
+          ],
+        },
+      },
+    },
   },
   server: {
     host: "0.0.0.0",

@@ -9,13 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUpload } from "@/components/shared/ImageUpload";
 import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
+import { GoogleMapsProvider } from "@/components/shared/GoogleMapsProvider";
 
 const INTEREST_OPTIONS = [
-  "Hiking", "Food", "Nature", "Art", "Sports", "Music", 
+  "Hiking", "Food", "Nature", "Art", "Sports", "Music",
   "Science", "Reading", "Gaming", "Travel", "Crafts", "Beach"
 ];
 
-export default function Onboarding() {
+function OnboardingInner() {
   const { user: clerkUser } = useUser();
   const { getToken } = useAuth();
   const queryClient = useQueryClient();
@@ -295,5 +296,13 @@ export default function Onboarding() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Onboarding() {
+  return (
+    <GoogleMapsProvider>
+      <OnboardingInner />
+    </GoogleMapsProvider>
   );
 }

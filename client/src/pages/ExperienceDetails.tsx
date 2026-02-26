@@ -11,8 +11,9 @@ import { formatExperience, type ExperienceWithCreator } from "@/lib/types";
 import { useClerkAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { ExperienceMap } from "@/components/shared/ExperienceMap";
+import { GoogleMapsProvider } from "@/components/shared/GoogleMapsProvider";
 
-export default function ExperienceDetails() {
+function ExperienceDetailsInner() {
   const [match, params] = useRoute("/experience/:id");
   const [, setLocation] = useLocation();
   const [isSaved, setIsSaved] = useState(false);
@@ -700,5 +701,13 @@ export default function ExperienceDetails() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ExperienceDetails() {
+  return (
+    <GoogleMapsProvider>
+      <ExperienceDetailsInner />
+    </GoogleMapsProvider>
   );
 }

@@ -6,9 +6,10 @@ import { Calendar, MapPin, Users, ChevronRight, Plane, Plus, X } from "lucide-re
 import { format } from "date-fns";
 import { api } from "@/lib/api";
 import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
+import { GoogleMapsProvider } from "@/components/shared/GoogleMapsProvider";
 import { DateRangePicker } from "@/components/shared/DateRangePicker";
 
-export default function Trips() {
+function TripsInner() {
   const [, setLocation] = useLocation();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [tripName, setTripName] = useState("");
@@ -267,5 +268,13 @@ export default function Trips() {
         document.body
       )}
     </div>
+  );
+}
+
+export default function Trips() {
+  return (
+    <GoogleMapsProvider>
+      <TripsInner />
+    </GoogleMapsProvider>
   );
 }

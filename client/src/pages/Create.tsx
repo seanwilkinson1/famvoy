@@ -6,8 +6,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
+import { GoogleMapsProvider } from "@/components/shared/GoogleMapsProvider";
 
-export default function Create() {
+function CreateInner() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -342,5 +343,13 @@ export default function Create() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function Create() {
+  return (
+    <GoogleMapsProvider>
+      <CreateInner />
+    </GoogleMapsProvider>
   );
 }

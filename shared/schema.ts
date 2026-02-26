@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, serial, real, timestamp, integer, boolean, index, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, real, timestamp, integer, boolean, index, uniqueIndex, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -71,7 +71,10 @@ export const experiences = pgTable("experiences", {
   tips: text("tips").array(),
   userId: integer("user_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_experiences_user_id").on(table.userId),
+  index("idx_experiences_created_at").on(table.createdAt),
+]);
 
 export const pods = pgTable("pods", {
   id: serial("id").primaryKey(),
@@ -90,14 +93,21 @@ export const podMembers = pgTable("pod_members", {
   id: serial("id").primaryKey(),
   podId: integer("pod_id").notNull().references(() => pods.id),
   userId: integer("user_id").notNull().references(() => users.id),
-});
+}, (table) => [
+  index("idx_pod_members_pod_id").on(table.podId),
+  index("idx_pod_members_user_id").on(table.userId),
+  uniqueIndex("idx_pod_members_pod_user").on(table.podId, table.userId),
+]);
 
 export const savedExperiences = pgTable("saved_experiences", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   experienceId: integer("experience_id").notNull().references(() => experiences.id),
   savedAt: timestamp("saved_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_saved_experiences_user_id").on(table.userId),
+  uniqueIndex("idx_saved_experiences_user_exp").on(table.userId, table.experienceId),
+]);
 
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
@@ -108,7 +118,10 @@ export const messages = pgTable("messages", {
   imageUrl: text("image_url"),
   sharedExperienceId: integer("shared_experience_id").references(() => experiences.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_messages_pod_id").on(table.podId),
+  index("idx_messages_created_at").on(table.createdAt),
+]);
 
 export const familyConnections = pgTable("family_connections", {
   id: serial("id").primaryKey(),
@@ -116,7 +129,10 @@ export const familyConnections = pgTable("family_connections", {
   connectedUserId: integer("connected_user_id").notNull().references(() => users.id),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_family_connections_user_id").on(table.userId),
+  index("idx_family_connections_connected_user_id").on(table.connectedUserId),
+]);
 
 export const familySwipes = pgTable("family_swipes", {
   id: serial("id").primaryKey(),
@@ -124,7 +140,10 @@ export const familySwipes = pgTable("family_swipes", {
   swipedUserId: integer("swiped_user_id").notNull().references(() => users.id),
   liked: boolean("liked").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_family_swipes_user_id").on(table.userId),
+  index("idx_family_swipes_swiped_user_id").on(table.swipedUserId),
+]);
 
 export const activities = pgTable("activities", {
   id: serial("id").primaryKey(),
@@ -144,14 +163,20 @@ export const comments = pgTable("comments", {
   content: text("content").notNull(),
   rating: integer("rating"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_comments_experience_id").on(table.experienceId),
+]);
 
 export const follows = pgTable("follows", {
   id: serial("id").primaryKey(),
   followerId: integer("follower_id").notNull().references(() => users.id),
   followingId: integer("following_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_follows_follower_id").on(table.followerId),
+  index("idx_follows_following_id").on(table.followingId),
+  uniqueIndex("idx_follows_follower_following").on(table.followerId, table.followingId),
+]);
 
 export const podExperiences = pgTable("pod_experiences", {
   id: serial("id").primaryKey(),
@@ -205,7 +230,10 @@ export const experienceCheckins = pgTable("experience_checkins", {
   review: text("review"),
   rating: integer("rating"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_checkins_experience_id").on(table.experienceId),
+  index("idx_checkins_user_id").on(table.userId),
+]);
 
 export const podTrips = pgTable("pod_trips", {
   id: serial("id").primaryKey(),
@@ -252,7 +280,10 @@ export const tripItems = pgTable("trip_items", {
   confirmationState: text("confirmation_state").default("pending"),
   selectedOptionId: integer("selected_option_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_trip_items_trip_id").on(table.tripId),
+  index("idx_trip_items_destination_id").on(table.destinationId),
+]);
 
 export const tripConfirmationSessions = pgTable("trip_confirmation_sessions", {
   id: serial("id").primaryKey(),
@@ -281,7 +312,9 @@ export const tripItemOptions = pgTable("trip_item_options", {
   isLocked: boolean("is_locked").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   expiresAt: timestamp("expires_at"),
-});
+}, (table) => [
+  index("idx_trip_item_options_trip_item_id").on(table.tripItemId),
+]);
 
 export const bookingOptions = pgTable("booking_options", {
   id: serial("id").primaryKey(),
@@ -460,7 +493,10 @@ export const conversationMembers = pgTable("conversation_members", {
   conversationId: integer("conversation_id").notNull().references(() => conversations.id),
   userId: integer("user_id").notNull().references(() => users.id),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_conversation_members_conversation_id").on(table.conversationId),
+  index("idx_conversation_members_user_id").on(table.userId),
+]);
 
 export const chatMessages = pgTable("chat_messages", {
   id: serial("id").primaryKey(),
@@ -469,7 +505,10 @@ export const chatMessages = pgTable("chat_messages", {
   content: text("content").notNull(),
   imageUrl: text("image_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_chat_messages_conversation_id").on(table.conversationId),
+  index("idx_chat_messages_created_at").on(table.createdAt),
+]);
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({ id: true });
