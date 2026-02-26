@@ -1,7 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import path from "path";
-import multer from "multer";
 import express from "express";
 import { clerkMiddleware, getAuth, requireAuth, clerkClient } from "@clerk/express";
 import { storage } from "./storage";
@@ -12,32 +11,6 @@ import { z } from "zod";
 import { fromError } from "zod-validation-error";
 import OpenAI from "openai";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
-
-const uploadStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, 'public/uploads');
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
-  }
-});
-
-const upload = multer({
-  storage: uploadStorage,
-  limits: {
-    fileSize: 20 * 1024 * 1024, // 20MB limit
-  },
-  fileFilter: (_req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed.'));
-    }
-  }
-});
 
 export async function registerRoutes(
   httpServer: Server,
@@ -51,27 +24,7 @@ export async function registerRoutes(
     });
   });
 
-  app.use('/uploads', express.static('public/uploads'));
-
   app.use(clerkMiddleware());
-
-  app.post('/api/upload', requireAuth(), (req, res, next) => {
-    upload.single('image')(req, res, (err) => {
-      if (err) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(400).json({ error: 'File is too large. Maximum size is 20MB.' });
-        }
-        return res.status(400).json({ error: err.message });
-      }
-      
-      if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
-      }
-      
-      const imageUrl = `/uploads/${req.file.filename}`;
-      res.json({ url: imageUrl, filename: req.file.filename });
-    });
-  });
 
   app.post('/api/objects/upload', requireAuth(), async (req, res) => {
     try {
@@ -260,7 +213,20 @@ export async function registerRoutes(
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      const updatedUser = await storage.updateUserProfile(user.id, req.body);
+      // Only allow safe fields to be updated (prevent privilege escalation)
+      const allowedFields = [
+        'name', 'location', 'locationLat', 'locationLng', 'shareLocation',
+        'kids', 'interests', 'bio', 'avatar', 'familyValues', 'languages',
+        'pets', 'familyMotto', 'favoriteTraditions', 'dreamVacation',
+        'firstName', 'lastName', 'profileImageUrl', 'email',
+      ];
+      const sanitizedData: Record<string, any> = {};
+      for (const key of allowedFields) {
+        if (key in req.body) {
+          sanitizedData[key] = req.body[key];
+        }
+      }
+      const updatedUser = await storage.updateUserProfile(user.id, sanitizedData);
       res.json(updatedUser);
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -327,8 +293,8 @@ export async function registerRoutes(
     }
   });
 
-  // Update user location (also available at /api/users/location for compatibility)
-  app.patch('/api/users/location', requireAuth(), async (req, res) => {
+  // Update user location
+  async function handleUpdateLocation(req: any, res: any) {
     try {
       const { userId } = getAuth(req);
       if (!userId) {
@@ -338,30 +304,28 @@ export async function registerRoutes(
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       const locationSchema = z.object({
         lat: z.number().optional(),
         lng: z.number().optional(),
         shareLocation: z.boolean(),
       });
-      
+
       const parsed = locationSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ error: fromError(parsed.error).toString() });
       }
-      
+
       const { lat, lng, shareLocation } = parsed.data;
-      
-      // When enabling sharing, coordinates are required
+
       if (shareLocation && (lat === undefined || lng === undefined)) {
         return res.status(400).json({ error: "Coordinates required when enabling location sharing" });
       }
-      
-      // When disabling, just update shareLocation flag without touching coordinates
+
       const updated = await storage.updateUserLocation(
-        user.id, 
-        lat ?? user.locationLat ?? 0, 
-        lng ?? user.locationLng ?? 0, 
+        user.id,
+        lat ?? user.locationLat ?? 0,
+        lng ?? user.locationLng ?? 0,
         shareLocation
       );
       res.json(updated);
@@ -369,7 +333,9 @@ export async function registerRoutes(
       console.error("Error updating location:", error);
       res.status(500).json({ message: "Failed to update location" });
     }
-  });
+  }
+  app.patch('/api/users/me/location', requireAuth(), handleUpdateLocation);
+  app.patch('/api/users/location', requireAuth(), handleUpdateLocation);
 
   app.get("/api/experiences", async (req, res) => {
     try {

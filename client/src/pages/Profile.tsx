@@ -3,6 +3,7 @@ import { PodCard } from "@/components/shared/PodCard";
 import { ImageUpload } from "@/components/shared/ImageUpload";
 import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
 import { StaticMap } from "@/components/shared/StaticMap";
+import { GoogleMapsProvider } from "@/components/shared/GoogleMapsProvider";
 import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Trophy, CheckCircle, Star, Heart, Globe, Quote, Plane, Users, Share2, UserPlus, ChevronLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -34,7 +35,7 @@ const INTEREST_OPTIONS = [
   "Biking", "Swimming", "Dance", "Food", "Nature", "Science"
 ];
 
-export default function Profile() {
+function ProfileInner() {
   const [activeTab, setActiveTab] = useState<"experiences" | "about" | "saved" | "trips">("experiences");
   const [isEditing, setIsEditing] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -1146,5 +1147,13 @@ function AddMemberModal({
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Profile() {
+  return (
+    <GoogleMapsProvider>
+      <ProfileInner />
+    </GoogleMapsProvider>
   );
 }

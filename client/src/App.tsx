@@ -1,5 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, lazy, Suspense } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -8,43 +8,51 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { TopHeader } from "@/components/layout/TopHeader";
 import { FloatingActionButton } from "@/components/layout/FloatingActionButton";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
-import { GoogleMapsProvider } from "@/components/shared/GoogleMapsProvider";
 import { PullToRefresh } from "@/components/shared/PullToRefresh";
 import { SignedIn, SignedOut, useAuth } from "@clerk/clerk-react";
 import NotFound from "@/pages/not-found";
-
-import Landing from "@/pages/Landing";
-import Onboarding from "@/pages/Onboarding";
-import Home from "@/pages/Home";
-import Explore from "@/pages/Explore";
-import Pods from "@/pages/Pods";
-import Create from "@/pages/Create";
-import Profile from "@/pages/Profile";
-import Settings from "@/pages/Settings";
-import FamilyProfile from "@/pages/FamilyProfile";
-import ExperienceDetails from "@/pages/ExperienceDetails";
-import PodDetails from "@/pages/PodDetails";
-import TripDetails from "@/pages/TripDetails";
-import TripConfirmWizard from "@/pages/TripConfirmWizard";
-import Trips from "@/pages/Trips";
-import Chat from "@/pages/Chat";
-import ConversationDetail from "@/pages/ConversationDetail";
-import Cart from "@/pages/Cart";
-import CheckoutSuccess from "@/pages/CheckoutSuccess";
-import CheckoutCancel from "@/pages/CheckoutCancel";
-import AgentDashboard from "@/pages/AgentDashboard";
-import AgentRequestDetails from "@/pages/AgentRequestDetails";
-import ConciergeSuccess from "@/pages/ConciergeSuccess";
-import ConciergeBookingWizard from "@/pages/ConciergeBookingWizard";
-import AdminDashboard from "@/pages/admin/AdminDashboard";
-import AdminUsers from "@/pages/admin/AdminUsers";
-import AdminTrips from "@/pages/admin/AdminTrips";
-import AdminBookings from "@/pages/admin/AdminBookings";
-import AdminContent from "@/pages/admin/AdminContent";
-import AdminPods from "@/pages/admin/AdminPods";
-import AdminSettings from "@/pages/admin/AdminSettings";
 import { useClerkAuth } from "@/hooks/useAuth";
 import { setAuthTokenGetter } from "@/lib/api";
+
+// Lazy-loaded page components for code splitting
+const Landing = lazy(() => import("@/pages/Landing"));
+const Onboarding = lazy(() => import("@/pages/Onboarding"));
+const Home = lazy(() => import("@/pages/Home"));
+const Explore = lazy(() => import("@/pages/Explore"));
+const Pods = lazy(() => import("@/pages/Pods"));
+const Create = lazy(() => import("@/pages/Create"));
+const Profile = lazy(() => import("@/pages/Profile"));
+const Settings = lazy(() => import("@/pages/Settings"));
+const FamilyProfile = lazy(() => import("@/pages/FamilyProfile"));
+const ExperienceDetails = lazy(() => import("@/pages/ExperienceDetails"));
+const PodDetails = lazy(() => import("@/pages/PodDetails"));
+const TripDetails = lazy(() => import("@/pages/TripDetails"));
+const TripConfirmWizard = lazy(() => import("@/pages/TripConfirmWizard"));
+const Trips = lazy(() => import("@/pages/Trips"));
+const Chat = lazy(() => import("@/pages/Chat"));
+const ConversationDetail = lazy(() => import("@/pages/ConversationDetail"));
+const Cart = lazy(() => import("@/pages/Cart"));
+const CheckoutSuccess = lazy(() => import("@/pages/CheckoutSuccess"));
+const CheckoutCancel = lazy(() => import("@/pages/CheckoutCancel"));
+const AgentDashboard = lazy(() => import("@/pages/AgentDashboard"));
+const AgentRequestDetails = lazy(() => import("@/pages/AgentRequestDetails"));
+const ConciergeSuccess = lazy(() => import("@/pages/ConciergeSuccess"));
+const ConciergeBookingWizard = lazy(() => import("@/pages/ConciergeBookingWizard"));
+const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
+const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
+const AdminTrips = lazy(() => import("@/pages/admin/AdminTrips"));
+const AdminBookings = lazy(() => import("@/pages/admin/AdminBookings"));
+const AdminContent = lazy(() => import("@/pages/admin/AdminContent"));
+const AdminPods = lazy(() => import("@/pages/admin/AdminPods"));
+const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
+
+function PageLoader() {
+  return (
+    <div className="min-h-screen bg-soft-beige flex items-center justify-center">
+      <div className="w-12 h-12 rounded-full border-4 border-warm-teal border-t-transparent animate-spin" />
+    </div>
+  );
+}
 
 function AuthenticatedRouter() {
   const { user, isLoading, needsOnboarding } = useClerkAuth();
@@ -72,9 +80,9 @@ function AuthenticatedRouter() {
 
   if (needsOnboarding) {
     return (
-      <GoogleMapsProvider>
+      <Suspense fallback={<PageLoader />}>
         <Onboarding />
-      </GoogleMapsProvider>
+      </Suspense>
     );
   }
 
@@ -85,26 +93,28 @@ function AuthenticatedRouter() {
   // Admin pages have their own layout
   if (isAdminPage) {
     return (
-      <Switch>
-        <Route path="/admin" component={AdminDashboard} />
-        <Route path="/admin/users" component={AdminUsers} />
-        <Route path="/admin/trips" component={AdminTrips} />
-        <Route path="/admin/bookings" component={AdminBookings} />
-        <Route path="/admin/content" component={AdminContent} />
-        <Route path="/admin/pods" component={AdminPods} />
-        <Route path="/admin/settings" component={AdminSettings} />
-        <Route component={NotFound} />
-      </Switch>
+      <Suspense fallback={<PageLoader />}>
+        <Switch>
+          <Route path="/admin" component={AdminDashboard} />
+          <Route path="/admin/users" component={AdminUsers} />
+          <Route path="/admin/trips" component={AdminTrips} />
+          <Route path="/admin/bookings" component={AdminBookings} />
+          <Route path="/admin/content" component={AdminContent} />
+          <Route path="/admin/pods" component={AdminPods} />
+          <Route path="/admin/settings" component={AdminSettings} />
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
     );
   }
 
   return (
-    <GoogleMapsProvider>
-      <div className="flex min-h-screen bg-gray-50">
-        <Sidebar />
-        <div className="flex-1 flex flex-col mx-auto w-full max-w-md md:max-w-none bg-background shadow-2xl md:shadow-none overflow-hidden relative">
-          {showHeader && <TopHeader />}
-          <PWAInstallBanner />
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar />
+      <div className="flex-1 flex flex-col mx-auto w-full max-w-md md:max-w-none bg-background shadow-2xl md:shadow-none overflow-hidden relative">
+        {showHeader && <TopHeader />}
+        <PWAInstallBanner />
+        <Suspense fallback={<PageLoader />}>
           {isExplorePage ? (
             <Explore />
           ) : isConversationPage ? (
@@ -135,11 +145,11 @@ function AuthenticatedRouter() {
               </Switch>
             </PullToRefresh>
           )}
-          {location === "/" && <FloatingActionButton />}
-          {!isConversationPage && <BottomNav />}
-        </div>
+        </Suspense>
+        {location === "/" && <FloatingActionButton />}
+        {!isConversationPage && <BottomNav />}
       </div>
-    </GoogleMapsProvider>
+    </div>
   );
 }
 
@@ -147,7 +157,9 @@ function Router() {
   return (
     <>
       <SignedOut>
-        <Landing />
+        <Suspense fallback={<PageLoader />}>
+          <Landing />
+        </Suspense>
       </SignedOut>
       <SignedIn>
         <AuthenticatedRouter />
