@@ -6,6 +6,7 @@ import { rm, readFile } from "fs/promises";
 // which helps cold start times
 const allowlist = [
   "@google/generative-ai",
+  "@supabase/supabase-js",
   "axios",
   "connect-pg-simple",
   "cors",
@@ -24,7 +25,6 @@ const allowlist = [
   "passport",
   "passport-local",
   "pg",
-  "stripe",
   "uuid",
   "ws",
   "xlsx",
@@ -46,6 +46,7 @@ async function buildAll() {
   ];
   const externals = allDeps.filter((dep) => !allowlist.includes(dep));
 
+  // Build local server bundle
   await esbuild({
     entryPoints: ["server/index.ts"],
     platform: "node",
@@ -57,6 +58,25 @@ async function buildAll() {
     },
     minify: true,
     external: externals,
+    logLevel: "info",
+  });
+
+  // Build Vercel serverless function (resolves @shared/ aliases)
+  console.log("building api serverless function...");
+  await esbuild({
+    entryPoints: ["api/index.ts"],
+    platform: "node",
+    bundle: true,
+    format: "esm",
+    outfile: "api/index.mjs",
+    define: {
+      "process.env.NODE_ENV": '"production"',
+    },
+    minify: true,
+    external: externals,
+    banner: {
+      js: 'import { createRequire } from "module"; const require = createRequire(import.meta.url);',
+    },
     logLevel: "info",
   });
 }
