@@ -43,7 +43,25 @@ function TripsInner() {
     },
   });
 
-  const getStatusBadge = (status: string) => {
+  const getBadge = (trip: any) => {
+    const phase = trip.lifecyclePhase;
+
+    if (phase === "traveling") {
+      return (
+        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 animate-pulse">
+          Traveling Now
+        </span>
+      );
+    }
+    if (phase === "completed") {
+      return (
+        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">
+          Completed
+        </span>
+      );
+    }
+
+    // Planning phase -- show workflow status
     const styles: Record<string, string> = {
       draft: "bg-gray-100 text-gray-600",
       confirming: "bg-yellow-100 text-yellow-700",
@@ -59,18 +77,22 @@ function TripsInner() {
       booked: "Booked",
     };
     return (
-      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${styles[status] || styles.draft}`}>
-        {labels[status] || status}
+      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${styles[trip.status] || styles.draft}`}>
+        {labels[trip.status] || trip.status}
       </span>
     );
   };
 
-  const upcomingTrips = userTrips.filter((trip: any) => 
-    new Date(trip.startDate) >= new Date()
+  const travelingTrips = userTrips.filter((trip: any) =>
+    trip.lifecyclePhase === "traveling"
+  );
+
+  const upcomingTrips = userTrips.filter((trip: any) =>
+    trip.lifecyclePhase === "planning"
   ).sort((a: any, b: any) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
 
-  const pastTrips = userTrips.filter((trip: any) => 
-    new Date(trip.endDate) < new Date()
+  const pastTrips = userTrips.filter((trip: any) =>
+    trip.lifecyclePhase === "completed"
   ).sort((a: any, b: any) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
 
   if (isLoading) {
@@ -122,13 +144,57 @@ function TripsInner() {
           </div>
         ) : (
           <>
+            {travelingTrips.length > 0 && (
+              <section>
+                <h2 className="text-lg font-semibold text-charcoal mb-3">Traveling Now</h2>
+                <div className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:space-y-0">
+                  {travelingTrips.map((trip: any) => (
+                    <Link key={trip.id} href={`/trip/${trip.id}`}>
+                      <div
+                        className="bg-teal-50 rounded-2xl p-4 border-2 border-teal-200 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                        data-testid={`card-trip-traveling-${trip.id}`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-charcoal">{trip.name}</h3>
+                              {getBadge(trip)}
+                            </div>
+                            <div className="flex items-center gap-1 text-sm text-gray-500">
+                              <MapPin className="w-4 h-4" />
+                              <span>{trip.destination || "No destination set"}</span>
+                            </div>
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-gray-400" />
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            <span>
+                              {format(new Date(trip.startDate), "MMM d")} - {format(new Date(trip.endDate), "MMM d, yyyy")}
+                            </span>
+                          </div>
+                          {trip.pod && (
+                            <div className="flex items-center gap-1">
+                              <Users className="w-4 h-4" />
+                              <span>{trip.pod.name}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {upcomingTrips.length > 0 && (
               <section>
                 <h2 className="text-lg font-semibold text-charcoal mb-3">Upcoming</h2>
                 <div className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:space-y-0">
                   {upcomingTrips.map((trip: any) => (
                     <Link key={trip.id} href={`/trip/${trip.id}`}>
-                      <div 
+                      <div
                         className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                         data-testid={`card-trip-${trip.id}`}
                       >
@@ -136,7 +202,7 @@ function TripsInner() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <h3 className="font-semibold text-charcoal">{trip.name}</h3>
-                              {getStatusBadge(trip.status)}
+                              {getBadge(trip)}
                             </div>
                             <div className="flex items-center gap-1 text-sm text-gray-500">
                               <MapPin className="w-4 h-4" />
@@ -172,13 +238,16 @@ function TripsInner() {
                 <div className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:space-y-0">
                   {pastTrips.map((trip: any) => (
                     <Link key={trip.id} href={`/trip/${trip.id}`}>
-                      <div 
+                      <div
                         className="bg-gray-50 rounded-2xl p-4 border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors opacity-75"
                         data-testid={`card-trip-past-${trip.id}`}
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
-                            <h3 className="font-semibold text-charcoal">{trip.name}</h3>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-charcoal">{trip.name}</h3>
+                              {getBadge(trip)}
+                            </div>
                             <div className="flex items-center gap-1 text-sm text-gray-500">
                               <MapPin className="w-4 h-4" />
                               <span>{trip.destination || "No destination set"}</span>

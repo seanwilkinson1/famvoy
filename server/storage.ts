@@ -59,6 +59,7 @@ import {
   type InsertConciergeChatMessage,
   type ConciergeAiSuggestion,
   type InsertConciergeAiSuggestion,
+  type TripStatus,
   type PodPost,
   type InsertPodPost,
   type Conversation,
@@ -270,7 +271,7 @@ export interface IStorage {
   lockTripItemOption(optionId: number): Promise<TripItemOption>;
   getLockedAccommodationForTrip(tripId: number): Promise<TripItemOption | null>;
   
-  updateTripStatus(tripId: number, status: string): Promise<PodTrip>;
+  updateTripStatus(tripId: number, status: TripStatus): Promise<PodTrip>;
   updateTripItemConfirmation(itemId: number, state: string, selectedOptionId?: number): Promise<TripItem>;
   getConfirmableItems(tripId: number): Promise<TripItem[]>;
   
@@ -1704,7 +1705,17 @@ export class DatabaseStorage implements IStorage {
     return null;
   }
 
-  async updateTripStatus(tripId: number, status: string): Promise<PodTrip> {
+  async updateTripStatus(tripId: number, status: TripStatus): Promise<PodTrip> {
+    // Validate the transition
+    const [existing] = await db.select({ status: podTrips.status }).from(podTrips).where(eq(podTrips.id, tripId));
+    if (existing) {
+      const { validateStatusTransition } = await import("./lib/tripStatus");
+      const currentStatus = existing.status as TripStatus;
+      if (!validateStatusTransition(currentStatus, status)) {
+        throw new Error(`Invalid status transition: ${currentStatus} -> ${status}`);
+      }
+    }
+
     const [trip] = await db.update(podTrips)
       .set({ status, updatedAt: new Date() })
       .where(eq(podTrips.id, tripId))

@@ -11,6 +11,8 @@ import { z } from "zod";
 import { fromError } from "zod-validation-error";
 import OpenAI from "openai";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import { assertTripAccess, NotFoundError, ForbiddenError } from "./lib/tripAuth";
+import { computeLifecyclePhase, syncLifecycleIfNeeded } from "./lib/tripStatus";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -245,7 +247,11 @@ export async function registerRoutes(
         return res.status(404).json({ message: "User not found" });
       }
       const trips = await storage.getTripsByUser(user.id);
-      res.json(trips);
+      const tripsWithPhase = trips.map(trip => ({
+        ...trip,
+        lifecyclePhase: computeLifecyclePhase(trip),
+      }));
+      res.json(tripsWithPhase);
     } catch (error) {
       console.error("Error fetching user trips:", error);
       res.status(500).json({ message: "Failed to fetch trips" });
@@ -1818,12 +1824,27 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/pods/:id/trips", async (req, res) => {
+  app.get("/api/pods/:id/trips", requireAuth(), async (req, res) => {
     try {
       const podId = parseInt(req.params.id);
       if (isNaN(podId)) {
         return res.status(400).json({ error: "Invalid pod ID" });
       }
+
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      const isMember = await storage.isPodMember(podId, user.id);
+      if (!isMember) {
+        return res.status(403).json({ error: "Not a member of this pod" });
+      }
+
       const trips = await storage.getTripsByPod(podId);
       res.json(trips);
     } catch (error: any) {
@@ -1894,19 +1915,30 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/trips/:id", async (req, res) => {
+  app.get("/api/trips/:id", requireAuth(), async (req, res) => {
     try {
       const tripId = parseInt(req.params.id);
       if (isNaN(tripId)) {
         return res.status(400).json({ error: "Invalid trip ID" });
       }
-      const trip = await storage.getTripById(tripId);
-      if (!trip) {
-        return res.status(404).json({ error: "Trip not found" });
+
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
       }
-      
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      const trip = await assertTripAccess(user.id, tripId, "read");
+
+      // Sync lifecycle timestamps if dates indicate a transition
+      const synced = await syncLifecycleIfNeeded(trip);
+      const lifecyclePhase = computeLifecyclePhase(synced);
+
       // For confirmed trips, include locked booking options
-      if (trip.status === "confirmed") {
+      if (synced.status === "confirmed") {
         const itemsWithOptions = await Promise.all(
           trip.items.map(async (item) => {
             if (item.selectedOptionId) {
@@ -1917,7 +1949,7 @@ export async function registerRoutes(
             return { ...item, lockedOption: null };
           })
         );
-        
+
         // Calculate total estimated cost using numericPriceEstimate
         let totalCost = 0;
         itemsWithOptions.forEach(item => {
@@ -1925,12 +1957,13 @@ export async function registerRoutes(
             totalCost += item.lockedOption.numericPriceEstimate;
           }
         });
-        
+
         // Calculate service fee (15%)
         const serviceFee = Math.round(totalCost * 0.15);
-        
+
         res.json({
-          ...trip,
+          ...synced,
+          lifecyclePhase,
           items: itemsWithOptions,
           costSummary: {
             total: totalCost,
@@ -1943,9 +1976,15 @@ export async function registerRoutes(
         });
         return;
       }
-      
-      res.json(trip);
+
+      res.json({ ...synced, lifecyclePhase, items: trip.items });
     } catch (error: any) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: error.message });
+      }
+      if (error instanceof ForbiddenError) {
+        return res.status(403).json({ error: error.message });
+      }
       res.status(500).json({ error: error.message });
     }
   });
@@ -2003,10 +2042,52 @@ export async function registerRoutes(
       if (!clerkUserId) {
         return res.status(401).json({ error: "Not authenticated" });
       }
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
 
-      const trip = await storage.updateTrip(tripId, req.body);
+      await assertTripAccess(user.id, tripId, "write");
+
+      const allowedTripUpdate = z.object({
+        name: z.string().optional(),
+        destination: z.string().optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        aiSummary: z.string().nullable().optional(),
+        budgetMin: z.number().nullable().optional(),
+        budgetMax: z.number().nullable().optional(),
+        pace: z.string().nullable().optional(),
+        kidsAgeGroups: z.array(z.string()).nullable().optional(),
+        tripInterests: z.array(z.string()).nullable().optional(),
+      });
+
+      const parsed = allowedTripUpdate.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: fromError(parsed.error).toString() });
+      }
+
+      // If dates changed, clear activatedAt if trip is moving to the future
+      const existingTrip = await storage.getTripById(tripId);
+      if (existingTrip && parsed.data.startDate) {
+        const newStart = new Date(parsed.data.startDate + "T00:00:00");
+        if (newStart > new Date() && existingTrip.activatedAt && !existingTrip.completedAt) {
+          // Trip postponed -- revert from traveling to planning
+          await storage.updateTrip(tripId, { ...parsed.data, activatedAt: null } as any);
+          const updated = await storage.getTripById(tripId);
+          return res.json(updated);
+        }
+      }
+
+      const trip = await storage.updateTrip(tripId, parsed.data);
       res.json(trip);
     } catch (error: any) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: error.message });
+      }
+      if (error instanceof ForbiddenError) {
+        return res.status(403).json({ error: error.message });
+      }
       res.status(500).json({ error: error.message });
     }
   });
@@ -2018,9 +2099,25 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid trip ID" });
       }
 
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      await assertTripAccess(user.id, tripId, "owner");
       await storage.deleteTrip(tripId);
       res.json({ success: true });
     } catch (error: any) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: error.message });
+      }
+      if (error instanceof ForbiddenError) {
+        return res.status(403).json({ error: error.message });
+      }
       res.status(500).json({ error: error.message });
     }
   });
@@ -2128,15 +2225,32 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/trips/:id/destinations", async (req, res) => {
+  app.get("/api/trips/:id/destinations", requireAuth(), async (req, res) => {
     try {
       const tripId = parseInt(req.params.id);
       if (isNaN(tripId)) {
         return res.status(400).json({ error: "Invalid trip ID" });
       }
+
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      await assertTripAccess(user.id, tripId, "read");
       const destinations = await storage.getTripDestinations(tripId);
       res.json(destinations);
     } catch (error: any) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: error.message });
+      }
+      if (error instanceof ForbiddenError) {
+        return res.status(403).json({ error: error.message });
+      }
       res.status(500).json({ error: error.message });
     }
   });

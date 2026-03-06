@@ -235,6 +235,14 @@ export const experienceCheckins = pgTable("experience_checkins", {
   index("idx_checkins_user_id").on(table.userId),
 ]);
 
+export const TRIP_STATUSES = [
+  "draft", "confirming", "confirmed", "booking_in_progress", "booked",
+] as const;
+export type TripStatus = (typeof TRIP_STATUSES)[number];
+
+export const TRIP_LIFECYCLE_PHASES = ["planning", "traveling", "completed"] as const;
+export type TripLifecyclePhase = (typeof TRIP_LIFECYCLE_PHASES)[number];
+
 export const podTrips = pgTable("pod_trips", {
   id: serial("id").primaryKey(),
   podId: integer("pod_id").references(() => pods.id),
@@ -250,6 +258,8 @@ export const podTrips = pgTable("pod_trips", {
   kidsAgeGroups: text("kids_age_groups").array(),
   tripInterests: text("trip_interests").array(),
   createdByUserId: integer("created_by_user_id").notNull().references(() => users.id),
+  activatedAt: timestamp("activated_at"),
+  completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

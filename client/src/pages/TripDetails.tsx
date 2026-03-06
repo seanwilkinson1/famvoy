@@ -83,6 +83,7 @@ interface Trip {
   endDate: string;
   aiSummary: string | null;
   status: string;
+  lifecyclePhase?: "planning" | "traveling" | "completed";
   createdByUserId: number;
   createdAt: string;
   items: TripItem[];
@@ -549,6 +550,23 @@ export default function TripDetails() {
             {format(startDate, "MMM d")} - {format(endDate, "MMM d, yyyy")}
           </span>
         </div>
+        {trip.lifecyclePhase === "traveling" && (
+          <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-teal-50 border border-teal-200 rounded-xl">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-teal-500" />
+            </span>
+            <span className="text-sm font-medium text-teal-700">
+              Day {Math.max(1, Math.ceil((new Date().getTime() - new Date(trip.startDate + "T00:00:00").getTime()) / 86_400_000))} of your trip
+            </span>
+          </div>
+        )}
+        {trip.lifecyclePhase === "completed" && (
+          <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-xl">
+            <CheckCircle2 className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-600">Trip completed</span>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto pb-24">
