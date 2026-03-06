@@ -2477,7 +2477,7 @@ export async function registerRoutes(
 
       const openai = new OpenAI({
         baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        apiKey: process.env.OPENAI_API_KEY,
       });
 
       const prompt = `You are a family trip planner AI. Create a detailed ${numDays}-day itinerary for a family trip to ${destinationText} from ${trip.startDate} to ${trip.endDate}.
@@ -2614,7 +2614,7 @@ Return ONLY valid JSON, no markdown or explanations.`;
 
       const openai = new OpenAI({
         baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        apiKey: process.env.OPENAI_API_KEY,
       });
 
       const prompt = `Regenerate Day ${dayNumber} of a family trip to ${trip.destination}.
@@ -3187,71 +3187,8 @@ Return ONLY valid JSON.`;
     }
   });
 
-  // Create checkout session
-  app.post('/api/checkout', requireAuth(), async (req, res) => {
-    try {
-      const auth = getAuth(req);
-      if (!auth?.userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-      const user = await storage.getUserByClerkId(auth.userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      const cart = await storage.getCartByUser(user.id);
-      if (!cart || cart.items.length === 0) {
-        return res.status(400).json({ error: "Cart is empty" });
-      }
-
-      const { getUncachableStripeClient } = await import('./stripeClient');
-      const stripe = await getUncachableStripeClient();
-
-      const lineItems = cart.items.map(item => ({
-        price_data: {
-          currency: item.bookingOption.currency,
-          product_data: {
-            name: item.bookingOption.name,
-            description: item.bookingOption.description || undefined,
-            images: item.bookingOption.image ? [item.bookingOption.image] : undefined,
-          },
-          unit_amount: item.priceSnapshot,
-        },
-        quantity: item.quantity * item.guestCount,
-      }));
-
-      const totalInCents = cart.items.reduce((sum, item) => 
-        sum + (item.priceSnapshot * item.quantity * item.guestCount), 0);
-
-      const order = await storage.createOrder({
-        userId: user.id,
-        cartId: cart.id,
-        podTripId: cart.podTripId,
-        totalInCents,
-        currency: 'usd',
-        status: 'pending',
-      });
-
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: lineItems,
-        mode: 'payment',
-        success_url: `${req.protocol}://${req.get('host')}/checkout/success?order=${order.id}`,
-        cancel_url: `${req.protocol}://${req.get('host')}/checkout/cancel`,
-        metadata: {
-          orderId: order.id.toString(),
-          userId: user.id.toString(),
-        },
-      });
-
-      await storage.updateOrder(order.id, { stripeCheckoutSessionId: session.id });
-
-      res.json({ url: session.url, orderId: order.id });
-    } catch (error: any) {
-      console.error("Checkout error:", error);
-      res.status(500).json({ error: error.message });
-    }
-  });
+  // STRIPE DISABLED: Checkout session (requires Stripe integration)
+  // app.post('/api/checkout', requireAuth(), async (req, res) => { ... });
 
   // Get user's orders
   app.get('/api/orders', requireAuth(), async (req, res) => {
@@ -3331,196 +3268,16 @@ Return ONLY valid JSON.`;
     }
   });
 
-  // Stripe publishable key endpoint
-  app.get('/api/stripe/config', async (req, res) => {
-    try {
-      const { getStripePublishableKey } = await import('./stripeClient');
-      const publishableKey = await getStripePublishableKey();
-      res.json({ publishableKey });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
+  // STRIPE DISABLED: Stripe config endpoint (requires Stripe integration)
+  // app.get('/api/stripe/config', async (req, res) => { ... });
 
   // ==================== CONCIERGE BOOKING ROUTES ====================
 
-  // Create concierge checkout session for a confirmed trip
-  app.post('/api/concierge/checkout', requireAuth(), async (req, res) => {
-    try {
-      const auth = getAuth(req);
-      if (!auth?.userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-      const user = await storage.getUserByClerkId(auth.userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
+  // STRIPE DISABLED: Concierge checkout (requires Stripe integration)
+  // app.post('/api/concierge/checkout', requireAuth(), async (req, res) => { ... });
 
-      const { tripId, customerNotes } = req.body;
-      if (!tripId) {
-        return res.status(400).json({ error: "Trip ID is required" });
-      }
-
-      const trip = await storage.getTripById(tripId);
-      if (!trip) {
-        return res.status(404).json({ error: "Trip not found" });
-      }
-
-      // Check if already has concierge request
-      const existingRequest = await storage.getConciergeRequestByTrip(tripId);
-      if (existingRequest) {
-        return res.status(400).json({ error: "Concierge request already exists for this trip" });
-      }
-
-      // Get confirmed items with their selected options
-      const confirmableItems = await storage.getConfirmableItems(tripId);
-      const lockedItems = confirmableItems.filter(item => item.confirmationState === 'locked' && item.selectedOptionId);
-
-      if (lockedItems.length === 0) {
-        return res.status(400).json({ error: "No items to book. Please confirm trip items first." });
-      }
-
-      // Calculate estimated total from locked options
-      let totalEstimatedCents = 0;
-      for (const item of lockedItems) {
-        if (item.selectedOptionId) {
-          const options = await storage.getTripItemOptions(item.id);
-          const selectedOption = options.find(o => o.id === item.selectedOptionId);
-          if (selectedOption?.priceEstimate) {
-            // Parse price estimate (e.g., "$150.50" -> 15050 cents, "$1,250" -> 125000 cents)
-            const priceMatch = selectedOption.priceEstimate.match(/[\d,]+\.?\d*/);
-            if (priceMatch) {
-              const priceStr = priceMatch[0].replace(/,/g, '');
-              const priceDollars = parseFloat(priceStr);
-              if (!isNaN(priceDollars)) {
-                totalEstimatedCents += Math.round(priceDollars * 100);
-              }
-            }
-          }
-        }
-      }
-
-      // Minimum $50 booking if we couldn't parse any valid prices
-      if (totalEstimatedCents === 0) {
-        totalEstimatedCents = 5000;
-      }
-
-      // Calculate service fee (15%)
-      const serviceFeePercent = 15;
-      const serviceFeeCents = Math.round(totalEstimatedCents * serviceFeePercent / 100);
-      const totalPaidCents = totalEstimatedCents + serviceFeeCents;
-
-      const { getUncachableStripeClient } = await import('./stripeClient');
-      const stripe = await getUncachableStripeClient();
-
-      // Create Stripe checkout session
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: `Trip Booking: ${trip.name}`,
-                description: `Concierge booking service for ${lockedItems.length} items`,
-              },
-              unit_amount: totalEstimatedCents,
-            },
-            quantity: 1,
-          },
-          {
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: 'Concierge Service Fee',
-                description: `${serviceFeePercent}% service fee for personal booking concierge`,
-              },
-              unit_amount: serviceFeeCents,
-            },
-            quantity: 1,
-          },
-        ],
-        mode: 'payment',
-        success_url: `${req.protocol}://${req.get('host')}/concierge/success?tripId=${tripId}`,
-        cancel_url: `${req.protocol}://${req.get('host')}/pods/${trip.podId}/trips/${tripId}`,
-        metadata: {
-          tripId: tripId.toString(),
-          userId: user.id.toString(),
-          type: 'concierge',
-        },
-      });
-
-      // Create concierge request
-      const conciergeRequest = await storage.createConciergeRequest({
-        tripId,
-        userId: user.id,
-        status: 'pending_payment',
-        totalEstimatedCents,
-        serviceFeePercent,
-        serviceFeeCents,
-        totalPaidCents,
-        stripeCheckoutSessionId: session.id,
-        customerNotes: customerNotes || null,
-      });
-
-      // Create concierge request items for each locked item
-      const requestItems = lockedItems.map(item => ({
-        conciergeRequestId: conciergeRequest.id,
-        tripItemId: item.id,
-        selectedOptionId: item.selectedOptionId,
-        status: 'pending' as const,
-        estimatedPriceCents: null,
-      }));
-
-      await storage.createConciergeRequestItems(requestItems);
-
-      res.json({ url: session.url, requestId: conciergeRequest.id });
-    } catch (error: any) {
-      console.error("Concierge checkout error:", error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Complete concierge request after payment
-  app.post('/api/concierge/requests/:id/complete-payment', requireAuth(), async (req, res) => {
-    try {
-      const auth = getAuth(req);
-      if (!auth?.userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-      const user = await storage.getUserByClerkId(auth.userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      const requestId = parseInt(req.params.id);
-      const request = await storage.getConciergeRequestById(requestId);
-      if (!request) {
-        return res.status(404).json({ error: "Request not found" });
-      }
-
-      // Verify the user owns this request
-      if (request.userId !== user.id) {
-        return res.status(403).json({ error: "Not authorized to access this request" });
-      }
-
-      // Already completed, return current state (idempotent)
-      if (request.status !== 'pending_payment') {
-        return res.json(request);
-      }
-
-      const updatedRequest = await storage.updateConciergeRequest(requestId, {
-        status: 'pending',
-      });
-
-      // Update trip status
-      await storage.updateTripStatus(request.tripId, 'booking_in_progress');
-
-      res.json(updatedRequest);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
+  // STRIPE DISABLED: Complete concierge payment (requires Stripe integration)
+  // app.post('/api/concierge/requests/:id/complete-payment', requireAuth(), async (req, res) => { ... });
 
   // Get user's concierge requests
   app.get('/api/concierge/requests', requireAuth(), async (req, res) => {
@@ -3778,7 +3535,7 @@ Return ONLY valid JSON.`;
       // Generate AI response using Replit AI Integrations
       const openai = new OpenAI({
         baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        apiKey: process.env.OPENAI_API_KEY,
       });
       
       const systemPrompt = `You are a friendly travel concierge helping a family plan their trip to ${trip.destination} (${trip.startDate} to ${trip.endDate}).

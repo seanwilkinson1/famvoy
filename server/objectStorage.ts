@@ -1,26 +1,17 @@
-import { Storage, File } from "@google-cloud/storage";
+import { createClient } from "@supabase/supabase-js";
 import { Response } from "express";
 import { randomUUID } from "crypto";
 
-const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
+const BUCKET = "famvoy-uploads";
 
-export const objectStorageClient = new Storage({
-  credentials: {
-    audience: "replit",
-    subject_token_type: "access_token",
-    token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
-    type: "external_account",
-    credential_source: {
-      url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
-      format: {
-        type: "json",
-        subject_token_field_name: "access_token",
-      },
-    },
-    universe_domain: "googleapis.com",
-  },
-  projectId: "",
-});
+function getSupabaseAdmin() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set");
+  }
+  return createClient(url, key);
+}
 
 export class ObjectNotFoundError extends Error {
   constructor() {
@@ -30,43 +21,29 @@ export class ObjectNotFoundError extends Error {
   }
 }
 
-export class ObjectStorageService {
-  constructor() {}
+export interface StorageFile {
+  path: string;
+}
 
-  getPrivateObjectDir(): string {
-    const dir = process.env.PRIVATE_OBJECT_DIR || "";
-    if (!dir) {
-      throw new Error(
-        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
-          "tool and set PRIVATE_OBJECT_DIR env var."
-      );
-    }
-    return dir;
-  }
+export class ObjectStorageService {
+  private supabase = getSupabaseAdmin();
 
   async getObjectEntityUploadURL(): Promise<string> {
-    const privateObjectDir = this.getPrivateObjectDir();
-    if (!privateObjectDir) {
-      throw new Error(
-        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
-          "tool and set PRIVATE_OBJECT_DIR env var."
-      );
+    const objectId = randomUUID();
+    const path = `uploads/${objectId}`;
+
+    const { data, error } = await this.supabase.storage
+      .from(BUCKET)
+      .createSignedUploadUrl(path);
+
+    if (error || !data) {
+      throw new Error(`Failed to create upload URL: ${error?.message}`);
     }
 
-    const objectId = randomUUID();
-    const fullPath = `${privateObjectDir}/uploads/${objectId}`;
-
-    const { bucketName, objectName } = parseObjectPath(fullPath);
-
-    return signObjectURL({
-      bucketName,
-      objectName,
-      method: "PUT",
-      ttlSec: 900,
-    });
+    return data.signedUrl;
   }
 
-  async getObjectEntityFile(objectPath: string): Promise<File> {
+  async getObjectEntityFile(objectPath: string): Promise<StorageFile> {
     if (!objectPath.startsWith("/objects/")) {
       throw new ObjectNotFoundError();
     }
@@ -76,44 +53,54 @@ export class ObjectStorageService {
       throw new ObjectNotFoundError();
     }
 
-    const entityId = parts.slice(1).join("/");
-    let entityDir = this.getPrivateObjectDir();
-    if (!entityDir.endsWith("/")) {
-      entityDir = `${entityDir}/`;
-    }
-    const objectEntityPath = `${entityDir}${entityId}`;
-    const { bucketName, objectName } = parseObjectPath(objectEntityPath);
-    const bucket = objectStorageClient.bucket(bucketName);
-    const objectFile = bucket.file(objectName);
-    const [exists] = await objectFile.exists();
-    if (!exists) {
+    // objectPath is like "/objects/uploads/<uuid>" → storage path is "uploads/<uuid>"
+    const storagePath = parts.slice(1).join("/");
+
+    // Verify the file exists by attempting to get its metadata
+    const { data, error } = await this.supabase.storage
+      .from(BUCKET)
+      .download(storagePath);
+
+    if (error || !data) {
       throw new ObjectNotFoundError();
     }
-    return objectFile;
+
+    return { path: storagePath };
   }
 
-  normalizeObjectEntityPath(rawPath: string): string {
-    if (!rawPath.startsWith("https://storage.googleapis.com/")) {
-      throw new Error("Invalid upload URL: must be a Google Cloud Storage URL");
-    }
+  normalizeObjectEntityPath(rawUrl: string): string {
+    // Supabase signed upload URLs contain the bucket and path in the URL
+    // Extract the storage path from the URL
+    try {
+      const url = new URL(rawUrl);
+      // Supabase storage URLs look like:
+      // https://<project>.supabase.co/storage/v1/object/sign/<bucket>/<path>?token=...
+      // or upload URLs like:
+      // https://<project>.supabase.co/storage/v1/upload/sign/<bucket>/<path>?token=...
+      const pathname = url.pathname;
 
-    const url = new URL(rawPath);
-    const rawObjectPath = url.pathname;
+      // Match paths like /storage/v1/object/sign/famvoy-uploads/uploads/<uuid>
+      // or /storage/v1/upload/sign/famvoy-uploads/uploads/<uuid>
+      const bucketPattern = new RegExp(`/storage/v1/(?:object|upload)/sign(?:ed-url)?/${BUCKET}/(.+)`);
+      const match = pathname.match(bucketPattern);
 
-    let objectEntityDir = this.getPrivateObjectDir();
-    if (!objectEntityDir.startsWith("/")) {
-      objectEntityDir = `/${objectEntityDir}`;
-    }
-    if (!objectEntityDir.endsWith("/")) {
-      objectEntityDir = `${objectEntityDir}/`;
-    }
+      if (match) {
+        return `/objects/${match[1]}`;
+      }
 
-    if (!rawObjectPath.startsWith(objectEntityDir)) {
-      throw new Error("Invalid upload URL: file not in expected storage directory");
-    }
+      // Fallback: try to find uploads/<uuid> pattern directly
+      const uploadsMatch = pathname.match(/(uploads\/[a-f0-9-]+)/);
+      if (uploadsMatch) {
+        return `/objects/${uploadsMatch[1]}`;
+      }
 
-    const entityId = rawObjectPath.slice(objectEntityDir.length);
-    return `/objects/${entityId}`;
+      throw new Error("Could not extract path from upload URL");
+    } catch (e) {
+      if (e instanceof TypeError) {
+        throw new Error("Invalid upload URL");
+      }
+      throw e;
+    }
   }
 
   async verifyObjectExists(objectPath: string): Promise<boolean> {
@@ -125,25 +112,25 @@ export class ObjectStorageService {
     }
   }
 
-  async downloadObject(file: File, res: Response, cacheTtlSec: number = 3600) {
+  async downloadObject(file: StorageFile, res: Response, cacheTtlSec: number = 3600) {
     try {
-      const [metadata] = await file.getMetadata();
+      const { data, error } = await this.supabase.storage
+        .from(BUCKET)
+        .download(file.path);
+
+      if (error || !data) {
+        throw new Error(`Download failed: ${error?.message}`);
+      }
+
+      const buffer = Buffer.from(await data.arrayBuffer());
+
       res.set({
-        "Content-Type": metadata.contentType || "application/octet-stream",
-        "Content-Length": metadata.size,
+        "Content-Type": data.type || "application/octet-stream",
+        "Content-Length": buffer.length.toString(),
         "Cache-Control": `public, max-age=${cacheTtlSec}`,
       });
 
-      const stream = file.createReadStream();
-
-      stream.on("error", (err) => {
-        console.error("Stream error:", err);
-        if (!res.headersSent) {
-          res.status(500).json({ error: "Error streaming file" });
-        }
-      });
-
-      stream.pipe(res);
+      res.send(buffer);
     } catch (error) {
       console.error("Error downloading file:", error);
       if (!res.headersSent) {
@@ -151,63 +138,4 @@ export class ObjectStorageService {
       }
     }
   }
-}
-
-function parseObjectPath(path: string): {
-  bucketName: string;
-  objectName: string;
-} {
-  if (!path.startsWith("/")) {
-    path = `/${path}`;
-  }
-  const pathParts = path.split("/");
-  if (pathParts.length < 3) {
-    throw new Error("Invalid path: must contain at least a bucket name");
-  }
-
-  const bucketName = pathParts[1];
-  const objectName = pathParts.slice(2).join("/");
-
-  return {
-    bucketName,
-    objectName,
-  };
-}
-
-async function signObjectURL({
-  bucketName,
-  objectName,
-  method,
-  ttlSec,
-}: {
-  bucketName: string;
-  objectName: string;
-  method: "GET" | "PUT" | "DELETE" | "HEAD";
-  ttlSec: number;
-}): Promise<string> {
-  const request = {
-    bucket_name: bucketName,
-    object_name: objectName,
-    method,
-    expires_at: new Date(Date.now() + ttlSec * 1000).toISOString(),
-  };
-  const response = await fetch(
-    `${REPLIT_SIDECAR_ENDPOINT}/object-storage/signed-object-url`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(request),
-    }
-  );
-  if (!response.ok) {
-    throw new Error(
-      `Failed to sign object URL, errorcode: ${response.status}, ` +
-        `make sure you're running on Replit`
-    );
-  }
-
-  const { signed_url: signedURL } = await response.json();
-  return signedURL;
 }

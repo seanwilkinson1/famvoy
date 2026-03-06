@@ -23,7 +23,10 @@ export default function ConciergeSuccess() {
 
   const { data: conciergeRequest, isLoading } = useQuery<ConciergeRequest | null>({
     queryKey: [`/api/trips/${tripId}/concierge`],
-    queryFn: () => apiRequest("GET", `/api/trips/${tripId}/concierge`),
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/trips/${tripId}/concierge`);
+      return await res.json() as ConciergeRequest | null;
+    },
     enabled: !!tripId,
   });
 
