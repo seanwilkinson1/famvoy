@@ -64,19 +64,16 @@ async function buildAll() {
   // Build Vercel serverless function (resolves @shared/ aliases)
   console.log("building api serverless function...");
   await esbuild({
-    entryPoints: ["api/index.ts"],
+    entryPoints: ["server/vercel-entry.ts"],
     platform: "node",
     bundle: true,
-    format: "esm",
-    outfile: "api/index.mjs",
+    format: "cjs",
+    outfile: "api/index.js",
     define: {
       "process.env.NODE_ENV": '"production"',
     },
     minify: true,
     external: externals,
-    banner: {
-      js: 'import { createRequire } from "module"; const require = createRequire(import.meta.url);',
-    },
     logLevel: "info",
   });
 }
