@@ -1,6 +1,5 @@
 node_modules
 dist
-api/
 .env
 .DS_Store
 server/public
