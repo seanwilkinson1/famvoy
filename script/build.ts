@@ -61,7 +61,8 @@ async function buildAll() {
     logLevel: "info",
   });
 
-  // Build Vercel serverless function (resolves @shared/ aliases)
+  // Build Vercel serverless function — bundle ALL deps (no externals)
+  // so the function is fully self-contained in the serverless environment
   console.log("building api serverless function...");
   await esbuild({
     entryPoints: ["server/vercel-entry.ts"],
@@ -73,7 +74,6 @@ async function buildAll() {
       "process.env.NODE_ENV": '"production"',
     },
     minify: true,
-    external: externals,
     logLevel: "info",
   });
 }
