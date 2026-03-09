@@ -702,3 +702,44 @@ export const adminAuditLogs = pgTable("admin_audit_logs", {
 export const insertAdminAuditLogSchema = createInsertSchema(adminAuditLogs).omit({ id: true, createdAt: true });
 export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
 export type InsertAdminAuditLog = z.infer<typeof insertAdminAuditLogSchema>;
+
+// Trip check-ins: marks itinerary items as completed during the trip
+export const tripItemCheckins = pgTable("trip_item_checkins", {
+  id: serial("id").primaryKey(),
+  tripItemId: integer("trip_item_id").notNull().references(() => tripItems.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  completedAt: timestamp("completed_at").defaultNow().notNull(),
+  photoUrl: text("photo_url"),
+  caption: text("caption"),
+  locationLat: real("location_lat"),
+  locationLng: real("location_lng"),
+}, (table) => [
+  index("idx_trip_item_checkins_trip_item_id").on(table.tripItemId),
+  index("idx_trip_item_checkins_user_id").on(table.userId),
+]);
+
+export const insertTripItemCheckinSchema = createInsertSchema(tripItemCheckins).omit({ id: true, completedAt: true });
+export type TripItemCheckin = typeof tripItemCheckins.$inferSelect;
+export type InsertTripItemCheckin = z.infer<typeof insertTripItemCheckinSchema>;
+
+// Trip photos: photos captured during the trip, linked to days and items
+export const tripPhotos = pgTable("trip_photos", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => podTrips.id),
+  tripItemId: integer("trip_item_id").references(() => tripItems.id),
+  dayNumber: integer("day_number"),
+  userId: integer("user_id").notNull().references(() => users.id),
+  photoUrl: text("photo_url").notNull(),
+  caption: text("caption"),
+  locationLat: real("location_lat"),
+  locationLng: real("location_lng"),
+  takenAt: timestamp("taken_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_trip_photos_trip_id").on(table.tripId),
+  index("idx_trip_photos_user_id").on(table.userId),
+]);
+
+export const insertTripPhotoSchema = createInsertSchema(tripPhotos).omit({ id: true, takenAt: true, createdAt: true });
+export type TripPhoto = typeof tripPhotos.$inferSelect;
+export type InsertTripPhoto = z.infer<typeof insertTripPhotoSchema>;

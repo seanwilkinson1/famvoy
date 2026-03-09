@@ -27,6 +27,10 @@ import {
   type UserBadge,
   type ExperienceCheckin,
   type InsertExperienceCheckin,
+  type TripItemCheckin,
+  type InsertTripItemCheckin,
+  type TripPhoto,
+  type InsertTripPhoto,
   type PodTrip,
   type InsertPodTrip,
   type TripItem,
@@ -87,6 +91,8 @@ import {
   podTrips,
   tripDestinations,
   tripItems,
+  tripItemCheckins,
+  tripPhotos,
   familyMembers,
   bookingOptions,
   carts,
@@ -1331,6 +1337,11 @@ export class DatabaseStorage implements IStorage {
     return { ...trip, items };
   }
 
+  async getTripItem(itemId: number): Promise<TripItem | undefined> {
+    const [item] = await db.select().from(tripItems).where(eq(tripItems.id, itemId));
+    return item;
+  }
+
   async createTrip(data: InsertPodTrip): Promise<PodTrip> {
     const [trip] = await db.insert(podTrips).values(data).returning();
     return trip;
@@ -2176,6 +2187,67 @@ export class DatabaseStorage implements IStorage {
   async unlinkTripFromPod(tripId: number): Promise<void> {
     // We can't really unlink since podId is required, but we could implement this differently
     // For now, this is a no-op since trips must belong to a pod
+  }
+
+  // Trip item check-ins
+  async createTripItemCheckin(data: InsertTripItemCheckin): Promise<TripItemCheckin> {
+    const [checkin] = await db.insert(tripItemCheckins).values(data).returning();
+    return checkin;
+  }
+
+  async deleteTripItemCheckin(tripItemId: number, userId: number): Promise<void> {
+    await db.delete(tripItemCheckins)
+      .where(and(
+        eq(tripItemCheckins.tripItemId, tripItemId),
+        eq(tripItemCheckins.userId, userId),
+      ));
+  }
+
+  async getTripCheckins(tripId: number): Promise<TripItemCheckin[]> {
+    return db.select()
+      .from(tripItemCheckins)
+      .innerJoin(tripItems, eq(tripItemCheckins.tripItemId, tripItems.id))
+      .where(eq(tripItems.tripId, tripId))
+      .then(rows => rows.map(r => r.trip_item_checkins));
+  }
+
+  async getCheckinForItem(tripItemId: number, userId: number): Promise<TripItemCheckin | undefined> {
+    const [checkin] = await db.select()
+      .from(tripItemCheckins)
+      .where(and(
+        eq(tripItemCheckins.tripItemId, tripItemId),
+        eq(tripItemCheckins.userId, userId),
+      ));
+    return checkin;
+  }
+
+  // Trip photos
+  async createTripPhoto(data: InsertTripPhoto): Promise<TripPhoto> {
+    const [photo] = await db.insert(tripPhotos).values(data).returning();
+    return photo;
+  }
+
+  async getTripPhotos(tripId: number, dayNumber?: number): Promise<TripPhoto[]> {
+    const conditions = [eq(tripPhotos.tripId, tripId)];
+    if (dayNumber !== undefined) {
+      conditions.push(eq(tripPhotos.dayNumber, dayNumber));
+    }
+    return db.select().from(tripPhotos)
+      .where(and(...conditions))
+      .orderBy(tripPhotos.takenAt);
+  }
+
+  async deleteTripPhoto(photoId: number, userId: number): Promise<void> {
+    await db.delete(tripPhotos)
+      .where(and(
+        eq(tripPhotos.id, photoId),
+        eq(tripPhotos.userId, userId),
+      ));
+  }
+
+  async getTripPhotoById(photoId: number): Promise<TripPhoto | undefined> {
+    const [photo] = await db.select().from(tripPhotos).where(eq(tripPhotos.id, photoId));
+    return photo;
   }
 }
 

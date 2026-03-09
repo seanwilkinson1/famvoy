@@ -1001,4 +1001,63 @@ export const api = {
       return res.json();
     },
   },
+
+  tripCheckins: {
+    create: async (tripId: number, itemId: number, data?: { photoUrl?: string; caption?: string; locationLat?: number; locationLng?: number }): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/items/${itemId}/checkin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data || {}),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Failed to check in" }));
+        throw new Error(err.error);
+      }
+      return res.json();
+    },
+
+    remove: async (tripId: number, itemId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/items/${itemId}/checkin`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to undo check-in");
+    },
+
+    listForTrip: async (tripId: number): Promise<any[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/checkins`);
+      if (!res.ok) throw new Error("Failed to fetch check-ins");
+      return res.json();
+    },
+  },
+
+  tripPhotos: {
+    create: async (tripId: number, data: { photoUrl: string; tripItemId?: number; dayNumber?: number; caption?: string; locationLat?: number; locationLng?: number }): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/photos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Failed to add photo" }));
+        throw new Error(err.error);
+      }
+      return res.json();
+    },
+
+    list: async (tripId: number, day?: number): Promise<any[]> => {
+      const url = day !== undefined
+        ? `${API_BASE}/trips/${tripId}/photos?day=${day}`
+        : `${API_BASE}/trips/${tripId}/photos`;
+      const res = await fetchWithAuth(url);
+      if (!res.ok) throw new Error("Failed to fetch photos");
+      return res.json();
+    },
+
+    remove: async (tripId: number, photoId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/photos/${photoId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete photo");
+    },
+  },
 };

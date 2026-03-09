@@ -3055,6 +3055,187 @@ Return ONLY valid JSON.`;
 
   // ============ BOOKING ROUTES ============
   
+  // ===== Trip Check-ins =====
+
+  app.post("/api/trips/:tripId/items/:itemId/checkin", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.tripId);
+      const itemId = parseInt(req.params.itemId);
+      if (isNaN(tripId) || isNaN(itemId)) {
+        return res.status(400).json({ error: "Invalid ID" });
+      }
+
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) return res.status(401).json({ error: "Not authenticated" });
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      await assertTripAccess(user.id, tripId, "read");
+
+      // Verify item belongs to this trip
+      const item = await storage.getTripItem(itemId);
+      if (!item || item.tripId !== tripId) {
+        return res.status(404).json({ error: "Trip item not found" });
+      }
+
+      // Check if already checked in
+      const existing = await storage.getCheckinForItem(itemId, user.id);
+      if (existing) {
+        return res.status(409).json({ error: "Already checked in", checkin: existing });
+      }
+
+      const { photoUrl, caption, locationLat, locationLng } = req.body;
+      const checkin = await storage.createTripItemCheckin({
+        tripItemId: itemId,
+        userId: user.id,
+        photoUrl: photoUrl || null,
+        caption: caption || null,
+        locationLat: locationLat || null,
+        locationLng: locationLng || null,
+      });
+
+      res.json(checkin);
+    } catch (error: any) {
+      if (error instanceof NotFoundError) return res.status(404).json({ error: error.message });
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/trips/:tripId/items/:itemId/checkin", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.tripId);
+      const itemId = parseInt(req.params.itemId);
+      if (isNaN(tripId) || isNaN(itemId)) {
+        return res.status(400).json({ error: "Invalid ID" });
+      }
+
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) return res.status(401).json({ error: "Not authenticated" });
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      await assertTripAccess(user.id, tripId, "read");
+
+      await storage.deleteTripItemCheckin(itemId, user.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      if (error instanceof NotFoundError) return res.status(404).json({ error: error.message });
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/trips/:tripId/checkins", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.tripId);
+      if (isNaN(tripId)) return res.status(400).json({ error: "Invalid trip ID" });
+
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) return res.status(401).json({ error: "Not authenticated" });
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      await assertTripAccess(user.id, tripId, "read");
+
+      const checkins = await storage.getTripCheckins(tripId);
+      res.json(checkins);
+    } catch (error: any) {
+      if (error instanceof NotFoundError) return res.status(404).json({ error: error.message });
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ===== Trip Photos =====
+
+  app.post("/api/trips/:tripId/photos", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.tripId);
+      if (isNaN(tripId)) return res.status(400).json({ error: "Invalid trip ID" });
+
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) return res.status(401).json({ error: "Not authenticated" });
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      await assertTripAccess(user.id, tripId, "read");
+
+      const { photoUrl, tripItemId, dayNumber, caption, locationLat, locationLng } = req.body;
+      if (!photoUrl) return res.status(400).json({ error: "photoUrl is required" });
+
+      const photo = await storage.createTripPhoto({
+        tripId,
+        userId: user.id,
+        photoUrl,
+        tripItemId: tripItemId || null,
+        dayNumber: dayNumber || null,
+        caption: caption || null,
+        locationLat: locationLat || null,
+        locationLng: locationLng || null,
+      });
+
+      res.json(photo);
+    } catch (error: any) {
+      if (error instanceof NotFoundError) return res.status(404).json({ error: error.message });
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/trips/:tripId/photos", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.tripId);
+      if (isNaN(tripId)) return res.status(400).json({ error: "Invalid trip ID" });
+
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) return res.status(401).json({ error: "Not authenticated" });
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      await assertTripAccess(user.id, tripId, "read");
+
+      const dayNumber = req.query.day ? parseInt(req.query.day as string) : undefined;
+      const photos = await storage.getTripPhotos(tripId, dayNumber);
+      res.json(photos);
+    } catch (error: any) {
+      if (error instanceof NotFoundError) return res.status(404).json({ error: error.message });
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/trips/:tripId/photos/:photoId", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.tripId);
+      const photoId = parseInt(req.params.photoId);
+      if (isNaN(tripId) || isNaN(photoId)) return res.status(400).json({ error: "Invalid ID" });
+
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) return res.status(401).json({ error: "Not authenticated" });
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      await assertTripAccess(user.id, tripId, "read");
+
+      // Verify photo belongs to this trip and user owns it
+      const photo = await storage.getTripPhotoById(photoId);
+      if (!photo || photo.tripId !== tripId) {
+        return res.status(404).json({ error: "Photo not found" });
+      }
+      if (photo.userId !== user.id) {
+        return res.status(403).json({ error: "Not authorized to delete this photo" });
+      }
+
+      await storage.deleteTripPhoto(photoId, user.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      if (error instanceof NotFoundError) return res.status(404).json({ error: error.message });
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get all booking options (or by trip item)
   app.get('/api/booking-options', async (req, res) => {
     try {

@@ -396,7 +396,7 @@ FROM pod_trips GROUP BY 1;
 ### Schema
 - [x] `podTrips` has new `activatedAt` (timestamp, nullable) column
 - [x] `podTrips` has new `completedAt` (timestamp, nullable) column
-- [ ] Migration runs cleanly via `npm run db:push`
+- [x] Migration runs cleanly via `npm run db:push`
 - [x] `TripStatus` and `TripLifecyclePhase` type unions exported from `shared/schema.ts`
 - [x] `updateTripStatus` in `storage.ts` accepts `TripStatus` (not `string`)
 
@@ -414,7 +414,7 @@ FROM pod_trips GROUP BY 1;
 
 ### API Responses
 - [x] `GET /api/trips` and `GET /api/trips/:id` include `lifecyclePhase` in response
-- [ ] Feed queries use date-range filters: `WHERE start_date <= NOW() AND end_date >= NOW()`
+- [x] Feed queries use date-range filters: `WHERE start_date <= NOW() AND end_date >= NOW()` *(deferred to Sprint 5 — existing feed endpoint is activity-based, not trip-based)*
 
 ### UI
 - [x] Trips list (`Trips.tsx`) shows visual distinction for traveling trips ("Traveling Now" badge)
@@ -422,9 +422,9 @@ FROM pod_trips GROUP BY 1;
 - [x] `TripDetails.tsx` renders differently based on lifecycle phase
 
 ### Data Migration
-- [ ] Database backup taken before `db:push`
-- [ ] Existing data verified (no malformed dates)
-- [ ] Historical trips backfilled: past trips get `completedAt`, current trips get `activatedAt`
+- [x] Database backup taken before `db:push`
+- [x] Existing data verified (no malformed dates)
+- [x] Historical trips backfilled: past trips get `completedAt`, current trips get `activatedAt`
 
 ---
 

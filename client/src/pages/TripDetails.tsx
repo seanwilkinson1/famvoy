@@ -7,6 +7,8 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { BookingModal } from "@/components/shared/BookingModal";
+import { TodayCard } from "@/components/trip/TodayCard";
+import { TripPhotoGallery } from "@/components/trip/TripPhotoGallery";
 import { apiRequest } from "@/lib/queryClient";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -570,6 +572,12 @@ export default function TripDetails() {
       </div>
 
       <div className="flex-1 overflow-y-auto pb-24">
+        {trip.lifecyclePhase === "traveling" && trip.items.length > 0 && (
+          <div className="mx-4 mt-4">
+            <TodayCard tripId={tripId} startDate={trip.startDate} items={trip.items} />
+          </div>
+        )}
+
         {trip.aiSummary && (
           <details className="mx-4 mt-4 group">
             <summary className="flex items-center justify-between p-3 bg-muted/50 rounded-2xl cursor-pointer hover:bg-muted transition-colors list-none" data-testid="accordion-trip-insights">
@@ -991,6 +999,17 @@ export default function TripDetails() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {(trip.lifecyclePhase === "traveling" || trip.lifecyclePhase === "completed") && (
+          <div className="px-4">
+            <TripPhotoGallery
+              tripId={tripId}
+              startDate={trip.startDate}
+              endDate={trip.endDate}
+              isOwner={true}
+            />
           </div>
         )}
       </div>
