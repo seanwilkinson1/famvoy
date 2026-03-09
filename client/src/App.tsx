@@ -38,6 +38,7 @@ const AgentDashboard = lazy(() => import("@/pages/AgentDashboard"));
 const AgentRequestDetails = lazy(() => import("@/pages/AgentRequestDetails"));
 const ConciergeSuccess = lazy(() => import("@/pages/ConciergeSuccess"));
 const ConciergeBookingWizard = lazy(() => import("@/pages/ConciergeBookingWizard"));
+const TripBook = lazy(() => import("@/pages/TripBook"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
 const AdminTrips = lazy(() => import("@/pages/admin/AdminTrips"));
@@ -133,6 +134,7 @@ function AuthenticatedRouter() {
                 <Route path="/pod/:id" component={PodDetails} />
                 <Route path="/trip/:id" component={TripDetails} />
                 <Route path="/trip/:id/confirm" component={TripConfirmWizard} />
+                <Route path="/trip/:id/book" component={TripBook} />
                 <Route path="/trip/:id/concierge" component={ConciergeBookingWizard} />
                 <Route path="/family/:id" component={FamilyProfile} />
                 <Route path="/cart" component={Cart} />

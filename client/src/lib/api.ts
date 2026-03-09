@@ -1060,4 +1060,61 @@ export const api = {
       if (!res.ok) throw new Error("Failed to delete photo");
     },
   },
+
+  tripBook: {
+    get: async (tripId: number): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/book`);
+      if (!res.ok) throw new Error("Failed to fetch trip book");
+      return res.json();
+    },
+  },
+
+  tripHighlights: {
+    create: async (tripId: number, data: { tripItemId?: number; highlightType: string; notes?: string }): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/highlights`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Failed to add highlight" }));
+        throw new Error(err.error);
+      }
+      return res.json();
+    },
+
+    remove: async (tripId: number, highlightId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/highlights/${highlightId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to remove highlight");
+    },
+  },
+
+  tripRating: {
+    set: async (tripId: number, rating: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/rating`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating }),
+      });
+      if (!res.ok) throw new Error("Failed to set rating");
+    },
+  },
+
+  travelStats: {
+    get: async (userId: number): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/users/${userId}/travel-stats`);
+      if (!res.ok) throw new Error("Failed to fetch travel stats");
+      return res.json();
+    },
+  },
+
+  feedMemories: {
+    get: async (): Promise<any[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/feed/memories`);
+      if (!res.ok) throw new Error("Failed to fetch memories");
+      return res.json();
+    },
+  },
 };

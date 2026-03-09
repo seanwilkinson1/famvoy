@@ -1,5 +1,5 @@
 import { useRoute, useLocation } from "wouter";
-import { ChevronLeft, ChevronRight, MapPin, Calendar, Sparkles, Loader2, RefreshCw, Plus, Trash2, Edit2, X, Clock, Utensils, BedDouble, Car, Ticket, Check, CreditCard, DollarSign, ExternalLink, Star, Share2, GripVertical, Users, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Calendar, Sparkles, Loader2, RefreshCw, Plus, Trash2, Edit2, X, Clock, Utensils, BedDouble, Car, Ticket, Check, CreditCard, DollarSign, ExternalLink, Star, Share2, GripVertical, Users, CheckCircle2, BookOpen } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -564,9 +564,18 @@ export default function TripDetails() {
           </div>
         )}
         {trip.lifecyclePhase === "completed" && (
-          <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-xl">
-            <CheckCircle2 className="h-4 w-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-600">Trip completed</span>
+          <div className="mt-3 flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-xl">
+              <CheckCircle2 className="h-4 w-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-600">Trip completed</span>
+            </div>
+            <button
+              onClick={() => setLocation(`/trip/${tripId}/book`)}
+              className="flex items-center gap-2 px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition-colors"
+            >
+              <BookOpen className="h-4 w-4" />
+              <span className="text-sm font-medium">Trip Book</span>
+            </button>
           </div>
         )}
       </div>

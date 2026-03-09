@@ -31,6 +31,8 @@ import {
   type InsertTripItemCheckin,
   type TripPhoto,
   type InsertTripPhoto,
+  type TripHighlight,
+  type InsertTripHighlight,
   type PodTrip,
   type InsertPodTrip,
   type TripItem,
@@ -93,6 +95,7 @@ import {
   tripItems,
   tripItemCheckins,
   tripPhotos,
+  tripHighlights,
   familyMembers,
   bookingOptions,
   carts,
@@ -113,7 +116,7 @@ import {
   chatMessages,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or, ne, notInArray, ilike, isNotNull, isNull, inArray } from "drizzle-orm";
+import { eq, desc, and, or, ne, notInArray, ilike, isNotNull, isNull, inArray, sql, count } from "drizzle-orm";
 
 function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 3959;
@@ -2248,6 +2251,127 @@ export class DatabaseStorage implements IStorage {
   async getTripPhotoById(photoId: number): Promise<TripPhoto | undefined> {
     const [photo] = await db.select().from(tripPhotos).where(eq(tripPhotos.id, photoId));
     return photo;
+  }
+
+  // Trip highlights
+  async createTripHighlight(data: InsertTripHighlight): Promise<TripHighlight> {
+    const [highlight] = await db.insert(tripHighlights).values(data).returning();
+    return highlight;
+  }
+
+  async getTripHighlights(tripId: number): Promise<TripHighlight[]> {
+    return db.select().from(tripHighlights)
+      .where(eq(tripHighlights.tripId, tripId))
+      .orderBy(tripHighlights.createdAt);
+  }
+
+  async deleteTripHighlight(highlightId: number, userId: number): Promise<void> {
+    await db.delete(tripHighlights)
+      .where(and(
+        eq(tripHighlights.id, highlightId),
+        eq(tripHighlights.userId, userId),
+      ));
+  }
+
+  // Trip rating
+  async setTripRating(tripId: number, rating: number): Promise<void> {
+    await db.update(podTrips)
+      .set({ overallRating: rating })
+      .where(eq(podTrips.id, tripId));
+  }
+
+  // Trip book data (aggregated)
+  async getTripBookData(tripId: number) {
+    const [trip] = await db.select().from(podTrips).where(eq(podTrips.id, tripId));
+    if (!trip) return null;
+
+    const destinations = await db.select().from(tripDestinations)
+      .where(eq(tripDestinations.tripId, tripId))
+      .orderBy(tripDestinations.sortOrder);
+
+    const items = await db.select().from(tripItems)
+      .where(eq(tripItems.tripId, tripId))
+      .orderBy(tripItems.dayNumber, tripItems.sortOrder);
+
+    const checkins = await this.getTripCheckins(tripId);
+    const photos = await this.getTripPhotos(tripId);
+    const highlights = await this.getTripHighlights(tripId);
+
+    return { trip, destinations, items, checkins, photos, highlights };
+  }
+
+  // User travel stats
+  async getUserTravelStats(userId: number) {
+    const completedTrips = await db.select().from(podTrips)
+      .where(and(
+        eq(podTrips.createdByUserId, userId),
+        isNotNull(podTrips.completedAt),
+      ));
+
+    let totalDays = 0;
+    let destinationCount = 0;
+    let photoCount = 0;
+    let checkinCount = 0;
+    let favoriteTrip: typeof completedTrips[0] | null = null;
+
+    for (const trip of completedTrips) {
+      const start = new Date(trip.startDate + "T00:00:00");
+      const end = new Date(trip.endDate + "T23:59:59");
+      totalDays += Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86_400_000));
+
+      if (!favoriteTrip || (trip.overallRating ?? 0) > (favoriteTrip.overallRating ?? 0)) {
+        favoriteTrip = trip;
+      }
+    }
+
+    if (completedTrips.length > 0) {
+      const tripIds = completedTrips.map(t => t.id);
+
+      const [destResult] = await db.select({ count: count() }).from(tripDestinations)
+        .where(inArray(tripDestinations.tripId, tripIds));
+      destinationCount = destResult?.count ?? 0;
+
+      const [photoResult] = await db.select({ count: count() }).from(tripPhotos)
+        .where(inArray(tripPhotos.tripId, tripIds));
+      photoCount = photoResult?.count ?? 0;
+
+      const itemIds = await db.select({ id: tripItems.id }).from(tripItems)
+        .where(inArray(tripItems.tripId, tripIds));
+      if (itemIds.length > 0) {
+        const [checkinResult] = await db.select({ count: count() }).from(tripItemCheckins)
+          .where(inArray(tripItemCheckins.tripItemId, itemIds.map(i => i.id)));
+        checkinCount = checkinResult?.count ?? 0;
+      }
+    }
+
+    return {
+      totalTrips: completedTrips.length,
+      totalDays,
+      destinationsVisited: destinationCount,
+      photosCapured: photoCount,
+      activitiesCompleted: checkinCount,
+      favoriteTrip: favoriteTrip ? { id: favoriteTrip.id, name: favoriteTrip.name, rating: favoriteTrip.overallRating } : null,
+    };
+  }
+
+  // Anniversary memories
+  async getAnniversaryTrips(userId: number): Promise<any[]> {
+    const trips = await db.select().from(podTrips)
+      .where(and(
+        eq(podTrips.createdByUserId, userId),
+        isNotNull(podTrips.completedAt),
+      ));
+
+    const today = new Date();
+    const todayMonth = today.getMonth();
+    const todayDay = today.getDate();
+
+    return trips.filter(trip => {
+      const start = new Date(trip.startDate + "T00:00:00");
+      return start.getMonth() === todayMonth &&
+        start.getDate() === todayDay &&
+        start.getFullYear() < today.getFullYear();
+    });
   }
 }
 

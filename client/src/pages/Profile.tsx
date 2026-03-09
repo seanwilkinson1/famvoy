@@ -217,6 +217,13 @@ function ProfileInner() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: travelStats } = useQuery({
+    queryKey: ["travelStats", currentUser?.id],
+    queryFn: () => currentUser ? api.travelStats.get(currentUser.id) : null,
+    enabled: !!currentUser,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const { data: familyMembers = [] } = useQuery<FamilyMember[]>({
     queryKey: ["familyMembers", currentUser?.id],
     queryFn: () => currentUser ? api.users.getFamilyMembers(currentUser.id) : [],
@@ -623,14 +630,9 @@ function ProfileInner() {
           </div>
         </div>
 
-        {/* Trip Stats Card */}
+        {/* Travel Stats Card */}
         <div className="mt-6 bg-gray-800 rounded-xl p-4">
-          {userTrips.length === 0 ? (
-            <div className="text-center">
-              <p className="text-white font-bold">No trip stats yet</p>
-              <p className="text-gray-400 text-sm mt-1">Track or post trips to log miles and get badges</p>
-            </div>
-          ) : (
+          {!travelStats || travelStats.totalTrips === 0 ? (
             <div className="flex items-center justify-around">
               <div className="text-center">
                 <p className="text-2xl font-bold text-white">{userTrips.length}</p>
@@ -646,6 +648,36 @@ function ProfileInner() {
                 <p className="text-2xl font-bold text-white">{userBadges.length}</p>
                 <p className="text-gray-400 text-xs">Badges</p>
               </div>
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center justify-around">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-white">{travelStats.totalTrips}</p>
+                  <p className="text-gray-400 text-xs">Trips</p>
+                </div>
+                <div className="w-px h-8 bg-gray-700" />
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-white">{travelStats.totalDays}</p>
+                  <p className="text-gray-400 text-xs">Days</p>
+                </div>
+                <div className="w-px h-8 bg-gray-700" />
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-white">{travelStats.destinationsVisited}</p>
+                  <p className="text-gray-400 text-xs">Destinations</p>
+                </div>
+                <div className="w-px h-8 bg-gray-700" />
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-white">{travelStats.photosCapured}</p>
+                  <p className="text-gray-400 text-xs">Photos</p>
+                </div>
+              </div>
+              {travelStats.favoriteTrip && travelStats.favoriteTrip.rating && (
+                <div className="mt-3 pt-3 border-t border-gray-700 text-center">
+                  <p className="text-gray-400 text-xs">Favorite Trip</p>
+                  <p className="text-white text-sm font-medium">{travelStats.favoriteTrip.name}</p>
+                </div>
+              )}
             </div>
           )}
         </div>

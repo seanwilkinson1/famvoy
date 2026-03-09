@@ -3236,6 +3236,125 @@ Return ONLY valid JSON.`;
     }
   });
 
+  // ===== Trip Book, Highlights, Ratings, Stats, Memories =====
+
+  // Get trip book data (aggregated)
+  app.get("/api/trips/:tripId/book", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.tripId);
+      await assertTripAccess(user.id, tripId, "read");
+
+      const bookData = await storage.getTripBookData(tripId);
+      if (!bookData) return res.status(404).json({ error: "Trip not found" });
+
+      res.json(bookData);
+    } catch (error: any) {
+      if (error instanceof NotFoundError) return res.status(404).json({ error: error.message });
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Add a highlight
+  app.post("/api/trips/:tripId/highlights", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.tripId);
+      await assertTripAccess(user.id, tripId, "write");
+
+      const { tripItemId, highlightType, notes } = req.body;
+      if (!highlightType) return res.status(400).json({ error: "highlightType is required" });
+
+      const highlight = await storage.createTripHighlight({
+        tripId,
+        tripItemId: tripItemId || null,
+        userId: user.id,
+        highlightType,
+        notes: notes || null,
+      });
+      res.json(highlight);
+    } catch (error: any) {
+      if (error instanceof NotFoundError) return res.status(404).json({ error: error.message });
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Remove a highlight
+  app.delete("/api/trips/:tripId/highlights/:highlightId", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.tripId);
+      await assertTripAccess(user.id, tripId, "write");
+
+      await storage.deleteTripHighlight(parseInt(req.params.highlightId), user.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      if (error instanceof NotFoundError) return res.status(404).json({ error: error.message });
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Set trip rating
+  app.put("/api/trips/:tripId/rating", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.tripId);
+      await assertTripAccess(user.id, tripId, "write");
+
+      const { rating } = req.body;
+      if (!rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ error: "Rating must be between 1 and 5" });
+      }
+
+      await storage.setTripRating(tripId, rating);
+      res.json({ success: true });
+    } catch (error: any) {
+      if (error instanceof NotFoundError) return res.status(404).json({ error: error.message });
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // User travel stats
+  app.get("/api/users/:userId/travel-stats", requireAuth(), async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const stats = await storage.getUserTravelStats(userId);
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Anniversary memories for current user
+  app.get("/api/feed/memories", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const trips = await storage.getAnniversaryTrips(user.id);
+      res.json(trips);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get all booking options (or by trip item)
   app.get('/api/booking-options', async (req, res) => {
     try {

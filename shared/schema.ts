@@ -260,6 +260,7 @@ export const podTrips = pgTable("pod_trips", {
   createdByUserId: integer("created_by_user_id").notNull().references(() => users.id),
   activatedAt: timestamp("activated_at"),
   completedAt: timestamp("completed_at"),
+  overallRating: integer("overall_rating"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -743,3 +744,20 @@ export const tripPhotos = pgTable("trip_photos", {
 export const insertTripPhotoSchema = createInsertSchema(tripPhotos).omit({ id: true, takenAt: true, createdAt: true });
 export type TripPhoto = typeof tripPhotos.$inferSelect;
 export type InsertTripPhoto = z.infer<typeof insertTripPhotoSchema>;
+
+// Trip highlights: user-curated best moments from a trip
+export const tripHighlights = pgTable("trip_highlights", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => podTrips.id),
+  tripItemId: integer("trip_item_id").references(() => tripItems.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  highlightType: text("highlight_type").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_trip_highlights_trip_id").on(table.tripId),
+]);
+
+export const insertTripHighlightSchema = createInsertSchema(tripHighlights).omit({ id: true, createdAt: true });
+export type TripHighlight = typeof tripHighlights.$inferSelect;
+export type InsertTripHighlight = z.infer<typeof insertTripHighlightSchema>;

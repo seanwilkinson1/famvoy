@@ -116,6 +116,13 @@ export default function Home() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: memories = [] } = useQuery({
+    queryKey: ["feedMemories"],
+    queryFn: api.feedMemories.get,
+    enabled: !!currentUser,
+    staleTime: 60 * 60 * 1000,
+  });
+
   const formattedExperiences = experiences.map(exp => formatExperience(exp as any));
   const formattedFollowingExperiences = followingExperiences.map(exp => ({
     ...formatExperience(exp as any),
@@ -210,6 +217,33 @@ export default function Home() {
                 <div className="text-center py-12 text-muted-foreground">Loading experiences...</div>
               ) : (
                 <>
+                  {/* Anniversary Memory Cards */}
+                  {memories.length > 0 && activeFilter === "All" && (
+                    <section className="mb-6">
+                      {memories.map((trip: any) => {
+                        const yearsAgo = new Date().getFullYear() - new Date(trip.startDate + "T00:00:00").getFullYear();
+                        return (
+                          <Link key={trip.id} href={`/trip/${trip.id}/book`}>
+                            <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/20 p-5 cursor-pointer hover:shadow-md transition-shadow">
+                              <p className="text-xs font-medium text-primary uppercase tracking-wider mb-1">
+                                {yearsAgo} year{yearsAgo !== 1 ? "s" : ""} ago today
+                              </p>
+                              <p className="font-display font-bold text-charcoal text-lg">
+                                {trip.name}
+                              </p>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {trip.destination}
+                              </p>
+                              <p className="text-xs text-primary font-medium mt-2">
+                                Relive this trip →
+                              </p>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </section>
+                  )}
+
                   {/* Suggestions - only show when "All" filter is active */}
                   {activeFilter === "All" && (
                     <section>
