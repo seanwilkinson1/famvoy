@@ -84,7 +84,7 @@ export default function TripBook() {
   const totalDestinations = destinations.length;
 
   return (
-    <div className="min-h-screen bg-warm-cream">
+    <div className="min-h-screen bg-warm-cream md:max-w-5xl md:mx-auto md:px-8">
       {/* Header */}
       <div className="bg-gradient-to-br from-primary to-primary/80 text-white">
         <div className="max-w-2xl mx-auto px-4 pt-4 pb-8">
@@ -122,7 +122,7 @@ export default function TripBook() {
 
       {/* Stats Banner */}
       <div className="max-w-2xl mx-auto px-4 -mt-4">
-        <div className="bg-white rounded-xl shadow-sm border p-4 grid grid-cols-3 gap-4 text-center">
+        <div className="bg-white rounded-xl shadow-sm border p-4 grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
           <div>
             <p className="text-2xl font-bold text-charcoal">{dayCount}</p>
             <p className="text-xs text-muted-foreground">Days</p>
@@ -183,7 +183,7 @@ export default function TripBook() {
 
               {/* Day Photos */}
               {dayPhotos.length > 0 && (
-                <div className="grid grid-cols-3 gap-0.5">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-0.5">
                   {dayPhotos.slice(0, 6).map((photo: any) => (
                     <div key={photo.id} className="aspect-square overflow-hidden">
                       <img

@@ -66,7 +66,7 @@ export default function Dreams() {
   }
 
   return (
-    <div className="min-h-screen bg-warm-cream pb-24">
+    <div className="min-h-screen bg-warm-cream pb-24 md:max-w-6xl md:mx-auto md:px-8">
       {/* Header */}
       <div className="bg-white border-b px-4 pt-4 pb-4">
         <div className="max-w-2xl mx-auto">
@@ -95,7 +95,7 @@ export default function Dreams() {
 
         {/* Dream Grid */}
         {dreams.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {dreams.map((dream: any) => (
               <DreamCard
                 key={dream.id}

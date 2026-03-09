@@ -189,7 +189,7 @@ export default function AgentRequestDetails() {
   const allDone = pendingCount === 0;
 
   return (
-    <div className="flex-1 overflow-y-auto pb-24">
+    <div className="flex-1 overflow-y-auto pb-24 md:max-w-5xl md:mx-auto md:px-8">
       <div className="bg-gradient-to-b from-warm-teal/20 to-background px-4 py-6">
         <div className="flex items-center gap-3 mb-4">
           <Link href="/agent">
@@ -203,7 +203,7 @@ export default function AgentRequestDetails() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
           <Card>
             <CardContent className="p-3">
               <div className="flex items-center gap-2 text-sm">

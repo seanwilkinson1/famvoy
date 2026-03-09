@@ -854,7 +854,7 @@ export default function ConciergeBookingWizard() {
   };
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background overflow-x-hidden md:max-w-4xl md:mx-auto md:px-8">
       <div className="fixed top-0 left-0 right-0 border-b border-gray-100 bg-white px-6 pt-14 md:pt-6 pb-4 shadow-sm z-20">
         <div className="flex items-center gap-3 mb-4">
           <button 

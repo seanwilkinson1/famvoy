@@ -146,7 +146,7 @@ function ExperienceDetailsInner() {
   const formattedSimilar = similar.map(exp => formatExperience(exp as any));
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-8 relative z-50">
+    <div className="min-h-screen bg-background pb-24 md:pb-8 relative z-50 md:max-w-5xl md:mx-auto md:px-8">
       {/* Hero Image */}
       <div className="relative h-72 w-full md:max-w-5xl md:mx-auto md:mt-6 md:rounded-2xl md:overflow-hidden">
         <img

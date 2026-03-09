@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useRef, useMemo } from "react";
+import { useCallback, useState, useEffect, useRef, useMemo, memo } from "react";
 import { GoogleMap, Marker, InfoWindow, OverlayView } from "@react-google-maps/api";
 import { useLocation } from "wouter";
 import type { Experience, User } from "@shared/schema";
@@ -93,7 +93,7 @@ function clusterPeople(people: ExplorePerson[], clusterRadius: number): PersonCl
   return clusters;
 }
 
-export function ExploreMap({
+export const ExploreMap = memo(function ExploreMap({
   experiences,
   userLocation,
   onExperienceClick,
@@ -446,4 +446,4 @@ export function ExploreMap({
       </GoogleMap>
     </div>
   );
-}
+});

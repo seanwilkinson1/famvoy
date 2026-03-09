@@ -278,7 +278,7 @@ export default function PodDetails() {
   if (!match || !pod) return null;
 
   return (
-    <div className="flex h-screen flex-col bg-background pb-20 md:pb-0">
+    <div className="flex h-screen flex-col bg-background pb-20 md:pb-0 md:max-w-5xl md:mx-auto md:px-8">
       {/* Header */}
       <div className="border-b border-gray-100 bg-white px-6 pt-14 md:pt-6 pb-4 shadow-sm z-10 md:max-w-5xl md:mx-auto md:w-full md:rounded-b-none">
         <div className="mb-4 flex items-center justify-between">
@@ -525,7 +525,7 @@ export default function PodDetails() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {podAlbums.map((album: any) => (
                   <div 
                     key={album.id}
@@ -618,7 +618,7 @@ export default function PodDetails() {
                 <p className="text-sm">No photos yet</p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {albumPhotos.map((photo: any) => (
                   <div 
                     key={photo.id}

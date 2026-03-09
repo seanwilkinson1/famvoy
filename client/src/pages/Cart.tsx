@@ -87,7 +87,7 @@ export default function Cart() {
   ) || 0;
 
   return (
-    <div className="flex h-screen flex-col bg-background pb-16">
+    <div className="flex h-screen flex-col bg-background pb-16 md:max-w-4xl md:mx-auto md:px-8">
       <div className="flex items-center gap-3 p-4 border-b border-gray-100">
         <button
           onClick={() => setLocation("/")}

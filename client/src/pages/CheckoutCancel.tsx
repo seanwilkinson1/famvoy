@@ -5,7 +5,7 @@ export default function CheckoutCancel() {
   const [, setLocation] = useLocation();
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6 md:max-w-2xl md:mx-auto">
       <div className="text-center max-w-sm">
         <div className="mb-6 flex justify-center">
           <div className="rounded-full bg-red-100 p-6">

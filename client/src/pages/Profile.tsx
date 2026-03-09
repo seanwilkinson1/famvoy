@@ -534,7 +534,7 @@ function ProfileInner() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-32 md:pb-8">
+    <div className="min-h-screen bg-background pb-32 md:pb-8 md:max-w-5xl md:mx-auto md:px-8">
       {/* Map Header - 30% viewport height */}
       <div className="relative h-[30vh] min-h-[200px] md:max-w-6xl md:mx-auto md:mt-6 md:rounded-2xl md:overflow-hidden">
         {userLocation ? (

@@ -204,7 +204,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-14 pb-32">
+    <div className="min-h-screen bg-gray-50 pt-14 pb-32 md:max-w-3xl md:mx-auto md:px-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

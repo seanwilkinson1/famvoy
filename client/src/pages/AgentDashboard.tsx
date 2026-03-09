@@ -235,7 +235,7 @@ export default function AgentDashboard() {
   const activeRequests = assignedRequests.filter(r => r.status !== 'completed');
 
   return (
-    <div className="flex-1 overflow-y-auto pb-24">
+    <div className="flex-1 overflow-y-auto pb-24 md:max-w-6xl md:mx-auto md:px-8">
       <div className="bg-gradient-to-b from-warm-teal/20 to-background px-4 py-6">
         <div className="flex items-center gap-3 mb-4">
           <Link href="/">
@@ -249,7 +249,7 @@ export default function AgentDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
           <Card>
             <CardContent className="p-2 text-center">
               <Clock className="w-5 h-5 mx-auto mb-1 text-yellow-600" />

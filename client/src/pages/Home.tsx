@@ -160,7 +160,7 @@ export default function Home() {
   }, [formattedExperiences, activeFilter, userLocation]);
 
   return (
-    <div className="min-h-screen bg-background md:pb-8" style={{ paddingBottom: 'calc(var(--bottom-nav-height, 80px) + 2rem)' }}>
+    <div className="min-h-screen bg-background md:pb-8 md:max-w-6xl md:mx-auto md:px-8" style={{ paddingBottom: 'calc(var(--bottom-nav-height, 80px) + 2rem)' }}>
       {/* Header */}
       <div className="sticky top-0 z-40 bg-background/80 px-6 pt-14 md:pt-8 pb-4 backdrop-blur-md md:backdrop-blur-none md:max-w-6xl md:mx-auto">
         <p className="text-sm font-medium text-muted-foreground">Good morning,</p>

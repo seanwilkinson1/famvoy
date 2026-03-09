@@ -115,7 +115,7 @@ export default function FamilyProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-background pb-32 md:max-w-5xl md:mx-auto md:px-8">
       {/* Header */}
       <div className="relative">
         <div className="h-48 bg-gradient-to-br from-primary/20 to-secondary/20">
@@ -336,7 +336,7 @@ export default function FamilyProfile() {
 
       {/* Stats */}
       <div className="mt-8 mx-6 rounded-2xl bg-gray-50 p-6">
-        <div className="grid grid-cols-3 gap-4 text-center">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
           <div>
             <div className="text-2xl font-bold text-gray-900">{formattedExperiences.length}</div>
             <div className="text-sm text-gray-500">Experiences</div>

@@ -357,10 +357,10 @@ function ExploreInner() {
     );
   }, [filteredExperiences, visibleBounds, isInBounds]);
 
-  const formattedExperiences = experiencesInView.map(exp => ({
+  const formattedExperiences = useMemo(() => experiencesInView.map(exp => ({
     ...formatExperience(exp as any),
     distance: 'distance' in exp ? (exp as any).distance : undefined,
-  }));
+  })), [experiencesInView]);
   
   const activeFiltersCount = [
     categoryFilter !== "All",
@@ -388,7 +388,7 @@ function ExploreInner() {
   const nextFamily = discoverFamilies[currentFamilyIndex + 1];
 
   return (
-    <div className="fixed inset-0 top-0 bottom-0 w-full overflow-hidden bg-gray-100 z-30">
+    <div className="fixed inset-0 md:left-64 top-0 bottom-0 w-full md:w-auto overflow-hidden bg-gray-100 z-30">
       {/* Map View */}
       <div className="relative h-full">
         {/* Interactive Map */}

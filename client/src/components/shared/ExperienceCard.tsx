@@ -2,6 +2,7 @@ import { Heart, Clock, CurrencyDollar, Users, MapPin, Star, CheckCircle } from "
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Link } from "wouter";
+// Note: useState still needed for isSaved state
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { ExperienceWithFamily } from "@/lib/types";
@@ -15,7 +16,6 @@ interface ExperienceCardProps {
 
 export function ExperienceCard({ experience, className, horizontal = false, index = 0 }: ExperienceCardProps) {
   const [isSaved, setIsSaved] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: currentUser } = useQuery({
@@ -46,11 +46,8 @@ export function ExperienceCard({ experience, className, horizontal = false, inde
   return (
     <Link href={`/experience/${experience.id}`}>
       <div
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
         className={cn(
-          "group relative overflow-hidden rounded-2xl bg-card cursor-pointer transition-all duration-300",
-          isHovered ? "shadow-lg -translate-y-1" : "shadow-md",
+          "group relative overflow-hidden rounded-2xl bg-card cursor-pointer transition-[transform,box-shadow] duration-300 shadow-md hover:shadow-lg hover:-translate-y-1",
           horizontal ? "w-[280px] flex-shrink-0" : "w-full",
           className
         )}
@@ -66,10 +63,7 @@ export function ExperienceCard({ experience, className, horizontal = false, inde
           <img
             src={imageUrl}
             alt={experience.title}
-            className={cn(
-              "h-full w-full object-cover transition-transform duration-500",
-              isHovered && "scale-105"
-            )}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
@@ -78,11 +72,8 @@ export function ExperienceCard({ experience, className, horizontal = false, inde
           />
           
           {/* Gradient Overlay on hover */}
-          <div 
-            className={cn(
-              "absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent transition-opacity duration-300",
-              isHovered ? "opacity-100" : "opacity-0"
-            )}
+          <div
+            className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent transition-opacity duration-300 opacity-0 group-hover:opacity-100"
           />
           
           {/* Category Badge */}

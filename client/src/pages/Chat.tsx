@@ -57,7 +57,7 @@ export default function Chat() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 md:pb-8">
+    <div className="min-h-screen bg-gray-50 pb-20 md:pb-8 md:max-w-5xl md:mx-auto md:px-8">
       {/* Header */}
       <div className="bg-white px-4 pt-14 md:pt-8 pb-4 border-b border-gray-100 md:border-b-0 sticky top-0 z-10 md:max-w-4xl md:mx-auto">
         <div className="flex items-center justify-between mb-4">

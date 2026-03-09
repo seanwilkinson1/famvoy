@@ -496,7 +496,7 @@ export default function TripDetails() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-background md:pb-0">
+    <div className="flex h-screen flex-col bg-background md:pb-0 md:max-w-6xl md:mx-auto md:px-8">
       <div className="border-b border-gray-100 bg-white px-6 pt-14 md:pt-6 pb-4 shadow-sm z-10 md:max-w-5xl md:mx-auto md:w-full">
         <div className="flex items-center justify-between mb-3">
           <button 
@@ -1128,7 +1128,7 @@ export default function TripDetails() {
               </div>
               <div>
                 <label className="text-sm font-bold text-gray-700 mb-2 block">Type</label>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                   {Object.entries(ITEM_TYPE_CONFIG).map(([type, config]) => {
                     const Icon = config.icon;
                     const isSelected = itemForm.itemType === type;
@@ -1294,7 +1294,7 @@ export default function TripDetails() {
                 <label className="text-sm font-bold text-gray-700 mb-2 block">
                   Trip Pace
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {PACE_OPTIONS.map(option => (
                     <button
                       key={option.value}

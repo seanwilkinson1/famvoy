@@ -83,7 +83,7 @@ function OnboardingInner() {
   };
 
   return (
-    <div className="min-h-screen bg-soft-beige">
+    <div className="min-h-screen bg-soft-beige md:max-w-2xl md:mx-auto md:px-8">
       <div className="max-w-md mx-auto px-6 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

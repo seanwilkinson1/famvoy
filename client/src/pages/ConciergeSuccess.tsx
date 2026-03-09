@@ -60,7 +60,7 @@ export default function ConciergeSuccess() {
   }
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+    <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 md:max-w-2xl md:mx-auto">
       <div className="text-center mb-8">
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <PartyPopper className="w-10 h-10 text-green-600" />

@@ -149,7 +149,7 @@ function CreateInner() {
   };
 
   return (
-    <div className="min-h-screen bg-background pt-14 pb-32 px-6">
+    <div className="min-h-screen bg-background pt-14 pb-32 px-6 md:max-w-3xl md:mx-auto md:px-8">
       {/* Header */}
       <div className="mb-8 flex items-center gap-4">
         <button 

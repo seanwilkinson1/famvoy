@@ -34,7 +34,7 @@ export default function CheckoutSuccess() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6 md:max-w-2xl md:mx-auto">
       {isLoading ? (
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       ) : (

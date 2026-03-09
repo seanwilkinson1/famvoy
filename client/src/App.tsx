@@ -113,7 +113,7 @@ function AuthenticatedRouter() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-      <div className="flex-1 flex flex-col mx-auto w-full max-w-md md:max-w-none bg-background shadow-2xl md:shadow-none overflow-hidden relative">
+      <div className="flex-1 flex flex-col w-full bg-background shadow-2xl md:shadow-none overflow-hidden relative">
         {showHeader && <TopHeader />}
         <PWAInstallBanner />
         <Suspense fallback={<PageLoader />}>

@@ -60,7 +60,7 @@ export default function ConversationDetail() {
     : otherMembers[0]?.user?.avatar;
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50 overflow-hidden">
+    <div className="flex flex-1 flex-col bg-gray-50 overflow-hidden md:max-w-4xl md:mx-auto md:px-8">
       {/* Header */}
       <div className="border-b border-gray-100 bg-white px-4 py-4 shadow-sm z-10 flex-shrink-0">
         <div className="flex items-center gap-3">

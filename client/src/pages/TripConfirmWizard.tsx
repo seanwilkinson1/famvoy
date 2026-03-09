@@ -239,7 +239,7 @@ export default function TripConfirmWizard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary/5 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-primary/5 to-white md:max-w-4xl md:mx-auto md:px-8">
       <div className="sticky top-0 bg-white/80 backdrop-blur-sm border-b z-10">
         <div className="max-w-lg mx-auto px-4 py-3">
           <div className="flex items-center justify-between mb-2">
