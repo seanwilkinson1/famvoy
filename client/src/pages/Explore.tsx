@@ -390,9 +390,9 @@ function ExploreInner() {
   return (
     <div className="fixed inset-0 md:left-64 top-0 bottom-0 w-full md:w-auto overflow-hidden bg-gray-100 z-30">
       {/* Map View */}
-      <div className="relative h-full">
+      <div className="relative h-full md:flex">
         {/* Interactive Map */}
-        <div className="absolute inset-0 h-full w-full">
+        <div className="absolute inset-0 h-full w-full md:relative md:flex-1">
           <ExploreMap
             experiences={filteredExperiences}
             userLocation={userLocation}
@@ -576,7 +576,7 @@ function ExploreInner() {
           }}
           animate={{ y: 0, height: isExpanded ? "70%" : "140px" }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="absolute bottom-0 left-0 right-0 z-30 rounded-t-[32px] bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.12)] overflow-hidden"
+          className="absolute bottom-0 left-0 right-0 z-30 rounded-t-[32px] bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.12)] overflow-hidden md:hidden"
         >
           <div className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing" onClick={() => setIsExpanded(!isExpanded)}>
             <div className="h-1.5 w-12 rounded-full bg-gray-200" />
@@ -642,6 +642,34 @@ function ExploreInner() {
             </div>
           </div>
         </motion.div>
+
+        {/* Desktop Side Panel */}
+        <div className="hidden md:flex md:flex-col md:w-[400px] bg-white border-l border-gray-200 h-full overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h3 className="font-heading text-lg font-bold text-gray-900">
+              {searchQuery ? `Results for "${searchQuery}"` : `${formattedExperiences.length} experiences in view`}
+            </h3>
+          </div>
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+            {loadingExperiences ? (
+              <div className="text-center py-4 text-gray-400">Loading...</div>
+            ) : formattedExperiences.length === 0 ? (
+              <div className="text-center py-4">
+                <div className="text-gray-400 mb-2">No experiences match your filters</div>
+                <button
+                  onClick={clearAllFilters}
+                  className="text-sm text-primary font-medium"
+                >
+                  Reset filters
+                </button>
+              </div>
+            ) : (
+              formattedExperiences.map((exp) => (
+                <ExperienceCard key={exp.id} experience={exp} className="shadow-none border border-gray-100" />
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Categories Filter Modal */}
