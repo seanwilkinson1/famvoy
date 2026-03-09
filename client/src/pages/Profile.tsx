@@ -2,8 +2,6 @@ import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { PodCard } from "@/components/shared/PodCard";
 import { ImageUpload } from "@/components/shared/ImageUpload";
 import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
-import { StaticMap } from "@/components/shared/StaticMap";
-import { GoogleMapsProvider } from "@/components/shared/GoogleMapsProvider";
 import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Trophy, CheckCircle, Star, Heart, Globe, Quote, Plane, Users, Share2, UserPlus, ChevronLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -535,147 +533,127 @@ function ProfileInner() {
 
   return (
     <div className="min-h-screen bg-background pb-32 md:pb-8 md:max-w-5xl md:mx-auto md:px-8">
-      {/* Map Header - 30% viewport height */}
-      <div className="relative h-[30vh] min-h-[200px] md:max-w-6xl md:mx-auto md:mt-6 md:rounded-2xl md:overflow-hidden">
-        {userLocation ? (
-          <StaticMap
-            center={userLocation}
-            className="h-full w-full"
-            zoom={10}
-          />
-        ) : (
-          <div className="h-full w-full bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 flex items-center justify-center">
-            <div className="text-center">
-              <MapPin className="h-8 w-8 text-gray-500 mx-auto mb-2" />
-              <span className="text-gray-400 text-sm">Pin your location in Settings</span>
-            </div>
-          </div>
-        )}
-        
-        {/* Top controls overlay */}
-        <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10 pt-10">
-          <button
-            onClick={() => setIsEditing(true)}
-            className="rounded-full bg-white/90 backdrop-blur-sm p-2 shadow-lg"
-            data-testid="button-edit-profile"
-          >
-            <Edit2 className="h-5 w-5 text-gray-700" />
-          </button>
-          <button
-            onClick={() => setLocation("/settings")}
-            className="rounded-full bg-white/90 backdrop-blur-sm p-2 shadow-lg"
-            data-testid="button-settings"
-          >
-            <SettingsIcon className="h-5 w-5 text-gray-700" />
-          </button>
-        </div>
-
-        {/* Pinned location chip */}
-        {userLocation && currentUser?.location && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
-            <div className="flex items-center gap-2 px-4 py-2 bg-gray-800/90 backdrop-blur-sm rounded-full text-white text-sm font-medium">
-              <MapPin className="h-4 w-4 text-primary" />
-              {currentUser.location}
-            </div>
-          </div>
-        )}
+      {/* Top bar with Edit/Settings */}
+      <div className="flex justify-between items-center px-6 pt-16 md:pt-8 pb-2">
+        <button
+          onClick={() => setIsEditing(true)}
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          data-testid="button-edit-profile"
+        >
+          <Edit2 className="h-4 w-4" />
+          Edit
+        </button>
+        <button
+          onClick={() => setLocation("/settings")}
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          data-testid="button-settings"
+        >
+          <SettingsIcon className="h-4 w-4" />
+          Settings
+        </button>
       </div>
 
-      {/* Dark Profile Info Section */}
-      <div className="bg-gray-900 px-6 py-6">
-        <div className="flex items-start justify-between">
-          {/* Left side - Name and info */}
-          <div className="flex-1">
-            <h1 className="font-heading text-2xl font-bold text-white" data-testid="text-username">
+      {/* Light Profile Hero */}
+      <div className="px-6 py-6">
+        <div className="flex items-start gap-5">
+          {/* Avatar */}
+          <img
+            src={currentUser?.avatar || currentUser?.profileImageUrl || "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400"}
+            alt="Profile"
+            className="h-24 w-24 rounded-full object-cover ring-4 ring-white shadow-lg shrink-0"
+            data-testid="img-avatar"
+          />
+
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <h1 className="font-heading text-2xl font-bold text-gray-900" data-testid="text-username">
               {currentUser?.name || "Loading..."}
             </h1>
-            <p className="text-gray-400 text-sm mt-0.5">
+            <p className="text-gray-500 text-sm">
               @{(currentUser?.name || "family").toLowerCase().replace(/\s+/g, '')}
             </p>
-            
+
             {/* Followers/Following */}
-            <div className="flex items-center gap-4 mt-3">
-              <button 
+            <div className="flex items-center gap-4 mt-2">
+              <button
                 className="text-sm"
                 onClick={() => {}}
                 data-testid="button-following"
               >
-                <span className="text-white font-bold">{followingCount}</span>
-                <span className="text-gray-400 ml-1">following</span>
+                <span className="text-gray-900 font-bold">{followingCount}</span>
+                <span className="text-gray-500 ml-1">following</span>
               </button>
-              <button 
+              <button
                 className="text-sm"
                 onClick={() => {}}
                 data-testid="button-followers"
               >
-                <span className="text-white font-bold">{followersCount}</span>
-                <span className="text-gray-400 ml-1">followers</span>
+                <span className="text-gray-900 font-bold">{followersCount}</span>
+                <span className="text-gray-500 ml-1">followers</span>
               </button>
             </div>
-          </div>
 
-          {/* Right side - Avatar with flag */}
-          <div className="relative">
-            <img
-              src={currentUser?.avatar || currentUser?.profileImageUrl || "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400"}
-              alt="Profile"
-              className="h-20 w-20 rounded-full object-cover ring-4 ring-gray-700"
-              data-testid="img-avatar"
-            />
+            {/* Location chip */}
             {currentUser?.location && (
-              <div className="absolute -bottom-1 -right-1 text-xl">
-                🇺🇸
+              <div className="flex items-center gap-1.5 mt-2 text-sm text-gray-500">
+                <MapPin className="h-3.5 w-3.5 text-primary" />
+                <span>{currentUser.location}</span>
               </div>
+            )}
+
+            {/* Bio */}
+            {currentUser?.bio && (
+              <p className="text-gray-600 text-sm mt-2 max-w-md">{currentUser.bio}</p>
             )}
           </div>
         </div>
 
         {/* Travel Stats Card */}
-        <div className="mt-6 bg-gray-800 rounded-xl p-4">
+        <div className="mt-6 bg-white border border-gray-100 shadow-sm rounded-2xl p-4">
           {!travelStats || travelStats.totalTrips === 0 ? (
             <div className="flex items-center justify-around">
               <div className="text-center">
-                <p className="text-2xl font-bold text-white">{userTrips.length}</p>
-                <p className="text-gray-400 text-xs">Trips</p>
+                <p className="text-2xl font-bold text-gray-900">{userTrips.length}</p>
+                <p className="text-gray-500 text-xs">Trips</p>
               </div>
-              <div className="w-px h-8 bg-gray-700" />
+              <div className="w-px h-8 bg-gray-200" />
               <div className="text-center">
-                <p className="text-2xl font-bold text-white">{userCheckins.length}</p>
-                <p className="text-gray-400 text-xs">Experiences</p>
+                <p className="text-2xl font-bold text-gray-900">{userCheckins.length}</p>
+                <p className="text-gray-500 text-xs">Experiences</p>
               </div>
-              <div className="w-px h-8 bg-gray-700" />
+              <div className="w-px h-8 bg-gray-200" />
               <div className="text-center">
-                <p className="text-2xl font-bold text-white">{userBadges.length}</p>
-                <p className="text-gray-400 text-xs">Badges</p>
+                <p className="text-2xl font-bold text-gray-900">{userBadges.length}</p>
+                <p className="text-gray-500 text-xs">Badges</p>
               </div>
             </div>
           ) : (
             <div>
               <div className="flex items-center justify-around">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-white">{travelStats.totalTrips}</p>
-                  <p className="text-gray-400 text-xs">Trips</p>
+                  <p className="text-2xl font-bold text-gray-900">{travelStats.totalTrips}</p>
+                  <p className="text-gray-500 text-xs">Trips</p>
                 </div>
-                <div className="w-px h-8 bg-gray-700" />
+                <div className="w-px h-8 bg-gray-200" />
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-white">{travelStats.totalDays}</p>
-                  <p className="text-gray-400 text-xs">Days</p>
+                  <p className="text-2xl font-bold text-gray-900">{travelStats.totalDays}</p>
+                  <p className="text-gray-500 text-xs">Days</p>
                 </div>
-                <div className="w-px h-8 bg-gray-700" />
+                <div className="w-px h-8 bg-gray-200" />
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-white">{travelStats.destinationsVisited}</p>
-                  <p className="text-gray-400 text-xs">Destinations</p>
+                  <p className="text-2xl font-bold text-gray-900">{travelStats.destinationsVisited}</p>
+                  <p className="text-gray-500 text-xs">Destinations</p>
                 </div>
-                <div className="w-px h-8 bg-gray-700" />
+                <div className="w-px h-8 bg-gray-200" />
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-white">{travelStats.photosCapured}</p>
-                  <p className="text-gray-400 text-xs">Photos</p>
+                  <p className="text-2xl font-bold text-gray-900">{travelStats.photosCapured}</p>
+                  <p className="text-gray-500 text-xs">Photos</p>
                 </div>
               </div>
               {travelStats.favoriteTrip && travelStats.favoriteTrip.rating && (
-                <div className="mt-3 pt-3 border-t border-gray-700 text-center">
-                  <p className="text-gray-400 text-xs">Favorite Trip</p>
-                  <p className="text-white text-sm font-medium">{travelStats.favoriteTrip.name}</p>
+                <div className="mt-3 pt-3 border-t border-gray-200 text-center">
+                  <p className="text-gray-500 text-xs">Favorite Trip</p>
+                  <p className="text-gray-900 text-sm font-medium">{travelStats.favoriteTrip.name}</p>
                 </div>
               )}
             </div>
@@ -686,25 +664,25 @@ function ProfileInner() {
         <div className="mt-4 flex gap-3">
           <button
             onClick={handleShareProfile}
-            className="flex-1 flex items-center justify-center gap-2 py-3 border-2 border-gray-600 rounded-xl text-white font-bold text-sm hover:bg-gray-800 transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-xl text-gray-700 font-medium text-sm hover:bg-gray-50 transition-colors"
             data-testid="button-share-profile"
           >
             <Share2 className="h-4 w-4" />
-            Share profile
+            Share
           </button>
           <button
             onClick={() => {}}
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-primary rounded-xl text-white font-bold text-sm hover:bg-primary/90 transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-xl text-gray-700 font-medium text-sm hover:bg-gray-50 transition-colors"
             data-testid="button-invite-friends"
           >
             <UserPlus className="h-4 w-4" />
-            Invite friends
+            Invite
           </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white sticky top-14 z-20 border-b border-gray-200">
+      <div className="mt-6 bg-white sticky top-14 z-20 border-b border-gray-200">
         <div className="flex">
           {[
             { id: "experiences", label: "Experiences" },
@@ -732,7 +710,7 @@ function ProfileInner() {
       {/* Tab Content */}
       <div className="px-6 py-6 animate-in fade-in duration-300">
         {activeTab === "experiences" && (
-          <div className="space-y-4">
+          <div>
             {formattedUserExperiences.length === 0 ? (
               <div className="py-12 text-center">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -742,9 +720,11 @@ function ProfileInner() {
                 <p className="text-gray-400 text-sm mt-1">Share your first family adventure!</p>
               </div>
             ) : (
-              [...formattedUserExperiences].reverse().map((exp) => (
-                <ExperienceCard key={exp.id} experience={exp} />
-              ))
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...formattedUserExperiences].reverse().map((exp) => (
+                  <ExperienceCard key={exp.id} experience={exp} />
+                ))}
+              </div>
             )}
           </div>
         )}
@@ -845,7 +825,7 @@ function ProfileInner() {
                   {currentUser.interests.map((interest) => (
                     <span
                       key={interest}
-                      className="px-3 py-1.5 bg-gray-800 text-white text-sm rounded-full font-medium"
+                      className="px-3 py-1.5 bg-primary/10 text-primary text-sm rounded-full font-medium"
                     >
                       {interest}
                     </span>
@@ -969,7 +949,7 @@ function ProfileInner() {
         )}
 
         {activeTab === "saved" && (
-          <div className="space-y-4">
+          <div>
             {formattedSavedExperiences.length === 0 ? (
               <div className="py-12 text-center">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -979,9 +959,11 @@ function ProfileInner() {
                 <p className="text-gray-400 text-sm mt-1">Save experiences you want to try!</p>
               </div>
             ) : (
-              [...formattedSavedExperiences].reverse().map((exp) => (
-                <ExperienceCard key={exp.id} experience={exp} />
-              ))
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...formattedSavedExperiences].reverse().map((exp) => (
+                  <ExperienceCard key={exp.id} experience={exp} />
+                ))}
+              </div>
             )}
           </div>
         )}
@@ -997,7 +979,7 @@ function ProfileInner() {
                 <p className="text-gray-400 text-sm mt-1">Join a pod and start planning your first trip!</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {userTrips.map((trip: any) => (
                   <div 
                     key={trip.id}
@@ -1183,9 +1165,5 @@ function AddMemberModal({
 }
 
 export default function Profile() {
-  return (
-    <GoogleMapsProvider>
-      <ProfileInner />
-    </GoogleMapsProvider>
-  );
+  return <ProfileInner />;
 }
