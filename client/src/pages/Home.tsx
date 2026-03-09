@@ -8,6 +8,8 @@ import { formatExperience } from "@/lib/types";
 import { useState, useEffect, useMemo } from "react";
 import { MapPin, UsersThree, CaretRight, Sparkle, Fire, Heart } from "@phosphor-icons/react";
 import { Link } from "wouter";
+import { TravelingNowSection } from "@/components/feed/TravelingNowSection";
+import { RecentAdventuresSection } from "@/components/feed/RecentAdventuresSection";
 
 const filters = ["All", "Nearby", "Free", "1–2 hrs", "Indoor", "Outdoor", "Toddler-friendly"];
 
@@ -217,6 +219,12 @@ export default function Home() {
                 <div className="text-center py-12 text-muted-foreground">Loading experiences...</div>
               ) : (
                 <>
+                  {/* Traveling Now */}
+                  {activeFilter === "All" && <TravelingNowSection />}
+
+                  {/* Recent Adventures */}
+                  {activeFilter === "All" && <RecentAdventuresSection />}
+
                   {/* Anniversary Memory Cards */}
                   {memories.length > 0 && activeFilter === "All" && (
                     <section className="mb-6">

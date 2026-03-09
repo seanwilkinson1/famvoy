@@ -9,6 +9,8 @@ import { format } from "date-fns";
 import { BookingModal } from "@/components/shared/BookingModal";
 import { TodayCard } from "@/components/trip/TodayCard";
 import { TripPhotoGallery } from "@/components/trip/TripPhotoGallery";
+import { TripReactions } from "@/components/trip/TripReactions";
+import { TripComments } from "@/components/trip/TripComments";
 import { apiRequest } from "@/lib/queryClient";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -165,6 +167,11 @@ export default function TripDetails() {
   );
   
   const tripId = params?.id ? parseInt(params.id) : 0;
+
+  const { data: currentUser } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: api.users.getMe,
+  });
 
   const { data: trip, isLoading } = useQuery<Trip>({
     queryKey: ["trip", tripId],
@@ -576,6 +583,12 @@ export default function TripDetails() {
               <BookOpen className="h-4 w-4" />
               <span className="text-sm font-medium">Trip Book</span>
             </button>
+          </div>
+        )}
+        {trip.lifecyclePhase === "completed" && currentUser && (
+          <div className="mt-4 space-y-4 px-1">
+            <TripReactions tripId={tripId} currentUserId={currentUser.id} />
+            <TripComments tripId={tripId} currentUserId={currentUser.id} />
           </div>
         )}
       </div>

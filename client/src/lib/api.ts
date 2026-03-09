@@ -1117,4 +1117,128 @@ export const api = {
       return res.json();
     },
   },
+
+  dreams: {
+    list: async (): Promise<any[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/dreams`);
+      if (!res.ok) throw new Error("Failed to fetch dreams");
+      return res.json();
+    },
+
+    create: async (data: { destinationName: string; destinationPlaceId?: string; coverImageUrl?: string; notes?: string; tags?: string[]; sourceTripId?: number }): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/dreams`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create dream");
+      return res.json();
+    },
+
+    update: async (id: number, data: Partial<{ destinationName: string; notes: string; tags: string[]; coverImageUrl: string }>): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/dreams/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update dream");
+      return res.json();
+    },
+
+    remove: async (id: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/dreams/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete dream");
+    },
+
+    suggest: async (params: { when?: string; budget?: string; tripStyle?: string }): Promise<any[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/dreams/suggest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(params),
+      });
+      if (!res.ok) throw new Error("Failed to get suggestions");
+      return res.json();
+    },
+  },
+
+  copyTrip: {
+    copy: async (tripId: number): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/copy`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to copy trip");
+      return res.json();
+    },
+  },
+
+  feedTravelingNow: {
+    get: async (): Promise<any[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/feed/traveling-now`);
+      if (!res.ok) throw new Error("Failed to fetch traveling now");
+      return res.json();
+    },
+  },
+
+  feedRecentAdventures: {
+    get: async (): Promise<any[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/feed/recent-adventures`);
+      if (!res.ok) throw new Error("Failed to fetch recent adventures");
+      return res.json();
+    },
+  },
+
+  tripFollow: {
+    follow: async (tripId: number): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/follow`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to follow trip");
+      return res.json();
+    },
+
+    unfollow: async (tripId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/follow`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to unfollow trip");
+    },
+  },
+
+  tripReactions: {
+    add: async (tripId: number, reactionType: string): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/reactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reactionType }),
+      });
+      if (!res.ok) throw new Error("Failed to add reaction");
+      return res.json();
+    },
+
+    remove: async (tripId: number, reactionType: string): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/reactions/${reactionType}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to remove reaction");
+    },
+  },
+
+  tripCommentsApi: {
+    list: async (tripId: number): Promise<any[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/comments`);
+      if (!res.ok) throw new Error("Failed to fetch comments");
+      return res.json();
+    },
+
+    create: async (tripId: number, content: string): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) throw new Error("Failed to add comment");
+      return res.json();
+    },
+
+    remove: async (tripId: number, commentId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/comments/${commentId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete comment");
+    },
+  },
 };

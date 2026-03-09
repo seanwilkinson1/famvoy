@@ -5,7 +5,7 @@ import express from "express";
 import { clerkMiddleware, getAuth, requireAuth, clerkClient } from "@clerk/express";
 import { storage } from "./storage";
 import { db } from "./db";
-import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema, insertFamilyMemberSchema, insertBookingOptionSchema, insertCartItemSchema, insertPodPostSchema, insertChatMessageSchema, conciergeBookingSessions, conciergeChatMessages, conciergeAiSuggestions, conciergeRequests, conciergeRequestItems, tripItems, users, experiences, pods, podTrips, orders, podMembers, messages, orderItems, tripItemBookingMeta, savedExperiences, comments, podExperiences } from "@shared/schema";
+import { insertExperienceSchema, insertPodSchema, insertMessageSchema, insertSavedExperienceSchema, insertFamilySwipeSchema, insertCommentSchema, insertPodAlbumSchema, insertAlbumPhotoSchema, insertFamilyMemberSchema, insertBookingOptionSchema, insertCartItemSchema, insertPodPostSchema, insertChatMessageSchema, insertDreamBoardItemSchema, insertTripCommentSchema, conciergeBookingSessions, conciergeChatMessages, conciergeAiSuggestions, conciergeRequests, conciergeRequestItems, tripItems, users, experiences, pods, podTrips, orders, podMembers, messages, orderItems, tripItemBookingMeta, savedExperiences, comments, podExperiences, familyMembers } from "@shared/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { z } from "zod";
 import { fromError } from "zod-validation-error";
@@ -3350,6 +3350,265 @@ Return ONLY valid JSON.`;
 
       const trips = await storage.getAnniversaryTrips(user.id);
       res.json(trips);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ========== Dream Board ==========
+
+  app.get("/api/dreams", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const items = await storage.getDreamBoardItems(user.id);
+      res.json(items);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/dreams", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const data = insertDreamBoardItemSchema.parse({ ...req.body, userId: user.id });
+      const item = await storage.createDreamBoardItem(data);
+      res.status(201).json(item);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/dreams/:id", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const id = parseInt(req.params.id);
+      const item = await storage.updateDreamBoardItem(id, req.body);
+      res.json(item);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/dreams/:id", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const id = parseInt(req.params.id);
+      await storage.deleteDreamBoardItem(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // AI destination suggestions
+  app.post("/api/dreams/suggest", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const { when, budget, tripStyle } = req.body;
+
+      // Get family info for personalization
+      const family = await db.select().from(familyMembers).where(eq(familyMembers.userId, user.id));
+      const kidAges = family.filter(m => !m.isAdult).map(m => m.ageGroup).filter(Boolean);
+
+      // Get past destinations to avoid repeats
+      const pastTrips = await db.select().from(podTrips).where(eq(podTrips.createdByUserId, user.id));
+      const pastDestinations = pastTrips.map(t => t.destination);
+
+      const openai = new OpenAI({
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+
+      const prompt = `You are a family travel advisor. Suggest 4 destinations for a family trip.
+
+Family details:
+- Children ages: ${kidAges.length > 0 ? kidAges.join(", ") : "not specified"}
+- Interests: ${user.interests?.join(", ") || "general travel"}
+- Past destinations (avoid repeats): ${pastDestinations.join(", ") || "none"}
+${when ? `- Preferred timing: ${when}` : ""}
+${budget ? `- Budget range: ${budget}` : ""}
+${tripStyle ? `- Trip style preference: ${tripStyle}` : ""}
+
+Return a JSON array of objects with these fields:
+- destinationName: string (city/region, country)
+- why: string (1-2 sentences why great for this family)
+- bestTime: string (best months to visit)
+- estimatedBudget: string (rough per-person estimate)
+- sampleActivities: string[] (3-4 family activities)
+- tags: string[] (2-3 tags like "beach", "kid-friendly", "adventure")
+
+Return ONLY valid JSON, no markdown.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.8,
+      });
+
+      const content = response.choices[0]?.message?.content || "[]";
+      const suggestions = JSON.parse(content.replace(/```json\n?|\n?```/g, ""));
+      res.json(suggestions);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ========== Copy Trip ==========
+
+  app.post("/api/trips/:id/copy", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      const newTrip = await storage.copyTrip(tripId, user.id);
+      res.status(201).json(newTrip);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ========== Feed: Traveling Now & Recent Adventures ==========
+
+  app.get("/api/feed/traveling-now", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const trips = await storage.getTravelingNow(user.id);
+      res.json(trips);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/feed/recent-adventures", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const trips = await storage.getRecentAdventures(user.id);
+      res.json(trips);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ========== Trip Follow / Unfollow ==========
+
+  app.post("/api/trips/:tripId/follow", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.tripId);
+      const follower = await storage.followTrip({ tripId, userId: user.id });
+      res.status(201).json(follower);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/trips/:tripId/follow", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.tripId);
+      await storage.unfollowTrip(tripId, user.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ========== Trip Reactions ==========
+
+  app.post("/api/trips/:tripId/reactions", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.tripId);
+      const { reactionType } = req.body;
+      const reaction = await storage.addTripReaction({ tripId, userId: user.id, reactionType });
+      res.status(201).json(reaction);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/trips/:tripId/reactions/:type", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.tripId);
+      await storage.removeTripReaction(tripId, user.id, req.params.type);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ========== Trip Comments ==========
+
+  app.get("/api/trips/:tripId/comments", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.tripId);
+      const comments = await storage.getTripComments(tripId);
+      res.json(comments);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/trips/:tripId/comments", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.tripId);
+      const data = insertTripCommentSchema.parse({ tripId, userId: user.id, content: req.body.content });
+      const comment = await storage.createTripComment(data);
+      res.status(201).json(comment);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/trips/:tripId/comments/:commentId", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const commentId = parseInt(req.params.commentId);
+      await storage.deleteTripComment(commentId);
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

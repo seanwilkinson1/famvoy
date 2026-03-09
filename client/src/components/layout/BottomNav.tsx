@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useEffect, useRef } from "react";
-import { HomeIcon, ExploreIcon, TripsIcon, PodsIcon, ChatIcon } from "@/components/icons/NavIcons";
+import { HomeIcon, ExploreIcon, TripsIcon, DreamsIcon, PodsIcon, ChatIcon } from "@/components/icons/NavIcons";
 
 export function BottomNav() {
   const [location] = useLocation();
@@ -24,7 +24,7 @@ export function BottomNav() {
     { href: "/", Icon: HomeIcon, label: "Home" },
     { href: "/explore", Icon: ExploreIcon, label: "Explore" },
     { href: "/trips", Icon: TripsIcon, label: "Trips" },
-    { href: "/pods", Icon: PodsIcon, label: "Pods" },
+    { href: "/dreams", Icon: DreamsIcon, label: "Dreams" },
     { href: "/chat", Icon: ChatIcon, label: "Chat" },
   ];
 

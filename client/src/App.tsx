@@ -39,6 +39,7 @@ const AgentRequestDetails = lazy(() => import("@/pages/AgentRequestDetails"));
 const ConciergeSuccess = lazy(() => import("@/pages/ConciergeSuccess"));
 const ConciergeBookingWizard = lazy(() => import("@/pages/ConciergeBookingWizard"));
 const TripBook = lazy(() => import("@/pages/TripBook"));
+const Dreams = lazy(() => import("@/pages/Dreams"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
 const AdminTrips = lazy(() => import("@/pages/admin/AdminTrips"));
@@ -126,6 +127,7 @@ function AuthenticatedRouter() {
                 <Route path="/" component={Home} />
                 <Route path="/pods" component={Pods} />
                 <Route path="/trips" component={Trips} />
+                <Route path="/dreams" component={Dreams} />
                 <Route path="/chat" component={Chat} />
                 <Route path="/create" component={Create} />
                 <Route path="/profile" component={Profile} />

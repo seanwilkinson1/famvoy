@@ -164,23 +164,23 @@ export function ChatIcon({ className, filled }: IconProps) {
     <svg viewBox="0 0 24 24" className={cn("w-6 h-6", className)} fill="none" strokeLinecap="round" strokeLinejoin="round">
       {filled ? (
         <>
-          <path 
-            d="M21 12C21 16.4183 16.9706 20 12 20C10.4607 20 9.01172 19.6565 7.74467 19.0511L3 20L4.39499 16.2561C3.51156 14.9828 3 13.5423 3 12C3 7.58172 7.02944 4 12 4C16.9706 4 21 7.58172 21 12Z" 
+          <path
+            d="M21 12C21 16.4183 16.9706 20 12 20C10.4607 20 9.01172 19.6565 7.74467 19.0511L3 20L4.39499 16.2561C3.51156 14.9828 3 13.5423 3 12C3 7.58172 7.02944 4 12 4C16.9706 4 21 7.58172 21 12Z"
             fill="currentColor"
           />
           <path d="M8 11H8.01" stroke="hsl(var(--background))" strokeWidth="2.5" />
           <path d="M12 11H12.01" stroke="hsl(var(--background))" strokeWidth="2.5" />
           <path d="M16 11H16.01" stroke="hsl(var(--background))" strokeWidth="2.5" />
-          <path 
-            d="M8.5 14C8.5 14 9.5 15.5 12 15.5C14.5 15.5 15.5 14 15.5 14" 
-            stroke="hsl(var(--background))" 
+          <path
+            d="M8.5 14C8.5 14 9.5 15.5 12 15.5C14.5 15.5 15.5 14 15.5 14"
+            stroke="hsl(var(--background))"
             strokeWidth="1.5"
           />
         </>
       ) : (
         <>
-          <path 
-            d="M21 12C21 16.4183 16.9706 20 12 20C10.4607 20 9.01172 19.6565 7.74467 19.0511L3 20L4.39499 16.2561C3.51156 14.9828 3 13.5423 3 12C3 7.58172 7.02944 4 12 4C16.9706 4 21 7.58172 21 12Z" 
+          <path
+            d="M21 12C21 16.4183 16.9706 20 12 20C10.4607 20 9.01172 19.6565 7.74467 19.0511L3 20L4.39499 16.2561C3.51156 14.9828 3 13.5423 3 12C3 7.58172 7.02944 4 12 4C16.9706 4 21 7.58172 21 12Z"
             stroke="currentColor"
             strokeWidth="2"
           />
@@ -188,6 +188,25 @@ export function ChatIcon({ className, filled }: IconProps) {
           <path d="M12 11H12.01" stroke="currentColor" strokeWidth="2.5" />
           <path d="M16 11H16.01" stroke="currentColor" strokeWidth="2.5" />
         </>
+      )}
+    </svg>
+  );
+}
+
+export function DreamsIcon({ className, filled }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={cn("w-6 h-6", className)} fill="none" strokeLinecap="round" strokeLinejoin="round">
+      {filled ? (
+        <path
+          d="M12 2L14.09 8.26L20.5 9.27L15.75 13.97L16.82 20.5L12 17.77L7.18 20.5L8.25 13.97L3.5 9.27L9.91 8.26L12 2Z"
+          fill="currentColor"
+        />
+      ) : (
+        <path
+          d="M12 2L14.09 8.26L20.5 9.27L15.75 13.97L16.82 20.5L12 17.77L7.18 20.5L8.25 13.97L3.5 9.27L9.91 8.26L12 2Z"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
       )}
     </svg>
   );

@@ -261,6 +261,7 @@ export const podTrips = pgTable("pod_trips", {
   activatedAt: timestamp("activated_at"),
   completedAt: timestamp("completed_at"),
   overallRating: integer("overall_rating"),
+  visibility: text("visibility").default("pod").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -761,3 +762,66 @@ export const tripHighlights = pgTable("trip_highlights", {
 export const insertTripHighlightSchema = createInsertSchema(tripHighlights).omit({ id: true, createdAt: true });
 export type TripHighlight = typeof tripHighlights.$inferSelect;
 export type InsertTripHighlight = z.infer<typeof insertTripHighlightSchema>;
+
+// Dream board items: saved destination inspiration
+export const dreamBoardItems = pgTable("dream_board_items", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  destinationName: text("destination_name").notNull(),
+  destinationPlaceId: text("destination_place_id"),
+  coverImageUrl: text("cover_image_url"),
+  notes: text("notes"),
+  tags: text("tags").array(),
+  sourceTripId: integer("source_trip_id").references(() => podTrips.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_dream_board_items_user_id").on(table.userId),
+]);
+
+export const insertDreamBoardItemSchema = createInsertSchema(dreamBoardItems).omit({ id: true, createdAt: true });
+export type DreamBoardItem = typeof dreamBoardItems.$inferSelect;
+export type InsertDreamBoardItem = z.infer<typeof insertDreamBoardItemSchema>;
+
+// Trip followers: users following a trip for live updates
+export const tripFollowers = pgTable("trip_followers", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => podTrips.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("idx_trip_followers_trip_user").on(table.tripId, table.userId),
+]);
+
+export const insertTripFollowerSchema = createInsertSchema(tripFollowers).omit({ id: true, createdAt: true });
+export type TripFollower = typeof tripFollowers.$inferSelect;
+export type InsertTripFollower = z.infer<typeof insertTripFollowerSchema>;
+
+// Trip reactions: emoji reactions on completed trips
+export const tripReactions = pgTable("trip_reactions", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => podTrips.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  reactionType: text("reaction_type").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("idx_trip_reactions_trip_user_type").on(table.tripId, table.userId, table.reactionType),
+]);
+
+export const insertTripReactionSchema = createInsertSchema(tripReactions).omit({ id: true, createdAt: true });
+export type TripReaction = typeof tripReactions.$inferSelect;
+export type InsertTripReaction = z.infer<typeof insertTripReactionSchema>;
+
+// Trip comments: comments on completed trips
+export const tripComments = pgTable("trip_comments", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => podTrips.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_trip_comments_trip_id").on(table.tripId),
+]);
+
+export const insertTripCommentSchema = createInsertSchema(tripComments).omit({ id: true, createdAt: true });
+export type TripComment = typeof tripComments.$inferSelect;
+export type InsertTripComment = z.infer<typeof insertTripCommentSchema>;

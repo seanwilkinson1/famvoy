@@ -1,4 +1,4 @@
-import { Home, Compass, Plane, Users, MessageCircle, Settings, User } from "lucide-react";
+import { Home, Compass, Plane, Users, MessageCircle, Settings, User, Star } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useUser } from "@clerk/clerk-react";
@@ -11,6 +11,7 @@ export function Sidebar() {
     { href: "/", icon: Home, label: "Home" },
     { href: "/explore", icon: Compass, label: "Explore" },
     { href: "/trips", icon: Plane, label: "Trips" },
+    { href: "/dreams", icon: Star, label: "Dreams" },
     { href: "/pods", icon: Users, label: "Pods" },
     { href: "/chat", icon: MessageCircle, label: "Chat" },
   ];
