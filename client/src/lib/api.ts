@@ -1199,6 +1199,12 @@ export const api = {
   },
 
   tripReactions: {
+    list: async (tripId: number): Promise<any[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/reactions`);
+      if (!res.ok) throw new Error("Failed to fetch reactions");
+      return res.json();
+    },
+
     add: async (tripId: number, reactionType: string): Promise<any> => {
       const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/reactions`, {
         method: "POST",

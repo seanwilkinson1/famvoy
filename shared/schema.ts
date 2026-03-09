@@ -264,7 +264,13 @@ export const podTrips = pgTable("pod_trips", {
   visibility: text("visibility").default("pod").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_pod_trips_created_by").on(table.createdByUserId),
+  index("idx_pod_trips_status").on(table.status),
+  index("idx_pod_trips_pod_id").on(table.podId),
+  index("idx_pod_trips_activated_at").on(table.activatedAt),
+  index("idx_pod_trips_completed_at").on(table.completedAt),
+]);
 
 export const tripDestinations = pgTable("trip_destinations", {
   id: serial("id").primaryKey(),
@@ -274,7 +280,9 @@ export const tripDestinations = pgTable("trip_destinations", {
   endDate: text("end_date").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_trip_destinations_trip_id").on(table.tripId),
+]);
 
 export const tripItems = pgTable("trip_items", {
   id: serial("id").primaryKey(),

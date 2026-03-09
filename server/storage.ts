@@ -1432,23 +1432,40 @@ export class DatabaseStorage implements IStorage {
     
     // Delete trip confirmation sessions
     await db.delete(tripConfirmationSessions).where(eq(tripConfirmationSessions.tripId, tripId));
-    
+
     // Delete trip item booking meta
     if (itemIds.length > 0) {
       await db.delete(tripItemBookingMeta).where(inArray(tripItemBookingMeta.tripItemId, itemIds));
     }
-    
+
     // Delete trip item options
     if (itemIds.length > 0) {
       await db.delete(tripItemOptions).where(inArray(tripItemOptions.tripItemId, itemIds));
     }
-    
+
+    // Delete trip item checkins
+    if (itemIds.length > 0) {
+      await db.delete(tripItemCheckins).where(inArray(tripItemCheckins.tripItemId, itemIds));
+    }
+
+    // Delete trip photos and highlights
+    await db.delete(tripPhotos).where(eq(tripPhotos.tripId, tripId));
+    await db.delete(tripHighlights).where(eq(tripHighlights.tripId, tripId));
+
+    // Delete social data (followers, reactions, comments)
+    await db.delete(tripFollowers).where(eq(tripFollowers.tripId, tripId));
+    await db.delete(tripReactions).where(eq(tripReactions.tripId, tripId));
+    await db.delete(tripComments).where(eq(tripComments.tripId, tripId));
+
+    // Nullify dream board references to this trip
+    await db.update(dreamBoardItems).set({ sourceTripId: null }).where(eq(dreamBoardItems.sourceTripId, tripId));
+
     // Delete trip destinations
     await db.delete(tripDestinations).where(eq(tripDestinations.tripId, tripId));
-    
+
     // Delete trip items
     await db.delete(tripItems).where(eq(tripItems.tripId, tripId));
-    
+
     // Finally delete the trip
     await db.delete(podTrips).where(eq(podTrips.id, tripId));
   }
@@ -2492,58 +2509,59 @@ export class DatabaseStorage implements IStorage {
     const [originalTrip] = await db.select().from(podTrips).where(eq(podTrips.id, tripId));
     if (!originalTrip) throw new Error("Trip not found");
 
-    const [newTrip] = await db.insert(podTrips).values({
-      name: `${originalTrip.name} (Copy)`,
-      destination: originalTrip.destination,
-      startDate: originalTrip.startDate,
-      endDate: originalTrip.endDate,
-      status: "draft",
-      budgetMin: originalTrip.budgetMin,
-      budgetMax: originalTrip.budgetMax,
-      pace: originalTrip.pace,
-      kidsAgeGroups: originalTrip.kidsAgeGroups,
-      tripInterests: originalTrip.tripInterests,
-      createdByUserId: userId,
-    }).returning();
-
-    // Clone destinations
-    const destinations = await db.select().from(tripDestinations).where(eq(tripDestinations.tripId, tripId));
-    const destIdMap = new Map<number, number>();
-
-    for (const dest of destinations) {
-      const [newDest] = await db.insert(tripDestinations).values({
-        tripId: newTrip.id,
-        destination: dest.destination,
-        startDate: dest.startDate,
-        endDate: dest.endDate,
-        sortOrder: dest.sortOrder,
+    return await db.transaction(async (tx) => {
+      const [newTrip] = await tx.insert(podTrips).values({
+        name: `${originalTrip.name} (Copy)`,
+        destination: originalTrip.destination,
+        startDate: originalTrip.startDate,
+        endDate: originalTrip.endDate,
+        status: "draft",
+        budgetMin: originalTrip.budgetMin,
+        budgetMax: originalTrip.budgetMax,
+        pace: originalTrip.pace,
+        kidsAgeGroups: originalTrip.kidsAgeGroups,
+        tripInterests: originalTrip.tripInterests,
+        createdByUserId: userId,
       }).returning();
-      destIdMap.set(dest.id, newDest.id);
-    }
 
-    // Clone items (without booking data)
-    const items = await db.select().from(tripItems).where(eq(tripItems.tripId, tripId));
-    for (const item of items) {
-      await db.insert(tripItems).values({
-        tripId: newTrip.id,
-        destinationId: item.destinationId ? destIdMap.get(item.destinationId) || null : null,
-        dayNumber: item.dayNumber,
-        dayTitle: item.dayTitle,
-        time: item.time,
-        title: item.title,
-        description: item.description,
-        itemType: item.itemType,
-        sortOrder: item.sortOrder,
-        confirmationState: "pending",
-      });
-    }
+      // Clone destinations
+      const destinations = await tx.select().from(tripDestinations).where(eq(tripDestinations.tripId, tripId));
+      const destIdMap = new Map<number, number>();
 
-    return newTrip;
+      for (const dest of destinations) {
+        const [newDest] = await tx.insert(tripDestinations).values({
+          tripId: newTrip.id,
+          destination: dest.destination,
+          startDate: dest.startDate,
+          endDate: dest.endDate,
+          sortOrder: dest.sortOrder,
+        }).returning();
+        destIdMap.set(dest.id, newDest.id);
+      }
+
+      // Clone items (without booking data)
+      const items = await tx.select().from(tripItems).where(eq(tripItems.tripId, tripId));
+      for (const item of items) {
+        await tx.insert(tripItems).values({
+          tripId: newTrip.id,
+          destinationId: item.destinationId ? destIdMap.get(item.destinationId) || null : null,
+          dayNumber: item.dayNumber,
+          dayTitle: item.dayTitle,
+          time: item.time,
+          title: item.title,
+          description: item.description,
+          itemType: item.itemType,
+          sortOrder: item.sortOrder,
+          confirmationState: "pending",
+        });
+      }
+
+      return newTrip;
+    });
   }
 
-  // Feed: Traveling Now (active trips from user's network)
-  async getTravelingNow(userId: number): Promise<any[]> {
-    // Get user's network: pod members + followed users
+  // Get unique user IDs in the user's network (pod members + followed users, excluding self)
+  private async getNetworkUserIds(userId: number): Promise<number[]> {
     const userPodRows = await db.select({ podId: podMembers.podId })
       .from(podMembers).where(eq(podMembers.userId, userId));
     const userPodIds = userPodRows.map(r => r.podId);
@@ -2559,8 +2577,12 @@ export class DatabaseStorage implements IStorage {
       const combined = networkUserIds.concat(podMemberRows.map(r => r.userId));
       networkUserIds = combined.filter((id, idx) => combined.indexOf(id) === idx);
     }
-    networkUserIds = networkUserIds.filter(id => id !== userId);
+    return networkUserIds.filter(id => id !== userId);
+  }
 
+  // Feed: Traveling Now (active trips from user's network)
+  async getTravelingNow(userId: number): Promise<any[]> {
+    const networkUserIds = await this.getNetworkUserIds(userId);
     if (networkUserIds.length === 0) return [];
 
     const trips = await db.select({
@@ -2584,23 +2606,7 @@ export class DatabaseStorage implements IStorage {
 
   // Feed: Recent Adventures (recently completed trips from user's network)
   async getRecentAdventures(userId: number): Promise<any[]> {
-    const userPodRows = await db.select({ podId: podMembers.podId })
-      .from(podMembers).where(eq(podMembers.userId, userId));
-    const userPodIds = userPodRows.map(r => r.podId);
-
-    const followedRows = await db.select({ followingId: follows.followingId })
-      .from(follows).where(eq(follows.followerId, userId));
-    const followedIds = followedRows.map(r => r.followingId);
-
-    let networkUserIds: number[] = followedIds.slice();
-    if (userPodIds.length > 0) {
-      const podMemberRows = await db.select({ userId: podMembers.userId })
-        .from(podMembers).where(inArray(podMembers.podId, userPodIds));
-      const combined = networkUserIds.concat(podMemberRows.map(r => r.userId));
-      networkUserIds = combined.filter((id, idx) => combined.indexOf(id) === idx);
-    }
-    networkUserIds = networkUserIds.filter(id => id !== userId);
-
+    const networkUserIds = await this.getNetworkUserIds(userId);
     if (networkUserIds.length === 0) return [];
 
     const trips = await db.select({

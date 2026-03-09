@@ -545,7 +545,8 @@ export async function registerRoutes(
       if (!userId) {
         return res.status(401).json({ error: "Not authenticated" });
       }
-      const member = await storage.updateFamilyMember(memberId, req.body);
+      const { name, role, photo, ageGroup, isAdult, sortOrder } = req.body;
+      const member = await storage.updateFamilyMember(memberId, { name, role, photo, ageGroup, isAdult, sortOrder });
       res.json(member);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2159,7 +2160,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid item ID" });
       }
 
-      const item = await storage.updateTripItem(itemId, req.body);
+      const { dayNumber, dayTitle, time, title, description, itemType, sortOrder, destinationId, confirmationState, selectedOptionId, isConfirmable } = req.body;
+      const item = await storage.updateTripItem(itemId, { dayNumber, dayTitle, time, title, description, itemType, sortOrder, destinationId, confirmationState, selectedOptionId, isConfirmable });
       res.json(item);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2284,7 +2286,8 @@ export async function registerRoutes(
       if (isNaN(destId)) {
         return res.status(400).json({ error: "Invalid destination ID" });
       }
-      const dest = await storage.updateTripDestination(destId, req.body);
+      const { destination, startDate, endDate, sortOrder } = req.body;
+      const dest = await storage.updateTripDestination(destId, { destination, startDate, endDate, sortOrder });
       res.json(dest);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -3391,7 +3394,13 @@ Return ONLY valid JSON.`;
       if (!user) return res.status(401).json({ error: "User not found" });
 
       const id = parseInt(req.params.id);
-      const item = await storage.updateDreamBoardItem(id, req.body);
+      // Ownership check
+      const userDreams = await storage.getDreamBoardItems(user.id);
+      if (!userDreams.some(d => d.id === id)) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      const { destinationName, notes, tags, coverImageUrl, destinationPlaceId } = req.body;
+      const item = await storage.updateDreamBoardItem(id, { destinationName, notes, tags, coverImageUrl, destinationPlaceId });
       res.json(item);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -3405,6 +3414,11 @@ Return ONLY valid JSON.`;
       if (!user) return res.status(401).json({ error: "User not found" });
 
       const id = parseInt(req.params.id);
+      // Ownership check
+      const userDreams = await storage.getDreamBoardItems(user.id);
+      if (!userDreams.some(d => d.id === id)) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
       await storage.deleteDreamBoardItem(id);
       res.json({ success: true });
     } catch (error: any) {
@@ -3477,9 +3491,13 @@ Return ONLY valid JSON, no markdown.`;
       if (!user) return res.status(401).json({ error: "User not found" });
 
       const tripId = parseInt(req.params.id);
+      // Verify user has read access to the source trip
+      await assertTripAccess(user.id, tripId, "read");
       const newTrip = await storage.copyTrip(tripId, user.id);
       res.status(201).json(newTrip);
     } catch (error: any) {
+      if (error instanceof NotFoundError) return res.status(404).json({ error: error.message });
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
       res.status(500).json({ error: error.message });
     }
   });
@@ -3544,6 +3562,23 @@ Return ONLY valid JSON, no markdown.`;
 
   // ========== Trip Reactions ==========
 
+  app.get("/api/trips/:tripId/reactions", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.tripId);
+      await assertTripAccess(user.id, tripId, "read");
+      const reactions = await storage.getTripReactions(tripId);
+      res.json(reactions);
+    } catch (error: any) {
+      if (error instanceof NotFoundError) return res.status(404).json({ error: error.message });
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/trips/:tripId/reactions", requireAuth(), async (req, res) => {
     try {
       const { userId: clerkId } = getAuth(req);
@@ -3551,6 +3586,7 @@ Return ONLY valid JSON, no markdown.`;
       if (!user) return res.status(401).json({ error: "User not found" });
 
       const tripId = parseInt(req.params.tripId);
+      await assertTripAccess(user.id, tripId, "read");
       const { reactionType } = req.body;
       const reaction = await storage.addTripReaction({ tripId, userId: user.id, reactionType });
       res.status(201).json(reaction);
@@ -3577,10 +3613,17 @@ Return ONLY valid JSON, no markdown.`;
 
   app.get("/api/trips/:tripId/comments", requireAuth(), async (req, res) => {
     try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
       const tripId = parseInt(req.params.tripId);
+      await assertTripAccess(user.id, tripId, "read");
       const comments = await storage.getTripComments(tripId);
       res.json(comments);
     } catch (error: any) {
+      if (error instanceof NotFoundError) return res.status(404).json({ error: error.message });
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
       res.status(500).json({ error: error.message });
     }
   });
@@ -3592,6 +3635,7 @@ Return ONLY valid JSON, no markdown.`;
       if (!user) return res.status(401).json({ error: "User not found" });
 
       const tripId = parseInt(req.params.tripId);
+      await assertTripAccess(user.id, tripId, "read");
       const data = insertTripCommentSchema.parse({ tripId, userId: user.id, content: req.body.content });
       const comment = await storage.createTripComment(data);
       res.status(201).json(comment);
@@ -3607,6 +3651,13 @@ Return ONLY valid JSON, no markdown.`;
       if (!user) return res.status(401).json({ error: "User not found" });
 
       const commentId = parseInt(req.params.commentId);
+      const tripId = parseInt(req.params.tripId);
+      // Ownership check: only comment author can delete
+      const comments = await storage.getTripComments(tripId);
+      const comment = comments.find(c => c.id === commentId);
+      if (!comment || comment.userId !== user.id) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
       await storage.deleteTripComment(commentId);
       res.json({ success: true });
     } catch (error: any) {
@@ -3655,7 +3706,8 @@ Return ONLY valid JSON, no markdown.`;
   // Update booking option
   app.patch('/api/booking-options/:id', requireAuth(), async (req, res) => {
     try {
-      const option = await storage.updateBookingOption(parseInt(req.params.id), req.body);
+      const { name, description, category, priceInCents, currency, image, locationName, duration, maxGuests, isActive, metadata } = req.body;
+      const option = await storage.updateBookingOption(parseInt(req.params.id), { name, description, category, priceInCents, currency, image, locationName, duration, maxGuests, isActive, metadata });
       res.json(option);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -3729,7 +3781,8 @@ Return ONLY valid JSON, no markdown.`;
   // Update cart item
   app.patch('/api/cart/items/:id', requireAuth(), async (req, res) => {
     try {
-      const item = await storage.updateCartItem(parseInt(req.params.id), req.body);
+      const { quantity, guestCount, selectedDate } = req.body;
+      const item = await storage.updateCartItem(parseInt(req.params.id), { quantity, guestCount, selectedDate });
       res.json(item);
     } catch (error: any) {
       res.status(500).json({ error: error.message });

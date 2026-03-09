@@ -20,24 +20,20 @@ export function TripReactions({ tripId, currentUserId }: TripReactionsProps) {
 
   const { data: reactions = [] } = useQuery({
     queryKey: ["/api/trips", tripId, "reactions"],
-    queryFn: async () => {
-      // Reactions are fetched via trip book or trip details endpoint
-      // For now we use a simple approach
-      return [] as any[];
-    },
+    queryFn: () => api.tripReactions.list(tripId),
   });
 
   const addMutation = useMutation({
     mutationFn: (reactionType: string) => api.tripReactions.add(tripId, reactionType),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/trips", tripId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/trips", tripId, "reactions"] });
     },
   });
 
   const removeMutation = useMutation({
     mutationFn: (reactionType: string) => api.tripReactions.remove(tripId, reactionType),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/trips", tripId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/trips", tripId, "reactions"] });
     },
   });
 
