@@ -41,6 +41,16 @@ import {
   type InsertTripReaction,
   type TripComment,
   type InsertTripComment,
+  type ItineraryDay,
+  type InsertItineraryDay,
+  type TripStop,
+  type InsertTripStop,
+  type TripMemory,
+  type InsertTripMemory,
+  type TripBooklet,
+  type InsertTripBooklet,
+  type BookletChapter,
+  type InsertBookletChapter,
   type PodTrip,
   type InsertPodTrip,
   type TripItem,
@@ -108,6 +118,11 @@ import {
   tripFollowers,
   tripReactions,
   tripComments,
+  itineraryDays,
+  tripStops,
+  tripMemories,
+  tripBooklets,
+  bookletChapters,
   familyMembers,
   bookingOptions,
   carts,
@@ -2602,6 +2617,204 @@ export class DatabaseStorage implements IStorage {
       ...r.trip,
       creator: r.creator,
     }));
+  }
+
+  // === Itinerary Days ===
+
+  async getItineraryDays(tripId: number): Promise<ItineraryDay[]> {
+    return db.select().from(itineraryDays)
+      .where(eq(itineraryDays.tripId, tripId))
+      .orderBy(itineraryDays.dayNumber);
+  }
+
+  async createItineraryDay(data: InsertItineraryDay): Promise<ItineraryDay> {
+    const [day] = await db.insert(itineraryDays).values(data).returning();
+    return day;
+  }
+
+  async updateItineraryDay(id: number, data: Partial<InsertItineraryDay>): Promise<ItineraryDay> {
+    const [day] = await db.update(itineraryDays).set(data).where(eq(itineraryDays.id, id)).returning();
+    return day;
+  }
+
+  // === Trip Stops ===
+
+  async getTripStopsByDay(dayId: number): Promise<TripStop[]> {
+    return db.select().from(tripStops)
+      .where(eq(tripStops.itineraryDayId, dayId))
+      .orderBy(tripStops.position);
+  }
+
+  async createTripStop(data: InsertTripStop): Promise<TripStop> {
+    const [stop] = await db.insert(tripStops).values(data).returning();
+    return stop;
+  }
+
+  async updateTripStop(id: number, data: Partial<InsertTripStop>): Promise<TripStop> {
+    const [stop] = await db.update(tripStops).set(data).where(eq(tripStops.id, id)).returning();
+    return stop;
+  }
+
+  async deleteTripStop(id: number): Promise<void> {
+    await db.delete(tripStops).where(eq(tripStops.id, id));
+  }
+
+  // === Trip Memories ===
+
+  async getTripMemories(tripId: number): Promise<TripMemory[]> {
+    return db.select().from(tripMemories)
+      .where(eq(tripMemories.tripId, tripId))
+      .orderBy(desc(tripMemories.loggedAt));
+  }
+
+  async getTripMemoriesByDay(tripId: number, dayNumber: number): Promise<TripMemory[]> {
+    return db.select().from(tripMemories)
+      .where(and(eq(tripMemories.tripId, tripId), eq(tripMemories.dayNumber, dayNumber)))
+      .orderBy(desc(tripMemories.loggedAt));
+  }
+
+  async createTripMemory(data: InsertTripMemory): Promise<TripMemory> {
+    const [memory] = await db.insert(tripMemories).values(data).returning();
+    return memory;
+  }
+
+  async updateTripMemory(id: number, data: Partial<InsertTripMemory>): Promise<TripMemory> {
+    const [memory] = await db.update(tripMemories).set(data).where(eq(tripMemories.id, id)).returning();
+    return memory;
+  }
+
+  // === Trip Booklets ===
+
+  async getBookletByTripId(tripId: number): Promise<TripBooklet | undefined> {
+    const [booklet] = await db.select().from(tripBooklets)
+      .where(eq(tripBooklets.tripId, tripId));
+    return booklet;
+  }
+
+  async createBooklet(data: InsertTripBooklet): Promise<TripBooklet> {
+    const [booklet] = await db.insert(tripBooklets).values(data).returning();
+    return booklet;
+  }
+
+  async updateBooklet(id: number, data: Partial<InsertTripBooklet>): Promise<TripBooklet> {
+    const [booklet] = await db.update(tripBooklets).set(data).where(eq(tripBooklets.id, id)).returning();
+    return booklet;
+  }
+
+  // === Booklet Chapters ===
+
+  async getBookletChapters(bookletId: number): Promise<BookletChapter[]> {
+    return db.select().from(bookletChapters)
+      .where(eq(bookletChapters.bookletId, bookletId))
+      .orderBy(bookletChapters.sortOrder);
+  }
+
+  async createBookletChapter(data: InsertBookletChapter): Promise<BookletChapter> {
+    const [chapter] = await db.insert(bookletChapters).values(data).returning();
+    return chapter;
+  }
+
+  async updateBookletChapter(id: number, data: Partial<InsertBookletChapter>): Promise<BookletChapter> {
+    const [chapter] = await db.update(bookletChapters).set(data).where(eq(bookletChapters.id, id)).returning();
+    return chapter;
+  }
+
+  // === Booklet Auto-Assembly ===
+
+  private static CHAPTER_ACCENT_COLORS = [
+    "#1C3A1C", // forest green
+    "#C4694A", // warm coral
+    "#4A90D9", // sky blue
+    "#D4A84A", // amber
+    "#8B6BB5", // lavender
+    "#D4654A", // terracotta
+    "#4AA89C", // teal
+    "#C4A04A", // gold
+  ];
+
+  async assembleBooklet(tripId: number): Promise<TripBooklet> {
+    const trip = await this.getTripById(tripId);
+    if (!trip) throw new Error("Trip not found");
+
+    // Check if booklet already exists
+    const existing = await this.getBookletByTripId(tripId);
+    if (existing) return existing;
+
+    // Get itinerary days (new system) or derive from tripItems (legacy)
+    const days = await this.getItineraryDays(tripId);
+    const memories = await this.getTripMemories(tripId);
+
+    // Compute stats
+    let totalStops = 0;
+    for (const day of days) {
+      const stops = await this.getTripStopsByDay(day.id);
+      totalStops += stops.length;
+    }
+
+    // If no itinerary days, derive from legacy tripItems
+    const legacyItems = days.length === 0
+      ? await db.select().from(tripItems).where(eq(tripItems.tripId, tripId)).orderBy(tripItems.dayNumber)
+      : [];
+
+    const totalPhotos = memories.reduce((sum, m) => sum + (m.photos?.length || 0), 0);
+
+    const booklet = await this.createBooklet({
+      tripId,
+      title: trip.name,
+      subtitle: trip.destination,
+      visibility: "private",
+      stats: { totalStops: totalStops || legacyItems.length, totalMemories: memories.length, totalPhotos },
+    });
+
+    // Create chapters from itinerary days or legacy items
+    if (days.length > 0) {
+      for (const day of days) {
+        const dayMemories = memories.filter(m => m.dayNumber === day.dayNumber);
+        const highlightMemory = dayMemories.find(m => m.isHighlight);
+        const accentColor = DatabaseStorage.CHAPTER_ACCENT_COLORS[
+          (day.dayNumber - 1) % DatabaseStorage.CHAPTER_ACCENT_COLORS.length
+        ];
+
+        await this.createBookletChapter({
+          bookletId: booklet.id,
+          dayNumber: day.dayNumber,
+          title: day.label || `Day ${day.dayNumber}`,
+          location: trip.destination,
+          date: day.date,
+          accentColor,
+          quote: highlightMemory?.caption || null,
+          sortOrder: day.dayNumber,
+        });
+      }
+    } else if (legacyItems.length > 0) {
+      // Derive chapters from legacy tripItems grouped by dayNumber
+      const dayNumbers = Array.from(new Set(legacyItems.map(i => i.dayNumber))).sort((a, b) => a - b);
+      for (const dayNum of dayNumbers) {
+        const dayItems = legacyItems.filter(i => i.dayNumber === dayNum);
+        const accentColor = DatabaseStorage.CHAPTER_ACCENT_COLORS[
+          (dayNum - 1) % DatabaseStorage.CHAPTER_ACCENT_COLORS.length
+        ];
+        const dayTitle = dayItems[0]?.dayTitle || `Day ${dayNum}`;
+
+        // Compute date from trip start + dayNumber offset
+        const startDate = new Date(trip.startDate);
+        startDate.setDate(startDate.getDate() + dayNum - 1);
+        const dateStr = startDate.toISOString().split("T")[0];
+
+        await this.createBookletChapter({
+          bookletId: booklet.id,
+          dayNumber: dayNum,
+          title: dayTitle,
+          location: trip.destination,
+          date: dateStr,
+          accentColor,
+          quote: null,
+          sortOrder: dayNum,
+        });
+      }
+    }
+
+    return booklet;
   }
 
   // Feed: Recent Adventures (recently completed trips from user's network)

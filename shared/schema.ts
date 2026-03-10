@@ -262,6 +262,12 @@ export const podTrips = pgTable("pod_trips", {
   completedAt: timestamp("completed_at"),
   overallRating: integer("overall_rating"),
   visibility: text("visibility").default("pod").notNull(),
+  adultsCount: integer("adults_count"),
+  kidsCount: integer("kids_count"),
+  travelStyleInterests: text("travel_style_interests").array(),
+  travelStylePace: text("travel_style_pace"), // "relaxed" | "balanced" | "packed"
+  travelStyleBudget: text("travel_style_budget"), // "budget" | "midrange" | "splurge"
+  googlePlaceId: text("google_place_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
@@ -833,3 +839,107 @@ export const tripComments = pgTable("trip_comments", {
 export const insertTripCommentSchema = createInsertSchema(tripComments).omit({ id: true, createdAt: true });
 export type TripComment = typeof tripComments.$inferSelect;
 export type InsertTripComment = z.infer<typeof insertTripCommentSchema>;
+
+// Itinerary days: first-class day entities for structured trip planning
+export const itineraryDays = pgTable("itinerary_days", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => podTrips.id),
+  dayNumber: integer("day_number").notNull(),
+  date: text("date").notNull(),
+  label: text("label"),
+  isLocked: boolean("is_locked").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_itinerary_days_trip_id").on(table.tripId),
+  uniqueIndex("idx_itinerary_days_trip_day").on(table.tripId, table.dayNumber),
+]);
+
+export const insertItineraryDaySchema = createInsertSchema(itineraryDays).omit({ id: true, createdAt: true });
+export type ItineraryDay = typeof itineraryDays.$inferSelect;
+export type InsertItineraryDay = z.infer<typeof insertItineraryDaySchema>;
+
+// Trip stops: activities/places within an itinerary day (replaces tripItems for new trips)
+export const tripStops = pgTable("trip_stops", {
+  id: serial("id").primaryKey(),
+  itineraryDayId: integer("itinerary_day_id").notNull().references(() => itineraryDays.id),
+  googlePlaceId: text("google_place_id"),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // "stay" | "activity" | "food" | "transport"
+  scheduledTime: text("scheduled_time"),
+  notes: text("notes"),
+  position: integer("position").notNull(),
+  status: text("status").default("upcoming").notNull(), // "upcoming" | "current" | "done"
+  suggestedBy: integer("suggested_by").references(() => users.id),
+  checkInAt: timestamp("check_in_at"),
+  coordinates: jsonb("coordinates"), // {lat, lng}
+  placeData: jsonb("place_data"), // cached Google Places response
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_trip_stops_itinerary_day_id").on(table.itineraryDayId),
+]);
+
+export const insertTripStopSchema = createInsertSchema(tripStops).omit({ id: true, createdAt: true });
+export type TripStop = typeof tripStops.$inferSelect;
+export type InsertTripStop = z.infer<typeof insertTripStopSchema>;
+
+// Trip memories: moments logged during a trip (photos, captions, moods)
+export const tripMemories = pgTable("trip_memories", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => podTrips.id),
+  tripStopId: integer("trip_stop_id").references(() => tripStops.id),
+  dayNumber: integer("day_number").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  emoji: text("emoji"),
+  caption: text("caption"),
+  photos: text("photos").array(),
+  tag: text("tag"), // "milestone" | "food" | "scenery" | "culture" | "family" | "history"
+  isHighlight: boolean("is_highlight").default(false).notNull(),
+  loggedAt: timestamp("logged_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_trip_memories_trip_id").on(table.tripId),
+  index("idx_trip_memories_trip_stop_id").on(table.tripStopId),
+]);
+
+export const insertTripMemorySchema = createInsertSchema(tripMemories).omit({ id: true, loggedAt: true, createdAt: true });
+export type TripMemory = typeof tripMemories.$inferSelect;
+export type InsertTripMemory = z.infer<typeof insertTripMemorySchema>;
+
+// Trip booklets: post-trip magazine-style artifact
+export const tripBooklets = pgTable("trip_booklets", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => podTrips.id),
+  title: text("title").notNull(),
+  subtitle: text("subtitle"),
+  coverEmoji: text("cover_emoji"),
+  aiReflection: text("ai_reflection"),
+  visibility: text("visibility").default("private").notNull(), // "public" | "friends" | "private"
+  publishedAt: timestamp("published_at"),
+  stats: jsonb("stats"), // {totalStops, totalMemories, totalPhotos, totalMiles}
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("idx_trip_booklets_trip_id").on(table.tripId),
+]);
+
+export const insertTripBookletSchema = createInsertSchema(tripBooklets).omit({ id: true, createdAt: true });
+export type TripBooklet = typeof tripBooklets.$inferSelect;
+export type InsertTripBooklet = z.infer<typeof insertTripBookletSchema>;
+
+// Booklet chapters: one per day, auto-assembled from itinerary
+export const bookletChapters = pgTable("booklet_chapters", {
+  id: serial("id").primaryKey(),
+  bookletId: integer("booklet_id").notNull().references(() => tripBooklets.id),
+  dayNumber: integer("day_number").notNull(),
+  title: text("title").notNull(),
+  location: text("location").notNull(),
+  date: text("date").notNull(),
+  accentColor: text("accent_color").notNull(),
+  quote: text("quote"),
+  sortOrder: integer("sort_order").notNull(),
+}, (table) => [
+  index("idx_booklet_chapters_booklet_id").on(table.bookletId),
+]);
+
+export const insertBookletChapterSchema = createInsertSchema(bookletChapters).omit({ id: true });
+export type BookletChapter = typeof bookletChapters.$inferSelect;
+export type InsertBookletChapter = z.infer<typeof insertBookletChapterSchema>;
