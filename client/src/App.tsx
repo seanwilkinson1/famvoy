@@ -39,6 +39,10 @@ const AgentRequestDetails = lazy(() => import("@/pages/AgentRequestDetails"));
 const ConciergeSuccess = lazy(() => import("@/pages/ConciergeSuccess"));
 const ConciergeBookingWizard = lazy(() => import("@/pages/ConciergeBookingWizard"));
 const TripBook = lazy(() => import("@/pages/TripBook"));
+const BookletCover = lazy(() => import("@/pages/booklet/BookletCover"));
+const BookletChapters = lazy(() => import("@/pages/booklet/BookletChapters"));
+const BookletMap = lazy(() => import("@/pages/booklet/BookletMap"));
+const BookletPublish = lazy(() => import("@/pages/booklet/BookletPublish"));
 const Dreams = lazy(() => import("@/pages/Dreams"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
@@ -138,6 +142,10 @@ function AuthenticatedRouter() {
                 <Route path="/trip/:id/confirm" component={TripConfirmWizard} />
                 <Route path="/trip/:id/book" component={TripBook} />
                 <Route path="/trip/:id/concierge" component={ConciergeBookingWizard} />
+                <Route path="/trips/:id/booklet" component={BookletCover} />
+                <Route path="/trips/:id/booklet/chapters" component={BookletChapters} />
+                <Route path="/trips/:id/booklet/map" component={BookletMap} />
+                <Route path="/trips/:id/booklet/publish" component={BookletPublish} />
                 <Route path="/family/:id" component={FamilyProfile} />
                 <Route path="/cart" component={Cart} />
                 <Route path="/checkout/success" component={CheckoutSuccess} />

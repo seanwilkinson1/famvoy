@@ -1247,4 +1247,81 @@ export const api = {
       if (!res.ok) throw new Error("Failed to delete comment");
     },
   },
+
+  // Booklet
+  booklet: {
+    get: async (tripId: number): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/booklet`);
+      if (!res.ok) throw new Error("Failed to fetch booklet");
+      return res.json();
+    },
+
+    update: async (tripId: number, data: Record<string, any>): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/booklet`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update booklet");
+      return res.json();
+    },
+
+    updateChapter: async (tripId: number, chapterId: number, data: Record<string, any>): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/booklet/chapters/${chapterId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update chapter");
+      return res.json();
+    },
+
+    generateReflection: async (tripId: number): Promise<Response> => {
+      return fetchWithAuth(`${API_BASE}/trips/${tripId}/booklet/generate-reflection`, {
+        method: "POST",
+      });
+    },
+
+    publish: async (tripId: number, visibility: string): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/booklet/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visibility }),
+      });
+      if (!res.ok) throw new Error("Failed to publish booklet");
+      return res.json();
+    },
+  },
+
+  // Trip memories
+  tripMemories: {
+    list: async (tripId: number, dayNumber?: number): Promise<any[]> => {
+      const url = dayNumber
+        ? `${API_BASE}/trips/${tripId}/memories?day=${dayNumber}`
+        : `${API_BASE}/trips/${tripId}/memories`;
+      const res = await fetchWithAuth(url);
+      if (!res.ok) throw new Error("Failed to fetch memories");
+      return res.json();
+    },
+
+    create: async (tripId: number, data: Record<string, any>): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/memories`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create memory");
+      return res.json();
+    },
+
+    update: async (tripId: number, memoryId: number, data: Record<string, any>): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/memories/${memoryId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update memory");
+      return res.json();
+    },
+  },
 };
