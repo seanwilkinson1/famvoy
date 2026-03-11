@@ -91,10 +91,10 @@ export default function ConciergeSuccess() {
       )}
 
       <div className="w-full max-w-sm space-y-4">
-        <Card className="border-warm-teal/30 bg-warm-teal/5">
+        <Card className="border-primary/30 bg-primary/5">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <Clock className="w-5 h-5 text-warm-teal mt-0.5" />
+              <Clock className="w-5 h-5 text-primary mt-0.5" />
               <div>
                 <p className="font-medium">What happens next?</p>
                 <ul className="text-sm text-muted-foreground mt-2 space-y-2">

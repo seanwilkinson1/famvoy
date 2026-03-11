@@ -160,7 +160,7 @@ export default function AgentRequestDetails() {
       case 'booked':
         return <Badge variant="secondary" className="bg-green-100 text-green-800">Booked</Badge>;
       case 'skipped':
-        return <Badge variant="secondary" className="bg-gray-100 text-gray-800">Skipped</Badge>;
+        return <Badge variant="secondary" className="bg-muted text-gray-800">Skipped</Badge>;
       case 'failed':
         return <Badge variant="secondary" className="bg-red-100 text-red-800">Failed</Badge>;
       default:
@@ -190,7 +190,7 @@ export default function AgentRequestDetails() {
 
   return (
     <div className="flex-1 overflow-y-auto pb-24 md:max-w-5xl md:mx-auto md:px-8">
-      <div className="bg-gradient-to-b from-warm-teal/20 to-background px-4 py-6">
+      <div className="bg-gradient-to-b from-primary/20 to-background px-4 py-6">
         <div className="flex items-center gap-3 mb-4">
           <Link href="/agent">
             <button className="p-2 hover:bg-white/50 rounded-full transition-colors" data-testid="button-back">

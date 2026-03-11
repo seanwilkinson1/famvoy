@@ -236,7 +236,7 @@ export default function AgentDashboard() {
 
   return (
     <div className="flex-1 overflow-y-auto pb-24 md:max-w-6xl md:mx-auto md:px-8">
-      <div className="bg-gradient-to-b from-warm-teal/20 to-background px-4 py-6">
+      <div className="bg-gradient-to-b from-primary/20 to-background px-4 py-6">
         <div className="flex items-center gap-3 mb-4">
           <Link href="/">
             <button className="p-2 hover:bg-white/50 rounded-full transition-colors" data-testid="button-back">

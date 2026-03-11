@@ -22,21 +22,21 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-100 h-screen sticky top-0">
-      <div className="p-6 border-b border-gray-100">
+    <aside className="hidden md:flex flex-col w-64 bg-card border-r border-border h-screen sticky top-0">
+      <div className="p-6 border-b border-border">
         <Link href="/">
           <div className="flex items-center gap-3 cursor-pointer">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-              <span className="text-white font-bold text-lg">F</span>
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-lg">F</span>
             </div>
-            <span className="font-heading text-xl font-bold text-charcoal">FamVoy</span>
+            <span className="font-heading text-xl font-bold text-foreground">FamVoy</span>
           </div>
         </Link>
       </div>
 
       <nav className="flex-1 p-4 space-y-1">
         {mainTabs.map((tab) => {
-          const isActive = location === tab.href || 
+          const isActive = location === tab.href ||
             (tab.href !== "/" && location.startsWith(tab.href));
           return (
             <Link key={tab.href} href={tab.href}>
@@ -44,8 +44,8 @@ export function Sidebar() {
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200",
                   isActive
-                    ? "bg-primary text-white shadow-md shadow-primary/20"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-charcoal"
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
                 <tab.icon className={cn("h-5 w-5", isActive && "stroke-[2.5px]")} />
@@ -56,7 +56,7 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-gray-100 space-y-1">
+      <div className="p-4 border-t border-border space-y-1">
         {bottomTabs.map((tab) => {
           const isActive = location === tab.href;
           return (
@@ -65,8 +65,8 @@ export function Sidebar() {
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200",
                   isActive
-                    ? "bg-primary text-white shadow-md shadow-primary/20"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-charcoal"
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
                 <tab.icon className={cn("h-5 w-5", isActive && "stroke-[2.5px]")} />
@@ -78,19 +78,19 @@ export function Sidebar() {
       </div>
 
       {user && (
-        <div className="p-4 border-t border-gray-100">
+        <div className="p-4 border-t border-border">
           <Link href="/profile">
-            <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors">
+            <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-muted cursor-pointer transition-colors">
               <img
                 src={user.imageUrl}
                 alt={user.fullName || "User"}
                 className="w-10 h-10 rounded-full object-cover"
               />
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-charcoal truncate text-sm">
+                <p className="font-medium text-foreground truncate text-sm">
                   {user.fullName || user.primaryEmailAddress?.emailAddress}
                 </p>
-                <p className="text-xs text-gray-400 truncate">View profile</p>
+                <p className="text-xs text-muted-foreground truncate">View profile</p>
               </div>
             </div>
           </Link>

@@ -100,7 +100,7 @@ export function TopHeader() {
             <Link href="/profile">
               <Avatar className="w-10 h-10 cursor-pointer ring-2 ring-border/50 hover:ring-primary/30 transition-all" data-testid="link-profile-avatar">
                 <AvatarImage src={profileImage} alt="Profile" />
-                <AvatarFallback className="bg-teal-gradient text-white text-sm font-medium">
+                <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
                   {initials}
                 </AvatarFallback>
               </Avatar>
@@ -199,7 +199,7 @@ export function TopHeader() {
                     >
                       <Avatar className="h-14 w-14 ring-2 ring-border/30">
                         <AvatarImage src={u.avatar || undefined} />
-                        <AvatarFallback className="bg-coral-gradient text-white text-base font-semibold">
+                        <AvatarFallback className="bg-primary text-primary-foreground text-base font-semibold">
                           {u.name?.[0] || "U"}
                         </AvatarFallback>
                       </Avatar>
@@ -227,7 +227,7 @@ export function TopHeader() {
                       className="w-full flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors text-left"
                       data-testid={`result-pod-${pod.id}`}
                     >
-                      <div className="h-14 w-14 rounded-2xl bg-teal-gradient flex items-center justify-center ring-2 ring-border/30">
+                      <div className="h-14 w-14 rounded-2xl bg-primary flex items-center justify-center ring-2 ring-border/30">
                         <UsersThree weight="fill" className="h-7 w-7 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">

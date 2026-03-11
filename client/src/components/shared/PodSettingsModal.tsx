@@ -137,20 +137,20 @@ export function PodSettingsModal({
           className="w-full max-w-lg bg-white rounded-t-3xl max-h-[85vh] overflow-hidden"
         >
           <div className="flex justify-center pt-3 pb-2">
-            <div className="h-1.5 w-12 rounded-full bg-gray-200" />
+            <div className="h-1.5 w-12 rounded-full bg-border" />
           </div>
 
           <div className="px-6 pb-32 overflow-y-auto max-h-[calc(85vh-40px)]">
             {view === "main" && (
               <>
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="font-heading text-xl font-bold text-gray-900">Pod Settings</h2>
+                  <h2 className="font-heading text-xl font-bold text-foreground">Pod Settings</h2>
                   <button
                     onClick={onClose}
-                    className="rounded-full p-2 hover:bg-gray-100 transition-colors"
+                    className="rounded-full p-2 hover:bg-muted transition-colors"
                     data-testid="button-close-settings"
                   >
-                    <X className="h-5 w-5 text-gray-500" />
+                    <X className="h-5 w-5 text-muted-foreground" />
                   </button>
                 </div>
 
@@ -162,30 +162,30 @@ export function PodSettingsModal({
                         setEditDescription(pod.description);
                         setView("edit");
                       }}
-                      className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-muted transition-colors"
                       data-testid="button-edit-pod"
                     >
                       <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                         <Edit2 className="h-5 w-5 text-primary" />
                       </div>
                       <div className="flex-1 text-left">
-                        <div className="font-medium text-gray-900">Edit Pod Info</div>
-                        <div className="text-sm text-gray-500">Change name and description</div>
+                        <div className="font-medium text-foreground">Edit Pod Info</div>
+                        <div className="text-sm text-muted-foreground">Change name and description</div>
                       </div>
                     </button>
                   )}
 
                   <button
                     onClick={() => setView("members")}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-muted transition-colors"
                     data-testid="button-manage-members"
                   >
                     <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center">
                       <Users className="h-5 w-5 text-blue-600" />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="font-medium text-gray-900">Manage Members</div>
-                      <div className="text-sm text-gray-500">{members.length} {members.length === 1 ? 'family' : 'families'}</div>
+                      <div className="font-medium text-foreground">Manage Members</div>
+                      <div className="text-sm text-muted-foreground">{members.length} {members.length === 1 ? 'family' : 'families'}</div>
                     </div>
                   </button>
 
@@ -193,7 +193,7 @@ export function PodSettingsModal({
                     <button
                       onClick={handleTogglePrivacy}
                       disabled={updateMutation.isPending}
-                      className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-muted transition-colors"
                       data-testid="button-toggle-privacy"
                     >
                       <div className={cn(
@@ -207,41 +207,41 @@ export function PodSettingsModal({
                         )}
                       </div>
                       <div className="flex-1 text-left">
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium text-foreground">
                           {isPublic ? "Public Pod" : "Private Pod"}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-muted-foreground">
                           {isPublic ? "Anyone can find and join" : "Invite only"}
                         </div>
                       </div>
-                      {updateMutation.isPending && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
+                      {updateMutation.isPending && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                     </button>
                   )}
 
                   <button
                     onClick={() => setIsMuted(!isMuted)}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-muted transition-colors"
                     data-testid="button-toggle-notifications"
                   >
                     <div className={cn(
                       "h-10 w-10 rounded-full flex items-center justify-center",
-                      isMuted ? "bg-gray-100" : "bg-purple-50"
+                      isMuted ? "bg-muted" : "bg-purple-50"
                     )}>
                       {isMuted ? (
-                        <BellOff className="h-5 w-5 text-gray-500" />
+                        <BellOff className="h-5 w-5 text-muted-foreground" />
                       ) : (
                         <Bell className="h-5 w-5 text-purple-600" />
                       )}
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="font-medium text-gray-900">Notifications</div>
-                      <div className="text-sm text-gray-500">
+                      <div className="font-medium text-foreground">Notifications</div>
+                      <div className="text-sm text-muted-foreground">
                         {isMuted ? "Muted" : "Enabled"}
                       </div>
                     </div>
                   </button>
 
-                  <div className="border-t border-gray-100 my-4" />
+                  <div className="border-t border-border my-4" />
 
                   {!isCreator && (
                     <button
@@ -254,7 +254,7 @@ export function PodSettingsModal({
                       </div>
                       <div className="flex-1 text-left">
                         <div className="font-medium text-red-600">Leave Pod</div>
-                        <div className="text-sm text-gray-500">You can rejoin if it's public</div>
+                        <div className="text-sm text-muted-foreground">You can rejoin if it's public</div>
                       </div>
                     </button>
                   )}
@@ -270,7 +270,7 @@ export function PodSettingsModal({
                       </div>
                       <div className="flex-1 text-left">
                         <div className="font-medium text-red-600">Delete Pod</div>
-                        <div className="text-sm text-gray-500">This cannot be undone</div>
+                        <div className="text-sm text-muted-foreground">This cannot be undone</div>
                       </div>
                     </button>
                   )}
@@ -282,14 +282,14 @@ export function PodSettingsModal({
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="bg-white rounded-2xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-                      <h3 className="font-heading text-lg font-bold text-gray-900 mb-2">Leave Pod?</h3>
-                      <p className="text-sm text-gray-500 mb-6">
+                      <h3 className="font-heading text-lg font-bold text-foreground mb-2">Leave Pod?</h3>
+                      <p className="text-sm text-muted-foreground mb-6">
                         Are you sure you want to leave "{pod.name}"?
                       </p>
                       <div className="flex gap-3">
                         <button
                           onClick={() => setShowLeaveConfirm(false)}
-                          className="flex-1 py-3 rounded-xl border border-gray-200 font-medium text-gray-700"
+                          className="flex-1 py-3 rounded-xl border border-border font-medium text-foreground"
                         >
                           Cancel
                         </button>
@@ -311,14 +311,14 @@ export function PodSettingsModal({
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="bg-white rounded-2xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-                      <h3 className="font-heading text-lg font-bold text-gray-900 mb-2">Delete Pod?</h3>
-                      <p className="text-sm text-gray-500 mb-6">
+                      <h3 className="font-heading text-lg font-bold text-foreground mb-2">Delete Pod?</h3>
+                      <p className="text-sm text-muted-foreground mb-6">
                         Are you sure you want to delete "{pod.name}"? This will remove all messages and members. This action cannot be undone.
                       </p>
                       <div className="flex gap-3">
                         <button
                           onClick={() => setShowDeleteConfirm(false)}
-                          className="flex-1 py-3 rounded-xl border border-gray-200 font-medium text-gray-700"
+                          className="flex-1 py-3 rounded-xl border border-border font-medium text-foreground"
                           data-testid="button-cancel-delete"
                         >
                           Cancel
@@ -343,33 +343,33 @@ export function PodSettingsModal({
                 <div className="flex items-center gap-4 mb-6">
                   <button
                     onClick={() => setView("main")}
-                    className="rounded-full p-2 hover:bg-gray-100 transition-colors"
+                    className="rounded-full p-2 hover:bg-muted transition-colors"
                   >
-                    <X className="h-5 w-5 text-gray-500" />
+                    <X className="h-5 w-5 text-muted-foreground" />
                   </button>
-                  <h2 className="font-heading text-xl font-bold text-gray-900">Edit Pod Info</h2>
+                  <h2 className="font-heading text-xl font-bold text-foreground">Edit Pod Info</h2>
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Pod Name</label>
+                    <label className="block text-sm font-medium text-foreground mb-2">Pod Name</label>
                     <input
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-xl border border-border px-4 py-3 text-base outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="Enter pod name"
                       data-testid="input-pod-name"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <label className="block text-sm font-medium text-foreground mb-2">Description</label>
                     <textarea
                       value={editDescription}
                       onChange={(e) => setEditDescription(e.target.value)}
                       rows={3}
-                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                      className="w-full rounded-xl border border-border px-4 py-3 text-base outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                       placeholder="What's this pod about?"
                       data-testid="input-pod-description"
                     />
@@ -393,11 +393,11 @@ export function PodSettingsModal({
                   <div className="flex items-center gap-4">
                     <button
                       onClick={() => setView("main")}
-                      className="rounded-full p-2 hover:bg-gray-100 transition-colors"
+                      className="rounded-full p-2 hover:bg-muted transition-colors"
                     >
-                      <X className="h-5 w-5 text-gray-500" />
+                      <X className="h-5 w-5 text-muted-foreground" />
                     </button>
-                    <h2 className="font-heading text-xl font-bold text-gray-900">Members</h2>
+                    <h2 className="font-heading text-xl font-bold text-foreground">Members</h2>
                   </div>
                   <button
                     onClick={() => setView("invite")}
@@ -413,7 +413,7 @@ export function PodSettingsModal({
                   {members.map((member) => (
                     <div
                       key={member.id}
-                      className="flex items-center gap-4 p-3 rounded-xl bg-gray-50"
+                      className="flex items-center gap-4 p-3 rounded-xl bg-muted"
                       data-testid={`member-${member.id}`}
                     >
                       <img
@@ -422,8 +422,8 @@ export function PodSettingsModal({
                         className="h-12 w-12 rounded-full object-cover"
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-gray-900 truncate">{member.name}</div>
-                        <div className="text-sm text-gray-500">
+                        <div className="font-medium text-foreground truncate">{member.name}</div>
+                        <div className="text-sm text-muted-foreground">
                           {member.id === pod.creatorId ? "Creator" : "Member"}
                         </div>
                       </div>
@@ -431,7 +431,7 @@ export function PodSettingsModal({
                         <button
                           onClick={() => removeMemberMutation.mutate(member.id)}
                           disabled={removeMemberMutation.isPending}
-                          className="p-2 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                          className="p-2 rounded-full hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"
                           data-testid={`button-remove-member-${member.id}`}
                         >
                           <UserMinus className="h-5 w-5" />
@@ -448,25 +448,25 @@ export function PodSettingsModal({
                 <div className="flex items-center gap-4 mb-6">
                   <button
                     onClick={() => setView("members")}
-                    className="rounded-full p-2 hover:bg-gray-100 transition-colors"
+                    className="rounded-full p-2 hover:bg-muted transition-colors"
                   >
-                    <X className="h-5 w-5 text-gray-500" />
+                    <X className="h-5 w-5 text-muted-foreground" />
                   </button>
-                  <h2 className="font-heading text-xl font-bold text-gray-900">Invite by Email</h2>
+                  <h2 className="font-heading text-xl font-bold text-foreground">Invite by Email</h2>
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <label className="block text-sm font-medium text-foreground mb-2">Email Address</label>
                     <input
                       type="email"
                       value={inviteEmail}
                       onChange={(e) => setInviteEmail(e.target.value)}
-                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-xl border border-border px-4 py-3 text-base outline-none focus:ring-2 focus:ring-primary/20"
                       placeholder="friend@email.com"
                       data-testid="input-invite-email"
                     />
-                    <p className="text-xs text-gray-500 mt-2">
+                    <p className="text-xs text-muted-foreground mt-2">
                       The user must already have an account on FamVoy
                     </p>
                   </div>

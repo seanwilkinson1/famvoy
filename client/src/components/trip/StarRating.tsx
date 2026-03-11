@@ -34,7 +34,7 @@ export function StarRating({ rating, onRate, size = "md", readonly = false }: St
               sizes[size],
               star <= rating
                 ? "fill-amber-400 text-amber-400"
-                : "fill-none text-gray-300",
+                : "fill-none text-border",
             )}
           />
         </button>

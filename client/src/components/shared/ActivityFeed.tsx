@@ -24,7 +24,7 @@ function getActivityIcon(type: string) {
     case "new_experience":
       return <MapPin className="h-4 w-4 text-primary" />;
     case "match":
-      return <Heart className="h-4 w-4 text-warm-coral fill-warm-coral" />;
+      return <Heart className="h-4 w-4 text-accent fill-accent" />;
     case "pod_join":
       return <Users className="h-4 w-4 text-purple-500" />;
     case "message":
@@ -32,7 +32,7 @@ function getActivityIcon(type: string) {
     case "save_experience":
       return <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />;
     default:
-      return <Compass className="h-4 w-4 text-gray-500" />;
+      return <Compass className="h-4 w-4 text-muted-foreground" />;
   }
 }
 
@@ -45,7 +45,7 @@ function ActivityItem({ activity, onClick }: ActivityItemProps) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       onClick={onClick}
-      className="flex items-start gap-3 w-full p-3 text-left hover:bg-gray-50 rounded-xl transition-colors"
+      className="flex items-start gap-3 w-full p-3 text-left hover:bg-muted rounded-xl transition-colors"
       data-testid={`activity-${activity.id}`}
     >
       <div className="relative">
@@ -60,13 +60,13 @@ function ActivityItem({ activity, onClick }: ActivityItemProps) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm">
-          <span className="font-semibold text-gray-900">{activity.user.name}</span>{" "}
-          <span className="text-gray-600">{activity.title}</span>
+          <span className="font-semibold text-foreground">{activity.user.name}</span>{" "}
+          <span className="text-muted-foreground">{activity.title}</span>
         </p>
         {activity.description && (
-          <p className="text-xs text-gray-500 truncate mt-0.5">{activity.description}</p>
+          <p className="text-xs text-muted-foreground truncate mt-0.5">{activity.description}</p>
         )}
-        <p className="text-xs text-gray-400 mt-1">{timeAgo}</p>
+        <p className="text-xs text-muted-foreground mt-1">{timeAgo}</p>
       </div>
     </motion.button>
   );
@@ -104,10 +104,10 @@ export function ActivityFeed({ className, limit = 20, userId, showEmpty = true }
       <div className={cn("space-y-2", className)}>
         {[...Array(3)].map((_, i) => (
           <div key={i} className="flex items-center gap-3 p-3 animate-pulse">
-            <div className="h-10 w-10 rounded-full bg-gray-200" />
+            <div className="h-10 w-10 rounded-full bg-border" />
             <div className="flex-1 space-y-2">
-              <div className="h-3 w-3/4 rounded bg-gray-200" />
-              <div className="h-2 w-1/2 rounded bg-gray-200" />
+              <div className="h-3 w-3/4 rounded bg-border" />
+              <div className="h-2 w-1/2 rounded bg-border" />
             </div>
           </div>
         ))}
@@ -120,11 +120,11 @@ export function ActivityFeed({ className, limit = 20, userId, showEmpty = true }
     
     return (
       <div className={cn("text-center py-8", className)}>
-        <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-          <Compass className="h-6 w-6 text-gray-400" />
+        <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+          <Compass className="h-6 w-6 text-muted-foreground" />
         </div>
-        <p className="text-sm text-gray-500">No recent activity</p>
-        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-sm text-muted-foreground">No recent activity</p>
+        <p className="text-xs text-muted-foreground mt-1">
           Connect with families to see their updates here
         </p>
       </div>

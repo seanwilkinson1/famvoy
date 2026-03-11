@@ -79,7 +79,7 @@ export function ImageUpload({
 
         <div
           className={cn(
-            "relative rounded-2xl overflow-hidden bg-gray-100",
+            "relative rounded-2xl overflow-hidden bg-muted",
             sizeClasses[size]
           )}
         >
@@ -91,7 +91,7 @@ export function ImageUpload({
             />
           ) : (
             <div className="h-full w-full flex items-center justify-center">
-              <Upload className="h-8 w-8 text-gray-300" />
+              <Upload className="h-8 w-8 text-border" />
             </div>
           )}
 
@@ -118,7 +118,7 @@ export function ImageUpload({
                 disabled={uploadMutation.isPending}
                 data-testid="button-upload-cover"
               >
-                <Camera className="h-5 w-5 text-gray-700" />
+                <Camera className="h-5 w-5 text-foreground" />
               </button>
             </div>
           )}
@@ -140,7 +140,7 @@ export function ImageUpload({
 
       <div
         className={cn(
-          "relative rounded-full overflow-hidden bg-gray-100",
+          "relative rounded-full overflow-hidden bg-muted",
           sizeClasses[size]
         )}
       >
@@ -152,7 +152,7 @@ export function ImageUpload({
           />
         ) : (
           <div className="h-full w-full flex items-center justify-center">
-            <Camera className="h-8 w-8 text-gray-300" />
+            <Camera className="h-8 w-8 text-border" />
           </div>
         )}
 

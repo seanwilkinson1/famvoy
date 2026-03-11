@@ -88,15 +88,15 @@ export default function Cart() {
 
   return (
     <div className="flex h-screen flex-col bg-background pb-16 md:max-w-4xl md:mx-auto md:px-8">
-      <div className="flex items-center gap-3 p-4 border-b border-gray-100">
+      <div className="flex items-center gap-3 p-4 border-b border-border">
         <button
           onClick={() => setLocation("/")}
-          className="rounded-full bg-gray-100 p-2"
+          className="rounded-full bg-muted p-2"
           data-testid="button-back"
         >
-          <ChevronLeft className="h-5 w-5 text-gray-600" />
+          <ChevronLeft className="h-5 w-5 text-muted-foreground" />
         </button>
-        <h1 className="font-heading text-xl font-bold text-charcoal">Your Cart</h1>
+        <h1 className="font-heading text-xl font-bold text-foreground">Your Cart</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -105,9 +105,9 @@ export default function Cart() {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : !cart || cart.items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full p-6 text-gray-400">
+          <div className="flex flex-col items-center justify-center h-full p-6 text-muted-foreground">
             <ShoppingCart className="h-16 w-16 mb-4 opacity-30" />
-            <h2 className="font-heading text-lg font-bold text-charcoal">Your cart is empty</h2>
+            <h2 className="font-heading text-lg font-bold text-foreground">Your cart is empty</h2>
             <p className="text-sm text-center mt-2">
               Add booking options from trip itineraries to get started
             </p>
@@ -124,7 +124,7 @@ export default function Cart() {
             {cart.items.map((item) => (
               <div
                 key={item.id}
-                className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm"
+                className="bg-white rounded-xl border border-border p-4 shadow-sm"
                 data-testid={`cart-item-${item.id}`}
               >
                 <div className="flex gap-3">
@@ -136,12 +136,12 @@ export default function Cart() {
                     />
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-charcoal">{item.bookingOption.name}</h3>
+                    <h3 className="font-bold text-foreground">{item.bookingOption.name}</h3>
                     {item.bookingOption.vendorName && (
-                      <p className="text-xs text-gray-400">{item.bookingOption.vendorName}</p>
+                      <p className="text-xs text-muted-foreground">{item.bookingOption.vendorName}</p>
                     )}
                     <div className="flex items-center gap-3 mt-2">
-                      <span className="text-sm text-gray-500">Guests:</span>
+                      <span className="text-sm text-muted-foreground">Guests:</span>
                       <button
                         onClick={() =>
                           updateItemMutation.mutate({
@@ -150,10 +150,10 @@ export default function Cart() {
                           })
                         }
                         disabled={item.guestCount <= 1 || updateItemMutation.isPending}
-                        className="rounded-full bg-gray-100 p-1 hover:bg-gray-200 disabled:opacity-50"
+                        className="rounded-full bg-muted p-1 hover:bg-border disabled:opacity-50"
                         data-testid={`button-decrease-guests-${item.id}`}
                       >
-                        <Minus className="h-3 w-3 text-gray-600" />
+                        <Minus className="h-3 w-3 text-muted-foreground" />
                       </button>
                       <span className="font-bold text-sm">{item.guestCount}</span>
                       <button
@@ -167,10 +167,10 @@ export default function Cart() {
                           }
                         }}
                         disabled={updateItemMutation.isPending || item.guestCount >= getMaxGuests(item)}
-                        className="rounded-full bg-gray-100 p-1 hover:bg-gray-200 disabled:opacity-50"
+                        className="rounded-full bg-muted p-1 hover:bg-border disabled:opacity-50"
                         data-testid={`button-increase-guests-${item.id}`}
                       >
-                        <Plus className="h-3 w-3 text-gray-600" />
+                        <Plus className="h-3 w-3 text-muted-foreground" />
                       </button>
                     </div>
                   </div>
@@ -195,10 +195,10 @@ export default function Cart() {
       </div>
 
       {cart && cart.items.length > 0 && (
-        <div className="border-t border-gray-100 p-4 bg-white">
+        <div className="border-t border-border p-4 bg-white">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-gray-500">Total</span>
-            <span className="font-heading text-2xl font-bold text-charcoal">
+            <span className="text-muted-foreground">Total</span>
+            <span className="font-heading text-2xl font-bold text-foreground">
               {formatPrice(totalAmount)}
             </span>
           </div>

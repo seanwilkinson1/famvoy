@@ -63,7 +63,7 @@ export function TripReactions({ tripId, currentUserId }: TripReactionsProps) {
           className={`text-sm px-2 py-1 rounded-full border transition-colors ${
             hasReacted
               ? "bg-primary/10 border-primary/30"
-              : "bg-white border-gray-200 hover:border-primary/30"
+              : "bg-white border-border hover:border-primary/30"
           }`}
         >
           {emoji} {count > 0 && <span className="text-xs ml-0.5">{count}</span>}

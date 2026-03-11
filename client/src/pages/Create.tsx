@@ -154,18 +154,18 @@ function CreateInner() {
       <div className="mb-8 flex items-center gap-4">
         <button 
           onClick={() => setLocation("/")} 
-          className="rounded-full bg-gray-100 p-2 active:scale-90"
+          className="rounded-full bg-muted p-2 active:scale-90"
           data-testid="button-back"
         >
-          <ChevronLeft className="h-6 w-6 text-gray-700" />
+          <ChevronLeft className="h-6 w-6 text-foreground" />
         </button>
-        <h1 className="font-heading text-2xl font-bold text-gray-900">New Experience</h1>
+        <h1 className="font-heading text-2xl font-bold text-foreground">New Experience</h1>
       </div>
 
       <div className="space-y-8">
         {/* Step 1: Photo */}
         <section>
-          <label className="mb-2 block text-sm font-bold text-gray-700">Photos</label>
+          <label className="mb-2 block text-sm font-bold text-foreground">Photos</label>
           <input
             ref={fileInputRef}
             type="file"
@@ -179,7 +179,7 @@ function CreateInner() {
               "relative aspect-video w-full overflow-hidden rounded-3xl border-2 border-dashed flex flex-col items-center justify-center group cursor-pointer transition-colors",
               uploadedImageUrl 
                 ? "border-transparent bg-gray-900" 
-                : "border-gray-300 bg-gray-100 hover:bg-gray-50"
+                : "border-gray-300 bg-muted hover:bg-muted"
             )}
           >
             {uploadedImageUrl ? (
@@ -191,7 +191,7 @@ function CreateInner() {
                 />
                 <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <div className="h-12 w-12 rounded-full bg-white/90 flex items-center justify-center">
-                    <Camera className="h-6 w-6 text-gray-700" />
+                    <Camera className="h-6 w-6 text-foreground" />
                   </div>
                 </div>
                 <button
@@ -209,11 +209,11 @@ function CreateInner() {
                 <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center shadow-sm mb-3 relative">
                   <Loader2 className="h-8 w-8 text-primary animate-spin" />
                 </div>
-                <p className="text-sm font-medium text-gray-500">
+                <p className="text-sm font-medium text-muted-foreground">
                   Uploading... {uploadProgress > 0 && `${uploadProgress}%`}
                 </p>
                 {uploadProgress > 0 && (
-                  <div className="w-32 h-1.5 bg-gray-200 rounded-full mt-2 overflow-hidden">
+                  <div className="w-32 h-1.5 bg-border rounded-full mt-2 overflow-hidden">
                     <div 
                       className="h-full bg-primary rounded-full transition-all duration-300"
                       style={{ width: `${uploadProgress}%` }}
@@ -226,7 +226,7 @@ function CreateInner() {
                 <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center shadow-sm mb-3 group-active:scale-90 transition-transform">
                   <Camera className="h-8 w-8 text-primary" />
                 </div>
-                <p className="text-sm font-medium text-gray-500">Tap to add a photo</p>
+                <p className="text-sm font-medium text-muted-foreground">Tap to add a photo</p>
               </>
             )}
           </div>
@@ -235,11 +235,11 @@ function CreateInner() {
         {/* Step 2: Details */}
         <section className="space-y-6">
           <div>
-            <label className="mb-2 block text-sm font-bold text-gray-700">Title</label>
+            <label className="mb-2 block text-sm font-bold text-foreground">Title</label>
             <input
               type="text"
               placeholder="e.g., Hidden Creek Hike"
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full rounded-xl border border-border bg-white p-4 text-base font-medium placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               data-testid="input-title"
@@ -248,13 +248,13 @@ function CreateInner() {
 
           <div className="grid grid-cols-2 gap-4">
              <div>
-              <label className="mb-2 block text-sm font-bold text-gray-700">Duration</label>
+              <label className="mb-2 block text-sm font-bold text-foreground">Duration</label>
               <div className="relative">
-                <Clock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                <Clock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="1.5 hrs"
-                  className="w-full rounded-xl border border-gray-200 bg-white py-4 pl-12 pr-4 text-base font-medium placeholder:text-gray-400 focus:border-primary focus:outline-none"
+                  className="w-full rounded-xl border border-border bg-white py-4 pl-12 pr-4 text-base font-medium placeholder:text-muted-foreground focus:border-primary focus:outline-none"
                   value={formData.duration}
                   onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                   data-testid="input-duration"
@@ -262,13 +262,13 @@ function CreateInner() {
               </div>
              </div>
              <div>
-              <label className="mb-2 block text-sm font-bold text-gray-700">Ages</label>
+              <label className="mb-2 block text-sm font-bold text-foreground">Ages</label>
               <div className="relative">
-                <Info className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                <Info className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="3-7"
-                  className="w-full rounded-xl border border-gray-200 bg-white py-4 pl-12 pr-4 text-base font-medium placeholder:text-gray-400 focus:border-primary focus:outline-none"
+                  className="w-full rounded-xl border border-border bg-white py-4 pl-12 pr-4 text-base font-medium placeholder:text-muted-foreground focus:border-primary focus:outline-none"
                   value={formData.ages}
                   onChange={(e) => setFormData({ ...formData, ages: e.target.value })}
                   data-testid="input-ages"
@@ -278,8 +278,8 @@ function CreateInner() {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-bold text-gray-700">Cost</label>
-            <div className="flex rounded-xl bg-gray-100 p-1">
+            <label className="mb-2 block text-sm font-bold text-foreground">Cost</label>
+            <div className="flex rounded-xl bg-muted p-1">
               {(["Free", "$", "$$"] as const).map((c) => (
                 <button
                   key={c}
@@ -288,7 +288,7 @@ function CreateInner() {
                     "flex-1 rounded-lg py-2 text-sm font-bold transition-all",
                     formData.cost === c
                       ? "bg-white text-primary shadow-sm"
-                      : "text-gray-500 hover:text-gray-700"
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                   data-testid={`button-cost-${c.toLowerCase()}`}
                 >
@@ -299,7 +299,7 @@ function CreateInner() {
           </div>
           
           <div>
-            <label className="mb-2 block text-sm font-bold text-gray-700">Location</label>
+            <label className="mb-2 block text-sm font-bold text-foreground">Location</label>
             <GooglePlacesAutocomplete
               value={locationSearch}
               onChange={setLocationSearch}
@@ -320,11 +320,11 @@ function CreateInner() {
           </div>
 
            <div>
-            <label className="mb-2 block text-sm font-bold text-gray-700">What did you love?</label>
+            <label className="mb-2 block text-sm font-bold text-foreground">What did you love?</label>
             <textarea
               rows={3}
               placeholder="Share your experience..."
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+              className="w-full rounded-xl border border-border bg-white p-4 text-base font-medium placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               data-testid="input-description"

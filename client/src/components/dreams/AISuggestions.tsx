@@ -24,7 +24,7 @@ export function AISuggestions({ onSaveDream }: AISuggestionsProps) {
     <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl border border-purple-200 p-5">
       <div className="flex items-center gap-2 mb-3">
         <Sparkles className="h-5 w-5 text-purple-600" />
-        <h3 className="font-display font-bold text-charcoal">AI Trip Ideas</h3>
+        <h3 className="font-display font-bold text-foreground">AI Trip Ideas</h3>
       </div>
 
       {!suggestMutation.data && !suggestMutation.isPending && (
@@ -36,7 +36,7 @@ export function AISuggestions({ onSaveDream }: AISuggestionsProps) {
           {showFilters && (
             <div className="space-y-3 mb-4">
               <div>
-                <label className="text-xs font-medium text-charcoal">When?</label>
+                <label className="text-xs font-medium text-foreground">When?</label>
                 <div className="flex gap-2 mt-1 flex-wrap">
                   {["spring", "summer", "fall", "winter", "anytime"].map((s) => (
                     <button
@@ -45,7 +45,7 @@ export function AISuggestions({ onSaveDream }: AISuggestionsProps) {
                       className={`text-xs px-3 py-1 rounded-full border ${
                         when === s
                           ? "bg-purple-600 text-white border-purple-600"
-                          : "bg-white text-muted-foreground border-gray-200"
+                          : "bg-white text-muted-foreground border-border"
                       }`}
                     >
                       {s}
@@ -54,7 +54,7 @@ export function AISuggestions({ onSaveDream }: AISuggestionsProps) {
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-charcoal">Budget</label>
+                <label className="text-xs font-medium text-foreground">Budget</label>
                 <div className="flex gap-2 mt-1 flex-wrap">
                   {["budget", "moderate", "luxury"].map((b) => (
                     <button
@@ -63,7 +63,7 @@ export function AISuggestions({ onSaveDream }: AISuggestionsProps) {
                       className={`text-xs px-3 py-1 rounded-full border ${
                         budget === b
                           ? "bg-purple-600 text-white border-purple-600"
-                          : "bg-white text-muted-foreground border-gray-200"
+                          : "bg-white text-muted-foreground border-border"
                       }`}
                     >
                       {b}
@@ -72,7 +72,7 @@ export function AISuggestions({ onSaveDream }: AISuggestionsProps) {
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-charcoal">Trip Style</label>
+                <label className="text-xs font-medium text-foreground">Trip Style</label>
                 <div className="flex gap-2 mt-1 flex-wrap">
                   {STYLES.map((s) => (
                     <button
@@ -81,7 +81,7 @@ export function AISuggestions({ onSaveDream }: AISuggestionsProps) {
                       className={`text-xs px-3 py-1 rounded-full border ${
                         tripStyle === s
                           ? "bg-purple-600 text-white border-purple-600"
-                          : "bg-white text-muted-foreground border-gray-200"
+                          : "bg-white text-muted-foreground border-border"
                       }`}
                     >
                       {s}
@@ -124,7 +124,7 @@ export function AISuggestions({ onSaveDream }: AISuggestionsProps) {
             <div key={i} className="bg-white rounded-xl border p-4">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h4 className="font-display font-bold text-charcoal flex items-center gap-1.5">
+                  <h4 className="font-display font-bold text-foreground flex items-center gap-1.5">
                     <MapPin className="h-4 w-4 text-purple-600" />
                     {s.destinationName}
                   </h4>

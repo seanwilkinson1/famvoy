@@ -46,9 +46,9 @@ export function MatchModal({ isOpen, onClose, matchedFamily, currentUser, podId 
             <div className="rounded-[22px] bg-white p-6 text-center">
               <button
                 onClick={onClose}
-                className="absolute right-4 top-4 rounded-full bg-gray-100 p-2"
+                className="absolute right-4 top-4 rounded-full bg-muted p-2"
               >
-                <X className="h-5 w-5 text-gray-500" />
+                <X className="h-5 w-5 text-muted-foreground" />
               </button>
 
               {/* Sparkle Animation */}
@@ -74,7 +74,7 @@ export function MatchModal({ isOpen, onClose, matchedFamily, currentUser, podId 
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                className="text-gray-500 mb-6"
+                className="text-muted-foreground mb-6"
               >
                 You and {matchedFamily.name || 'this family'} both want to connect!
               </motion.p>
@@ -115,7 +115,7 @@ export function MatchModal({ isOpen, onClose, matchedFamily, currentUser, podId 
                 </button>
                 <button
                   onClick={onClose}
-                  className="w-full py-3 text-sm font-medium text-gray-500"
+                  className="w-full py-3 text-sm font-medium text-muted-foreground"
                   data-testid="button-keep-swiping"
                 >
                   Keep Swiping

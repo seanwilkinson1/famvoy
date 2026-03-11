@@ -99,7 +99,7 @@ export function TripPhotoGallery({ tripId, startDate, endDate, isOwner }: TripPh
       />
 
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-display font-bold text-charcoal flex items-center gap-2">
+        <h3 className="text-lg font-display font-bold text-foreground flex items-center gap-2">
           <Camera className="h-5 w-5 text-primary" />
           Trip Photos
         </h3>
@@ -109,8 +109,8 @@ export function TripPhotoGallery({ tripId, startDate, endDate, isOwner }: TripPh
       </div>
 
       {photos.length === 0 ? (
-        <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center">
-          <ImageIcon className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+        <div className="border-2 border-dashed border-border rounded-xl p-8 text-center">
+          <ImageIcon className="h-10 w-10 text-border mx-auto mb-3" />
           <p className="text-sm text-muted-foreground mb-3">
             No photos yet. Capture memories from your trip!
           </p>
@@ -155,7 +155,7 @@ export function TripPhotoGallery({ tripId, startDate, endDate, isOwner }: TripPh
                         key={photo.id}
                         layoutId={`photo-${photo.id}`}
                         onClick={() => setSelectedPhoto(photo)}
-                        className="relative aspect-square overflow-hidden bg-gray-100"
+                        className="relative aspect-square overflow-hidden bg-muted"
                       >
                         <img
                           src={photo.photoUrl}
@@ -165,14 +165,14 @@ export function TripPhotoGallery({ tripId, startDate, endDate, isOwner }: TripPh
                       </motion.button>
                     ))}
                     {uploadMutation.isPending && uploadingDay === day && (
-                      <div className="aspect-square bg-gray-100 flex items-center justify-center">
+                      <div className="aspect-square bg-muted flex items-center justify-center">
                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                       </div>
                     )}
                   </div>
                 ) : (
                   isOwner && (
-                    <div className="border border-dashed border-gray-200 rounded-lg p-4 text-center">
+                    <div className="border border-dashed border-border rounded-lg p-4 text-center">
                       <p className="text-xs text-muted-foreground">No photos for this day</p>
                     </div>
                   )

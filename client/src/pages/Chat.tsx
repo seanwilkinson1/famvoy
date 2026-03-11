@@ -48,20 +48,20 @@ export default function Chat() {
   if (isLoading) {
     return (
       <div className="p-4 space-y-4">
-        <div className="h-8 w-32 bg-gray-200 rounded animate-pulse" />
+        <div className="h-8 w-32 bg-border rounded animate-pulse" />
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-20 bg-gray-200 rounded-2xl animate-pulse" />
+          <div key={i} className="h-20 bg-border rounded-2xl animate-pulse" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 md:pb-8 md:max-w-5xl md:mx-auto md:px-8">
+    <div className="min-h-screen bg-muted pb-20 md:pb-8 md:max-w-5xl md:mx-auto md:px-8">
       {/* Header */}
-      <div className="bg-white px-4 pt-14 md:pt-8 pb-4 border-b border-gray-100 md:border-b-0 sticky top-0 z-10 md:max-w-4xl md:mx-auto">
+      <div className="bg-white px-4 pt-14 md:pt-8 pb-4 border-b border-border md:border-b-0 sticky top-0 z-10 md:max-w-4xl md:mx-auto">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-charcoal font-heading">Messages</h1>
+          <h1 className="text-2xl font-bold text-foreground font-heading">Messages</h1>
           <button
             onClick={() => setShowNewChat(true)}
             className="rounded-full bg-primary p-2 text-white shadow-sm active:scale-95 transition-transform"
@@ -76,11 +76,11 @@ export default function Chat() {
       <div className="p-4 md:max-w-4xl md:mx-auto">
         {conversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <MessageCircle className="w-10 h-10 text-gray-400" />
+            <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4">
+              <MessageCircle className="w-10 h-10 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">No messages yet</h3>
-            <p className="text-gray-500 mb-6 max-w-xs">
+            <h3 className="text-lg font-semibold text-foreground mb-2">No messages yet</h3>
+            <p className="text-muted-foreground mb-6 max-w-xs">
               Start a conversation with another family!
             </p>
             <button 
@@ -105,7 +105,7 @@ export default function Chat() {
               return (
                 <Link key={conv.id} href={`/conversation/${conv.id}`}>
                   <div 
-                    className="flex items-center gap-3 p-3 bg-white rounded-2xl border border-gray-100 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                    className="flex items-center gap-3 p-3 bg-white rounded-2xl border border-border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                     data-testid={`conversation-${conv.id}`}
                   >
                     <div className="relative">
@@ -133,15 +133,15 @@ export default function Chat() {
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-semibold text-charcoal truncate">{displayName}</h3>
+                        <h3 className="font-semibold text-foreground truncate">{displayName}</h3>
                         {conv.lastMessage && (
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-muted-foreground">
                             {formatDistanceToNow(new Date(conv.lastMessage.createdAt), { addSuffix: false })}
                           </span>
                         )}
                       </div>
                       {conv.lastMessage ? (
-                        <div className="flex items-center gap-1 text-sm text-gray-500 truncate">
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground truncate">
                           {conv.lastMessage.imageUrl ? (
                             <>
                               <ImageIcon className="w-4 h-4" />
@@ -152,11 +152,11 @@ export default function Chat() {
                           )}
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-400">No messages yet</p>
+                        <p className="text-sm text-muted-foreground">No messages yet</p>
                       )}
                     </div>
                     
-                    <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                    <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                   </div>
                 </Link>
               );
@@ -169,11 +169,11 @@ export default function Chat() {
       {showNewChat && createPortal(
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-end md:items-center md:justify-center">
           <div className="bg-white rounded-t-3xl md:rounded-2xl w-full md:max-w-md max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+            <div className="flex items-center justify-between p-4 border-b border-border">
               <h3 className="font-heading text-lg font-bold">New Message</h3>
               <button 
                 onClick={() => { setShowNewChat(false); setSearchQuery(""); }}
-                className="rounded-full bg-gray-100 p-2"
+                className="rounded-full bg-muted p-2"
                 data-testid="button-close-new-chat"
               >
                 <X className="h-5 w-5" />
@@ -181,13 +181,13 @@ export default function Chat() {
             </div>
             
             {/* Search */}
-            <div className="p-4 border-b border-gray-100">
-              <div className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2">
-                <Search className="h-5 w-5 text-gray-400" />
+            <div className="p-4 border-b border-border">
+              <div className="flex items-center gap-2 rounded-full bg-muted px-4 py-2">
+                <Search className="h-5 w-5 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="Search families..."
-                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   data-testid="input-search-users"
@@ -198,13 +198,13 @@ export default function Chat() {
             {/* Users List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {filteredUsers.length === 0 ? (
-                <p className="text-center text-gray-400 py-8">No families found</p>
+                <p className="text-center text-muted-foreground py-8">No families found</p>
               ) : filteredUsers.map((user: any) => (
                 <button
                   key={user.id}
                   onClick={() => createDirectMutation.mutate(user.id)}
                   disabled={createDirectMutation.isPending}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors disabled:opacity-50"
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-muted hover:bg-muted transition-colors disabled:opacity-50"
                   data-testid={`user-${user.id}`}
                 >
                   {user.avatar ? (
@@ -219,9 +219,9 @@ export default function Chat() {
                     </div>
                   )}
                   <div className="flex-1 text-left">
-                    <p className="font-bold text-sm text-gray-900">{user.name || 'Family'}</p>
+                    <p className="font-bold text-sm text-foreground">{user.name || 'Family'}</p>
                     {user.location && (
-                      <p className="text-xs text-gray-500">{user.location}</p>
+                      <p className="text-xs text-muted-foreground">{user.location}</p>
                     )}
                   </div>
                   <MessageCircle className="w-5 h-5 text-primary" />

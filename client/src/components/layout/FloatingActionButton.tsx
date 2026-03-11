@@ -67,9 +67,9 @@ export function FloatingActionButton() {
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
             "w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-colors",
-            isOpen 
-              ? "bg-gray-700 text-white" 
-              : "bg-primary text-white"
+            isOpen
+              ? "bg-foreground/80 text-background"
+              : "bg-primary text-primary-foreground"
           )}
           whileTap={{ scale: 0.95 }}
           data-testid="fab-toggle"

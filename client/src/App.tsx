@@ -54,8 +54,8 @@ const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
 
 function PageLoader() {
   return (
-    <div className="min-h-screen bg-soft-beige flex items-center justify-center">
-      <div className="w-12 h-12 rounded-full border-4 border-warm-teal border-t-transparent animate-spin" />
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
     </div>
   );
 }
@@ -78,8 +78,8 @@ function AuthenticatedRouter() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-soft-beige flex items-center justify-center">
-        <div className="w-12 h-12 rounded-full border-4 border-warm-teal border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -115,7 +115,7 @@ function AuthenticatedRouter() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-background">
       <Sidebar />
       <div className="flex-1 flex flex-col w-full bg-background shadow-2xl md:shadow-none overflow-hidden relative">
         {showHeader && <TopHeader />}

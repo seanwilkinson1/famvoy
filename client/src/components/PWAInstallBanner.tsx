@@ -63,15 +63,15 @@ export function PWAInstallBanner() {
 
   return (
     <div 
-      className="px-4 py-3 flex items-center justify-between gap-3 border-b-2 border-gray-300 bg-gray-100"
+      className="px-4 py-3 flex items-center justify-between gap-3 border-b-2 border-gray-300 bg-muted"
       data-testid="pwa-install-banner"
     >
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        <Download className="w-5 h-5 flex-shrink-0 text-gray-700" />
+        <Download className="w-5 h-5 flex-shrink-0 text-foreground" />
         <div className="min-w-0">
           {isIOS ? (
             <p className="text-sm font-medium text-gray-800">
-              Install FamVoy: Tap <Share className="w-4 h-4 inline -mt-0.5 text-gray-700" /> then "Add to Home Screen"
+              Install FamVoy: Tap <Share className="w-4 h-4 inline -mt-0.5 text-foreground" /> then "Add to Home Screen"
             </p>
           ) : (
             <p className="text-sm font-medium text-gray-800">
@@ -93,7 +93,7 @@ export function PWAInstallBanner() {
         )}
         <button
           onClick={handleDismiss}
-          className="p-1 hover:bg-gray-200 rounded-full transition-colors text-gray-600"
+          className="p-1 hover:bg-border rounded-full transition-colors text-muted-foreground"
           aria-label="Dismiss"
           data-testid="button-dismiss-pwa-banner"
         >

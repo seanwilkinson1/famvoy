@@ -280,21 +280,21 @@ export default function PodDetails() {
   return (
     <div className="flex h-screen flex-col bg-background pb-20 md:pb-0 md:max-w-5xl md:mx-auto md:px-8">
       {/* Header */}
-      <div className="border-b border-gray-100 bg-white px-6 pt-14 md:pt-6 pb-4 shadow-sm z-10 md:max-w-5xl md:mx-auto md:w-full md:rounded-b-none">
+      <div className="border-b border-border bg-white px-6 pt-14 md:pt-6 pb-4 shadow-sm z-10 md:max-w-5xl md:mx-auto md:w-full md:rounded-b-none">
         <div className="mb-4 flex items-center justify-between">
           <button 
             onClick={() => setLocation("/pods")} 
-            className="rounded-full bg-gray-100 p-2 active:scale-90"
+            className="rounded-full bg-muted p-2 active:scale-90"
             data-testid="button-back"
           >
-            <ChevronLeft className="h-6 w-6 text-gray-700" />
+            <ChevronLeft className="h-6 w-6 text-foreground" />
           </button>
           <button 
             onClick={() => setShowSettingsModal(true)}
-            className="rounded-full bg-gray-100 p-2 active:scale-90" 
+            className="rounded-full bg-muted p-2 active:scale-90" 
             data-testid="button-settings"
           >
-            <Settings className="h-6 w-6 text-gray-700" />
+            <Settings className="h-6 w-6 text-foreground" />
           </button>
         </div>
         
@@ -309,26 +309,26 @@ export default function PodDetails() {
               />
             ))}
             {members.length > 3 && (
-              <div className="h-12 w-12 rounded-full border-2 border-white ring-1 ring-gray-100 bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
+              <div className="h-12 w-12 rounded-full border-2 border-white ring-1 ring-gray-100 bg-border flex items-center justify-center text-sm font-bold text-muted-foreground">
                 +{members.length - 3}
               </div>
             )}
           </div>
           <div>
-            <h1 className="font-heading text-xl font-bold text-gray-900" data-testid="text-pod-name">{pod.name}</h1>
-            <p className="text-xs font-medium text-gray-500">{members.length} {members.length === 1 ? 'family' : 'families'}</p>
+            <h1 className="font-heading text-xl font-bold text-foreground" data-testid="text-pod-name">{pod.name}</h1>
+            <p className="text-xs font-medium text-muted-foreground">{members.length} {members.length === 1 ? 'family' : 'families'}</p>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="mt-6 flex rounded-xl bg-gray-100 p-1">
+        <div className="mt-6 flex rounded-xl bg-muted p-1">
           {["posts", "experiences", "albums", "trips"].map((t) => (
             <button
               key={t}
               onClick={() => setActiveTab(t as any)}
               className={cn(
                 "flex-1 rounded-lg py-2 text-xs font-bold capitalize transition-all",
-                activeTab === t ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-700"
+                activeTab === t ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
               )}
               data-testid={`button-tab-${t}`}
             >
@@ -339,11 +339,11 @@ export default function PodDetails() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto bg-gray-50/50">
+      <div className="flex-1 overflow-y-auto bg-muted/50">
         {activeTab === "posts" && (
           <div className="flex h-full flex-col">
             {/* Post Input */}
-            <div className="border-b border-gray-100 bg-white p-4">
+            <div className="border-b border-border bg-white p-4">
               <div className="flex items-start gap-3">
                 <img 
                   src={currentUser?.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400'} 
@@ -353,7 +353,7 @@ export default function PodDetails() {
                 <div className="flex-1">
                   <textarea
                     placeholder="Share an update with the pod..."
-                    className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm outline-none focus:border-primary focus:bg-white transition-colors"
+                    className="w-full resize-none rounded-xl border border-border bg-muted p-3 text-sm outline-none focus:border-primary focus:bg-white transition-colors"
                     rows={2}
                     value={postInput}
                     onChange={(e) => setPostInput(e.target.value)}
@@ -376,7 +376,7 @@ export default function PodDetails() {
             {/* Posts Feed */}
             <div className="flex-1 space-y-4 p-4">
               {podPosts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+                <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
                   <p className="text-sm">No posts yet. Share something with the pod!</p>
                 </div>
               ) : podPosts.map((post: any) => (
@@ -388,8 +388,8 @@ export default function PodDetails() {
                       alt={post.user?.name || 'Family'} 
                     />
                     <div>
-                      <p className="font-bold text-sm text-gray-900">{post.user?.name || 'Family'}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="font-bold text-sm text-foreground">{post.user?.name || 'Family'}</p>
+                      <p className="text-xs text-muted-foreground">
                         {new Date(post.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })} at {new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
@@ -411,7 +411,7 @@ export default function PodDetails() {
         {activeTab === "experiences" && (
           <div className="p-6 space-y-4">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-medium text-gray-500">Pod's curated experiences</p>
+              <p className="text-sm font-medium text-muted-foreground">Pod's curated experiences</p>
               <button
                 onClick={() => setShowAddExperienceModal(true)}
                 className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-white shadow-sm active:scale-95 transition-transform"
@@ -423,7 +423,7 @@ export default function PodDetails() {
             </div>
             
             {formattedPodExperiences.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <MapPin className="h-12 w-12 mb-2 opacity-20" />
                 <p className="text-sm">No experiences added yet</p>
                 <button 
@@ -460,23 +460,23 @@ export default function PodDetails() {
         {showAddExperienceModal && (
           <div className="absolute inset-0 bg-black/50 z-50 flex items-end">
             <div className="bg-white rounded-t-3xl w-full max-h-[70vh] overflow-hidden">
-              <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <div className="flex items-center justify-between p-4 border-b border-border">
                 <h3 className="font-heading text-lg font-bold">Add Experience to Pod</h3>
                 <button 
                   onClick={() => setShowAddExperienceModal(false)}
-                  className="rounded-full bg-gray-100 p-2"
+                  className="rounded-full bg-muted p-2"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
               <div className="overflow-y-auto p-4 space-y-3 max-h-[55vh]">
                 {availableExperiences.length === 0 ? (
-                  <p className="text-center text-gray-400 py-8">All experiences already added to this pod</p>
+                  <p className="text-center text-muted-foreground py-8">All experiences already added to this pod</p>
                 ) : availableExperiences.map((exp) => (
                   <div 
                     key={exp.id}
                     onClick={() => addExperienceMutation.mutate(exp.id)}
-                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-xl bg-muted cursor-pointer hover:bg-muted transition-colors"
                   >
                     <img 
                       src={exp.image || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400'} 
@@ -487,8 +487,8 @@ export default function PodDetails() {
                       <span className="inline-block rounded bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary mb-1">
                         {exp.category}
                       </span>
-                      <p className="font-bold text-sm text-gray-900 line-clamp-1">{exp.title}</p>
-                      <p className="text-xs text-gray-500 line-clamp-1">{exp.locationName}</p>
+                      <p className="font-bold text-sm text-foreground line-clamp-1">{exp.title}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-1">{exp.locationName}</p>
                     </div>
                     <Plus className="h-5 w-5 text-primary" />
                   </div>
@@ -501,7 +501,7 @@ export default function PodDetails() {
         {activeTab === "albums" && !selectedAlbum && (
           <div className="p-6 space-y-4">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-medium text-gray-500">Pod photo albums</p>
+              <p className="text-sm font-medium text-muted-foreground">Pod photo albums</p>
               <button
                 onClick={() => setShowCreateAlbumModal(true)}
                 className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-white shadow-sm active:scale-95 transition-transform"
@@ -513,7 +513,7 @@ export default function PodDetails() {
             </div>
             
             {podAlbums.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <Images className="h-12 w-12 mb-2 opacity-20" />
                 <p className="text-sm">No albums yet</p>
                 <button 
@@ -533,7 +533,7 @@ export default function PodDetails() {
                     className="relative rounded-xl overflow-hidden bg-white shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                     data-testid={`album-card-${album.id}`}
                   >
-                    <div className="aspect-square bg-gray-100">
+                    <div className="aspect-square bg-muted">
                       {album.coverPhotoUrl ? (
                         <img 
                           src={album.coverPhotoUrl} 
@@ -542,13 +542,13 @@ export default function PodDetails() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Images className="h-12 w-12 text-gray-300" />
+                          <Images className="h-12 w-12 text-border" />
                         </div>
                       )}
                     </div>
                     <div className="p-3">
-                      <p className="font-bold text-sm text-gray-900 line-clamp-1">{album.name}</p>
-                      <p className="text-xs text-gray-500">{album.photoCount} photos</p>
+                      <p className="font-bold text-sm text-foreground line-clamp-1">{album.name}</p>
+                      <p className="text-xs text-muted-foreground">{album.photoCount} photos</p>
                     </div>
                   </div>
                 ))}
@@ -562,7 +562,7 @@ export default function PodDetails() {
             <div className="flex items-center justify-between mb-4">
               <button 
                 onClick={() => setSelectedAlbum(null)}
-                className="flex items-center gap-2 text-sm font-medium text-gray-600"
+                className="flex items-center gap-2 text-sm font-medium text-muted-foreground"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Back to Albums
@@ -579,9 +579,9 @@ export default function PodDetails() {
             </div>
             
             <div className="mb-4">
-              <h3 className="font-heading text-lg font-bold text-gray-900">{selectedAlbum.name}</h3>
+              <h3 className="font-heading text-lg font-bold text-foreground">{selectedAlbum.name}</h3>
               {selectedAlbum.description && (
-                <p className="text-sm text-gray-500 mt-1">{selectedAlbum.description}</p>
+                <p className="text-sm text-muted-foreground mt-1">{selectedAlbum.description}</p>
               )}
             </div>
 
@@ -596,7 +596,7 @@ export default function PodDetails() {
             <button
               onClick={() => albumPhotoInputRef.current?.click()}
               disabled={isUploadingAlbumPhoto}
-              className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 p-4 text-gray-500 hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-4 text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
               data-testid="button-upload-photo"
             >
               {isUploadingAlbumPhoto ? (
@@ -613,7 +613,7 @@ export default function PodDetails() {
             </button>
 
             {albumPhotos.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                 <Camera className="h-8 w-8 mb-2 opacity-20" />
                 <p className="text-sm">No photos yet</p>
               </div>
@@ -648,7 +648,7 @@ export default function PodDetails() {
         {showCreateAlbumModal && (
           <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-6">
             <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
-              <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <div className="flex items-center justify-between p-4 border-b border-border">
                 <h3 className="font-heading text-lg font-bold">Create Album</h3>
                 <button 
                   onClick={() => {
@@ -656,29 +656,29 @@ export default function PodDetails() {
                     setAlbumName("");
                     setAlbumDescription("");
                   }}
-                  className="rounded-full bg-gray-100 p-2"
+                  className="rounded-full bg-muted p-2"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
               <div className="p-4 space-y-4">
                 <div>
-                  <label className="text-sm font-bold text-gray-700 mb-1 block">Album Name</label>
+                  <label className="text-sm font-bold text-foreground mb-1 block">Album Name</label>
                   <input
                     type="text"
                     placeholder="e.g., Summer Beach Trip"
-                    className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-border p-3 text-sm focus:border-primary focus:outline-none"
                     value={albumName}
                     onChange={(e) => setAlbumName(e.target.value)}
                     data-testid="input-album-name"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-bold text-gray-700 mb-1 block">Description (optional)</label>
+                  <label className="text-sm font-bold text-foreground mb-1 block">Description (optional)</label>
                   <textarea
                     placeholder="What's this album about?"
                     rows={2}
-                    className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:border-primary focus:outline-none resize-none"
+                    className="w-full rounded-xl border border-border p-3 text-sm focus:border-primary focus:outline-none resize-none"
                     value={albumDescription}
                     onChange={(e) => setAlbumDescription(e.target.value)}
                     data-testid="input-album-description"
@@ -712,10 +712,10 @@ export default function PodDetails() {
             </div>
 
             {podTrips.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                 <Plane className="h-12 w-12 mb-2 opacity-20" />
                 <p className="text-sm">No trips linked yet.</p>
-                <p className="text-xs mt-1 text-gray-300">Create trips from the Trips tab, then link them here.</p>
+                <p className="text-xs mt-1 text-border">Create trips from the Trips tab, then link them here.</p>
                 <button 
                   onClick={() => setShowCreateTripModal(true)}
                   className="mt-4 text-primary font-bold text-sm"
@@ -730,7 +730,7 @@ export default function PodDetails() {
                   <div key={trip.id} className="relative">
                     <button
                       onClick={() => setLocation(`/trip/${trip.id}`)}
-                      className="w-full bg-white rounded-2xl border border-gray-100 p-4 text-left hover:shadow-md transition-shadow"
+                      className="w-full bg-white rounded-2xl border border-border p-4 text-left hover:shadow-md transition-shadow"
                       data-testid={`card-trip-${trip.id}`}
                     >
                       <div className="flex items-start gap-3">
@@ -739,23 +739,23 @@ export default function PodDetails() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
-                            <h4 className="font-heading font-bold text-charcoal truncate">{trip.name}</h4>
+                            <h4 className="font-heading font-bold text-foreground truncate">{trip.name}</h4>
                             <span className={cn(
                               "text-xs px-2 py-0.5 rounded-full font-medium shrink-0",
                               trip.status === "confirmed" 
                                 ? "bg-green-100 text-green-700" 
                                 : trip.status === "confirming"
                                 ? "bg-orange-100 text-orange-700"
-                                : "bg-gray-100 text-gray-600"
+                                : "bg-muted text-muted-foreground"
                             )}>
                               {trip.status === "confirmed" ? "Confirmed" : trip.status === "confirming" ? "In Progress" : "Draft"}
                             </span>
                           </div>
-                          <div className="flex items-center gap-1 text-sm text-gray-500 mt-0.5">
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground mt-0.5">
                             <MapPin className="h-3.5 w-3.5" />
                             <span className="truncate">{trip.destination}</span>
                           </div>
-                          <div className="flex items-center gap-1 text-xs text-gray-400 mt-1">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                             <Calendar className="h-3 w-3" />
                             <span>
                               {format(new Date(trip.startDate), "MMM d")} - {format(new Date(trip.endDate), "MMM d, yyyy")}
@@ -770,7 +770,7 @@ export default function PodDetails() {
                         )}
                       </div>
                       {trip.items && trip.items.length > 0 && (
-                        <div className="mt-3 text-xs text-gray-500">
+                        <div className="mt-3 text-xs text-muted-foreground">
                           {trip.items.length} activities planned
                         </div>
                       )}
@@ -799,33 +799,33 @@ export default function PodDetails() {
         {showCreateTripModal && (
           <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-6">
             <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
-              <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <div className="flex items-center justify-between p-4 border-b border-border">
                 <h3 className="font-heading text-lg font-bold">Link a Trip</h3>
                 <button 
                   onClick={() => setShowCreateTripModal(false)}
-                  className="rounded-full bg-gray-100 p-2"
+                  className="rounded-full bg-muted p-2"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
               <div className="p-4 space-y-3">
                 {unlinkedTrips.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-muted-foreground">
                     <Plane className="h-10 w-10 mx-auto mb-2 opacity-30" />
                     <p className="text-sm">No trips available to link.</p>
                     <p className="text-xs mt-1">Create a trip from the Trips tab first.</p>
                   </div>
                 ) : (
                   <>
-                    <p className="text-sm text-gray-500">Select a trip to link to this pod:</p>
+                    <p className="text-sm text-muted-foreground">Select a trip to link to this pod:</p>
                     {unlinkedTrips.map((trip: any) => (
                       <button
                         key={trip.id}
                         onClick={() => linkTripMutation.mutate(trip.id)}
                         disabled={linkingTripId !== null}
                         className={cn(
-                          "w-full bg-gray-50 rounded-xl p-3 text-left transition-colors border border-gray-100",
-                          linkingTripId === trip.id ? "opacity-70" : "hover:bg-gray-100",
+                          "w-full bg-muted rounded-xl p-3 text-left transition-colors border border-border",
+                          linkingTripId === trip.id ? "opacity-70" : "hover:bg-muted",
                           linkingTripId !== null && linkingTripId !== trip.id && "opacity-50"
                         )}
                         data-testid={`button-link-trip-${trip.id}`}
@@ -835,8 +835,8 @@ export default function PodDetails() {
                             <Plane className="h-5 w-5 text-primary" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-charcoal truncate">{trip.name}</h4>
-                            <div className="flex items-center gap-1 text-xs text-gray-400">
+                            <h4 className="font-medium text-foreground truncate">{trip.name}</h4>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
                               <MapPin className="h-3 w-3" />
                               <span className="truncate">{trip.destination}</span>
                             </div>

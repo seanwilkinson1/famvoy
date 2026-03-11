@@ -16,7 +16,7 @@ export function PodCard({ pod }: PodCardProps) {
         data-testid={`card-pod-${pod.id}`}
       >
         {/* Pod Image or Icon */}
-        <div className="relative h-14 w-14 flex-shrink-0 rounded-2xl overflow-hidden bg-gray-100">
+        <div className="relative h-14 w-14 flex-shrink-0 rounded-2xl overflow-hidden bg-muted">
           {pod.image ? (
             <img
               src={pod.image}
@@ -38,15 +38,15 @@ export function PodCard({ pod }: PodCardProps) {
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-heading text-base font-bold text-gray-900 truncate" data-testid={`text-pod-name-${pod.id}`}>
+          <h3 className="font-heading text-base font-bold text-foreground truncate" data-testid={`text-pod-name-${pod.id}`}>
             {pod.name}
           </h3>
-          <p className="line-clamp-1 text-sm text-gray-500">{pod.description}</p>
+          <p className="line-clamp-1 text-sm text-muted-foreground">{pod.description}</p>
           
           {/* Meta info */}
-          <div className="mt-1 flex items-center gap-3 text-xs text-gray-400">
+          <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
             {pod.category && (
-              <span className="rounded-full bg-gray-100 px-2 py-0.5">{pod.category}</span>
+              <span className="rounded-full bg-muted px-2 py-0.5">{pod.category}</span>
             )}
             {!pod.isDirect && pod.memberCount !== null && pod.memberCount !== undefined && (
               <div className="flex items-center gap-1">
@@ -60,7 +60,7 @@ export function PodCard({ pod }: PodCardProps) {
           </div>
         </div>
 
-        <ChevronRight className="h-5 w-5 text-gray-300 flex-shrink-0" />
+        <ChevronRight className="h-5 w-5 text-border flex-shrink-0" />
       </div>
     </Link>
   );

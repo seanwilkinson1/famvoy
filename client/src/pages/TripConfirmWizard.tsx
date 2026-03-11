@@ -181,7 +181,7 @@ export default function TripConfirmWizard() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary/5 to-white">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-gray-500">Loading your trip...</p>
+          <p className="text-muted-foreground">Loading your trip...</p>
         </div>
       </div>
     );
@@ -217,8 +217,8 @@ export default function TripConfirmWizard() {
         >
           <Check className="h-10 w-10 text-white" />
         </motion.div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">All Items Reviewed!</h1>
-        <p className="text-gray-500 mb-8 text-center">
+        <h1 className="text-2xl font-bold text-foreground mb-2">All Items Reviewed!</h1>
+        <p className="text-muted-foreground mb-8 text-center">
           You've gone through all the bookable items in your trip.
         </p>
         <button
@@ -245,19 +245,19 @@ export default function TripConfirmWizard() {
           <div className="flex items-center justify-between mb-2">
             <button
               onClick={() => navigate(`/trip/${tripId}`)}
-              className="p-2 -ml-2 hover:bg-gray-100 rounded-full"
+              className="p-2 -ml-2 hover:bg-muted rounded-full"
               data-testid="button-back"
             >
               <ChevronLeft className="h-6 w-6" />
             </button>
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-muted-foreground">
               {session.progress.current} of {session.progress.total}
             </span>
             {currentItem && (
               <button
                 onClick={() => skipItemMutation.mutate(currentItem.id)}
                 disabled={skipItemMutation.isPending}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors"
                 data-testid="button-skip-top"
               >
                 <SkipForward className="h-4 w-4" />
@@ -265,7 +265,7 @@ export default function TripConfirmWizard() {
               </button>
             )}
           </div>
-          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div className="h-2 bg-border rounded-full overflow-hidden">
             <motion.div
               className="h-full bg-primary rounded-full"
               initial={{ width: 0 }}
@@ -289,27 +289,27 @@ export default function TripConfirmWizard() {
               <div className="text-center mb-6">
                 <span className={cn(
                   "inline-block px-3 py-1 rounded-full text-xs font-medium mb-2",
-                  ITEM_TYPE_COLORS[currentItem.itemType] || "bg-gray-100 text-gray-700"
+                  ITEM_TYPE_COLORS[currentItem.itemType] || "bg-muted text-foreground"
                 )}>
                   {ITEM_TYPE_LABELS[currentItem.itemType] || currentItem.itemType}
                 </span>
-                <h1 className="text-2xl font-bold text-gray-900 mb-1">{currentItem.title}</h1>
-                <p className="text-gray-500 text-sm">
+                <h1 className="text-2xl font-bold text-foreground mb-1">{currentItem.title}</h1>
+                <p className="text-muted-foreground text-sm">
                   Day {currentItem.dayNumber} • {currentItem.time}
                 </p>
                 {currentItem.description && (
-                  <p className="text-gray-600 mt-2 text-sm">{currentItem.description}</p>
+                  <p className="text-muted-foreground mt-2 text-sm">{currentItem.description}</p>
                 )}
               </div>
 
               {isGenerating ? (
                 <div className="flex flex-col items-center justify-center py-16">
                   <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                  <p className="text-gray-500">Finding booking options...</p>
+                  <p className="text-muted-foreground">Finding booking options...</p>
                 </div>
               ) : session.currentOptions.length === 0 ? (
                 <div className="text-center py-16">
-                  <p className="text-gray-500 mb-4">No options available</p>
+                  <p className="text-muted-foreground mb-4">No options available</p>
                   <button
                     onClick={generateOptions}
                     className="text-primary hover:underline flex items-center gap-2 mx-auto"
@@ -321,7 +321,7 @@ export default function TripConfirmWizard() {
                 </div>
               ) : (
                 <>
-                  <p className="text-center text-sm text-gray-500 mb-4">
+                  <p className="text-center text-sm text-muted-foreground mb-4">
                     Choose your preferred option for this activity
                   </p>
                   
@@ -337,7 +337,7 @@ export default function TripConfirmWizard() {
                           "bg-white rounded-2xl border-2 overflow-hidden cursor-pointer transition-all",
                           selectedOption === option.id
                             ? "border-primary shadow-lg"
-                            : "border-gray-200 hover:border-gray-300"
+                            : "border-border hover:border-gray-300"
                         )}
                         data-testid={`option-card-${option.id}`}
                       >
@@ -355,7 +355,7 @@ export default function TripConfirmWizard() {
                         </div>
                         <div className="p-4">
                           <div className="flex items-start justify-between gap-2 mb-2">
-                            <h3 className="font-semibold text-gray-900">{option.title}</h3>
+                            <h3 className="font-semibold text-foreground">{option.title}</h3>
                             {selectedOption === option.id && (
                               <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center shrink-0">
                                 <Check className="h-4 w-4 text-white" />
@@ -364,32 +364,32 @@ export default function TripConfirmWizard() {
                           </div>
                           
                           {option.description && (
-                            <p className="text-sm text-gray-600 mb-3 line-clamp-2">{option.description}</p>
+                            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{option.description}</p>
                           )}
                           
                           <div className="flex flex-wrap gap-3 text-sm">
                             {option.priceEstimate && (
-                              <span className="flex items-center gap-1 text-gray-600">
+                              <span className="flex items-center gap-1 text-muted-foreground">
                                 <DollarSign className="h-4 w-4" />
                                 {option.priceEstimate}
                               </span>
                             )}
                             {option.rating && (
-                              <span className="flex items-center gap-1 text-gray-600">
+                              <span className="flex items-center gap-1 text-muted-foreground">
                                 <Star className="h-4 w-4 text-yellow-500" />
                                 {option.rating}
                                 {option.reviewCount && (
-                                  <span className="text-gray-400">({option.reviewCount})</span>
+                                  <span className="text-muted-foreground">({option.reviewCount})</span>
                                 )}
                               </span>
                             )}
                             {option.provider && (
-                              <span className="text-gray-400">{option.provider}</span>
+                              <span className="text-muted-foreground">{option.provider}</span>
                             )}
                           </div>
                           
                           {option.address && (
-                            <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
                               <MapPin className="h-3 w-3" />
                               {option.address}
                             </p>
@@ -428,7 +428,7 @@ export default function TripConfirmWizard() {
                         "w-full py-3 rounded-full font-semibold flex items-center justify-center gap-2 transition-all",
                         selectedOption
                           ? "bg-primary text-white"
-                          : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                          : "bg-border text-muted-foreground cursor-not-allowed"
                       )}
                       data-testid="button-lock-choice"
                     >
@@ -444,7 +444,7 @@ export default function TripConfirmWizard() {
                       <button
                         onClick={generateOptions}
                         disabled={isGenerating}
-                        className="flex-1 py-3 border border-gray-300 rounded-full font-medium text-gray-700 flex items-center justify-center gap-2 hover:bg-gray-50"
+                        className="flex-1 py-3 border border-gray-300 rounded-full font-medium text-foreground flex items-center justify-center gap-2 hover:bg-muted"
                         data-testid="button-regenerate"
                       >
                         <RefreshCw className={cn("h-4 w-4", isGenerating && "animate-spin")} />
@@ -454,7 +454,7 @@ export default function TripConfirmWizard() {
                       <button
                         onClick={() => currentItem && skipItemMutation.mutate(currentItem.id)}
                         disabled={skipItemMutation.isPending}
-                        className="flex-1 py-3 border border-gray-300 rounded-full font-medium text-gray-700 flex items-center justify-center gap-2 hover:bg-gray-50"
+                        className="flex-1 py-3 border border-gray-300 rounded-full font-medium text-foreground flex items-center justify-center gap-2 hover:bg-muted"
                         data-testid="button-skip"
                       >
                         <SkipForward className="h-4 w-4" />

@@ -40,7 +40,7 @@ export function DreamCard({ dream, onDelete, onEdit, onPlanTrip }: DreamCardProp
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <DropdownMenu>
             <DropdownMenuTrigger className="bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow-sm">
-              <MoreVertical className="h-4 w-4 text-charcoal" />
+              <MoreVertical className="h-4 w-4 text-foreground" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => onEdit(dream)}>
@@ -59,7 +59,7 @@ export function DreamCard({ dream, onDelete, onEdit, onPlanTrip }: DreamCardProp
 
       {/* Content */}
       <div className="p-3">
-        <h3 className="font-display font-bold text-charcoal text-sm truncate">
+        <h3 className="font-display font-bold text-foreground text-sm truncate">
           {dream.destinationName}
         </h3>
         {dream.notes && (

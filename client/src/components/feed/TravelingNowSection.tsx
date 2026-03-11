@@ -15,7 +15,7 @@ export function TravelingNowSection() {
 
   return (
     <div className="mb-6">
-      <h2 className="font-display font-bold text-charcoal text-lg flex items-center gap-2 mb-3 px-4">
+      <h2 className="font-display font-bold text-foreground text-lg flex items-center gap-2 mb-3 px-4">
         <Plane className="h-5 w-5 text-primary" />
         Traveling Now
       </h2>
@@ -33,7 +33,7 @@ export function TravelingNowSection() {
               <p className="text-xs text-muted-foreground">
                 {trip.creator?.firstName || "Someone"} is in
               </p>
-              <p className="font-display font-bold text-charcoal text-sm truncate">
+              <p className="font-display font-bold text-foreground text-sm truncate">
                 {trip.destination}
               </p>
               <p className="text-xs text-primary mt-1">{trip.name}</p>

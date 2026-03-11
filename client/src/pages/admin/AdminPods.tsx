@@ -135,12 +135,12 @@ export default function AdminPods() {
                       <TableRow key={pod.id} data-testid={`row-pod-${pod.id}`}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0">
+                            <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden flex-shrink-0">
                               {pod.image ? (
                                 <img src={pod.image} alt={pod.name} className="w-full h-full object-cover" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center">
-                                  <Users className="h-5 w-5 text-gray-400" />
+                                  <Users className="h-5 w-5 text-muted-foreground" />
                                 </div>
                               )}
                             </div>

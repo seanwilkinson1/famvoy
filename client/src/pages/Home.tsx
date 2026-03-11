@@ -236,7 +236,7 @@ export default function Home() {
                               <p className="text-xs font-medium text-primary uppercase tracking-wider mb-1">
                                 {yearsAgo} year{yearsAgo !== 1 ? "s" : ""} ago today
                               </p>
-                              <p className="font-display font-bold text-charcoal text-lg">
+                              <p className="font-display font-bold text-foreground text-lg">
                                 {trip.name}
                               </p>
                               <p className="text-sm text-muted-foreground mt-1">
@@ -320,7 +320,7 @@ export default function Home() {
                               >
                                 <Avatar className="h-18 w-18 mx-auto mb-3 ring-3 ring-border/30">
                                   <AvatarImage src={family.avatar || undefined} className="object-cover" />
-                                  <AvatarFallback className="bg-coral-gradient text-white text-xl font-semibold">
+                                  <AvatarFallback className="bg-primary text-white text-xl font-semibold">
                                     {(family.name || "?")[0]}
                                   </AvatarFallback>
                                 </Avatar>
@@ -361,7 +361,7 @@ export default function Home() {
                                 className="w-52 flex-shrink-0 bg-card rounded-3xl p-5 card-shadow hover:card-shadow-hover transition-all cursor-pointer hover:-translate-y-1"
                                 data-testid={`card-pod-${pod.id}`}
                               >
-                                <div className="h-14 w-14 rounded-2xl bg-teal-gradient flex items-center justify-center mb-4 shadow-sm">
+                                <div className="h-14 w-14 rounded-2xl bg-primary flex items-center justify-center mb-4 shadow-sm">
                                   <UsersThree weight="fill" className="h-7 w-7 text-white" />
                                 </div>
                                 <p className="font-semibold text-foreground truncate">{pod.name}</p>
@@ -452,7 +452,7 @@ export default function Home() {
                             className="h-11 w-11 rounded-full object-cover ring-2 ring-border/30 group-hover:ring-primary/30 transition-all"
                           />
                         ) : (
-                          <div className="h-11 w-11 rounded-full bg-coral-gradient flex items-center justify-center text-white font-semibold">
+                          <div className="h-11 w-11 rounded-full bg-primary flex items-center justify-center text-white font-semibold">
                             {(exp.creator?.name || "?").charAt(0).toUpperCase()}
                           </div>
                         )}

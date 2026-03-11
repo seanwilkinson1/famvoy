@@ -13,10 +13,10 @@ export default function CheckoutCancel() {
           </div>
         </div>
 
-        <h1 className="font-heading text-2xl font-bold text-charcoal mb-2">
+        <h1 className="font-heading text-2xl font-bold text-foreground mb-2">
           Checkout Cancelled
         </h1>
-        <p className="text-gray-500 mb-8">
+        <p className="text-muted-foreground mb-8">
           Your payment was not processed. Your items are still in your cart if you'd like to try again.
         </p>
 
@@ -31,7 +31,7 @@ export default function CheckoutCancel() {
           </button>
           <button
             onClick={() => setLocation("/")}
-            className="w-full flex items-center justify-center gap-2 rounded-xl border border-gray-200 py-3 font-bold text-charcoal hover:bg-gray-50"
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-border py-3 font-bold text-foreground hover:bg-muted"
             data-testid="button-go-home"
           >
             <Home className="h-5 w-5" />

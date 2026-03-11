@@ -27,8 +27,8 @@ export function RecentAdventuresSection() {
 
   return (
     <div className="mb-6 px-4">
-      <h2 className="font-display font-bold text-charcoal text-lg flex items-center gap-2 mb-3">
-        <MapPin className="h-5 w-5 text-warm-coral" />
+      <h2 className="font-display font-bold text-foreground text-lg flex items-center gap-2 mb-3">
+        <MapPin className="h-5 w-5 text-accent" />
         Recent Adventures
       </h2>
       <div className="space-y-3">
@@ -46,7 +46,7 @@ export function RecentAdventuresSection() {
                   <p className="text-xs text-muted-foreground">
                     {trip.creator?.firstName}'s trip
                   </p>
-                  <p className="font-display font-bold text-charcoal truncate">
+                  <p className="font-display font-bold text-foreground truncate">
                     {trip.name}
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">

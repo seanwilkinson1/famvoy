@@ -83,7 +83,7 @@ export function AddDreamSheet({ open, onClose, onSubmit, editingDream }: AddDrea
 
         <div className="space-y-4 mt-4 pb-4">
           <div>
-            <label className="text-sm font-medium text-charcoal">Destination</label>
+            <label className="text-sm font-medium text-foreground">Destination</label>
             <Input
               placeholder="Where do you dream of going?"
               value={destinationName}
@@ -93,7 +93,7 @@ export function AddDreamSheet({ open, onClose, onSubmit, editingDream }: AddDrea
           </div>
 
           <div>
-            <label className="text-sm font-medium text-charcoal">Notes</label>
+            <label className="text-sm font-medium text-foreground">Notes</label>
             <Textarea
               placeholder="Why does this place excite you?"
               value={notes}
@@ -104,7 +104,7 @@ export function AddDreamSheet({ open, onClose, onSubmit, editingDream }: AddDrea
           </div>
 
           <div>
-            <label className="text-sm font-medium text-charcoal mb-2 block">Tags</label>
+            <label className="text-sm font-medium text-foreground mb-2 block">Tags</label>
             <div className="flex flex-wrap gap-2">
               {SUGGESTED_TAGS.map((tag) => (
                 <button
@@ -113,7 +113,7 @@ export function AddDreamSheet({ open, onClose, onSubmit, editingDream }: AddDrea
                   className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                     tags.includes(tag)
                       ? "bg-primary text-white border-primary"
-                      : "bg-white text-muted-foreground border-gray-200 hover:border-primary/50"
+                      : "bg-white text-muted-foreground border-border hover:border-primary/50"
                   }`}
                 >
                   {tag}

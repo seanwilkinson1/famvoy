@@ -34,16 +34,16 @@ export function StaticMap({ center, className = "", zoom = 12 }: StaticMapProps)
 
   if (loadError) {
     return (
-      <div className={`flex items-center justify-center bg-gray-100 ${className}`}>
-        <span className="text-gray-500 text-sm">Map unavailable</span>
+      <div className={`flex items-center justify-center bg-muted ${className}`}>
+        <span className="text-muted-foreground text-sm">Map unavailable</span>
       </div>
     );
   }
 
   if (!isLoaded) {
     return (
-      <div className={`flex items-center justify-center bg-gray-100 ${className}`}>
-        <span className="text-gray-500 text-sm">Loading map...</span>
+      <div className={`flex items-center justify-center bg-muted ${className}`}>
+        <span className="text-muted-foreground text-sm">Loading map...</span>
       </div>
     );
   }

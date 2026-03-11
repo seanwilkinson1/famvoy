@@ -39,27 +39,27 @@ function SettingItem({ icon, title, subtitle, onClick, rightElement, danger }: S
       onClick={onClick}
       className={cn(
         "flex items-center gap-4 w-full p-4 text-left transition-colors",
-        onClick && "hover:bg-gray-50 active:bg-gray-100"
+        onClick && "hover:bg-muted active:bg-muted"
       )}
       data-testid={`setting-${title.toLowerCase().replace(/\s+/g, "-")}`}
     >
       <div className={cn(
         "flex h-10 w-10 items-center justify-center rounded-xl",
-        danger ? "bg-red-50" : "bg-gray-100"
+        danger ? "bg-red-50" : "bg-muted"
       )}>
         {icon}
       </div>
       <div className="flex-1">
         <h3 className={cn(
           "font-medium",
-          danger ? "text-red-600" : "text-gray-900"
+          danger ? "text-red-600" : "text-foreground"
         )}>{title}</h3>
         {subtitle && (
-          <p className="text-sm text-gray-500">{subtitle}</p>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
         )}
       </div>
       {rightElement || (onClick && (
-        <ChevronRight className="h-5 w-5 text-gray-400" />
+        <ChevronRight className="h-5 w-5 text-muted-foreground" />
       ))}
     </button>
   );
@@ -68,7 +68,7 @@ function SettingItem({ icon, title, subtitle, onClick, rightElement, danger }: S
 function SettingSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-6">
-      <h2 className="px-4 mb-2 text-xs font-bold uppercase tracking-wide text-gray-500">
+      <h2 className="px-4 mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
         {title}
       </h2>
       <div className="bg-white rounded-2xl overflow-hidden shadow-sm divide-y divide-gray-100">
@@ -204,7 +204,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-14 pb-32 md:max-w-3xl md:mx-auto md:px-8">
+    <div className="min-h-screen bg-muted pt-14 pb-32 md:max-w-3xl md:mx-auto md:px-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -216,9 +216,9 @@ export default function Settings() {
             className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm"
             data-testid="button-back"
           >
-            <ArrowLeft className="h-5 w-5 text-gray-700" />
+            <ArrowLeft className="h-5 w-5 text-foreground" />
           </button>
-          <h1 className="font-heading text-2xl font-bold text-gray-900">Settings</h1>
+          <h1 className="font-heading text-2xl font-bold text-foreground">Settings</h1>
         </div>
 
         <SettingSection title="Location Sharing">
@@ -231,7 +231,7 @@ export default function Settings() {
             }
             rightElement={
               isUpdatingLocation ? (
-                <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               ) : (
                 <Switch
                   checked={shareLocation}
@@ -304,7 +304,7 @@ export default function Settings() {
 
         <SettingSection title="Privacy">
           <SettingItem
-            icon={<MapPin className="h-5 w-5 text-warm-coral" />}
+            icon={<MapPin className="h-5 w-5 text-accent" />}
             title="Show Location"
             subtitle="Let other families see your general area"
             rightElement={
@@ -318,7 +318,7 @@ export default function Settings() {
             }
           />
           <SettingItem
-            icon={<Users className="h-5 w-5 text-warm-coral" />}
+            icon={<Users className="h-5 w-5 text-accent" />}
             title="Show Kids Info"
             subtitle="Display your children's ages on your profile"
             rightElement={
@@ -332,7 +332,7 @@ export default function Settings() {
             }
           />
           <SettingItem
-            icon={<Eye className="h-5 w-5 text-warm-coral" />}
+            icon={<Eye className="h-5 w-5 text-accent" />}
             title="Discoverable"
             subtitle="Allow other families to find you"
             rightElement={
@@ -346,7 +346,7 @@ export default function Settings() {
             }
           />
           <SettingItem
-            icon={<Shield className="h-5 w-5 text-warm-coral" />}
+            icon={<Shield className="h-5 w-5 text-accent" />}
             title="Blocked Families"
             subtitle="Manage families you've blocked"
             onClick={() => {}}
@@ -355,24 +355,24 @@ export default function Settings() {
 
         <SettingSection title="Support">
           <SettingItem
-            icon={<HelpCircle className="h-5 w-5 text-gray-500" />}
+            icon={<HelpCircle className="h-5 w-5 text-muted-foreground" />}
             title="Help Center"
             subtitle="FAQs and getting started guides"
             onClick={() => {}}
           />
           <SettingItem
-            icon={<Mail className="h-5 w-5 text-gray-500" />}
+            icon={<Mail className="h-5 w-5 text-muted-foreground" />}
             title="Contact Us"
             subtitle="Get in touch with our support team"
             onClick={() => {}}
           />
           <SettingItem
-            icon={<FileText className="h-5 w-5 text-gray-500" />}
+            icon={<FileText className="h-5 w-5 text-muted-foreground" />}
             title="Terms of Service"
             onClick={() => {}}
           />
           <SettingItem
-            icon={<Shield className="h-5 w-5 text-gray-500" />}
+            icon={<Shield className="h-5 w-5 text-muted-foreground" />}
             title="Privacy Policy"
             onClick={() => {}}
           />
@@ -380,7 +380,7 @@ export default function Settings() {
 
         <SettingSection title="Account">
           <SettingItem
-            icon={<LogOut className="h-5 w-5 text-gray-500" />}
+            icon={<LogOut className="h-5 w-5 text-muted-foreground" />}
             title="Sign Out"
             onClick={handleSignOut}
           />
@@ -393,7 +393,7 @@ export default function Settings() {
           />
         </SettingSection>
 
-        <p className="text-center text-xs text-gray-400 mt-8">
+        <p className="text-center text-xs text-muted-foreground mt-8">
           FamVoy v1.0.0
         </p>
       </motion.div>

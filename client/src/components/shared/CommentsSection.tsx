@@ -68,7 +68,7 @@ function CommentCard({
   const isOwn = currentUserId === comment.userId;
   
   return (
-    <div className="flex gap-3 py-4 border-b border-gray-100 last:border-0" data-testid={`comment-${comment.id}`}>
+    <div className="flex gap-3 py-4 border-b border-border last:border-0" data-testid={`comment-${comment.id}`}>
       <img
         src={comment.user.avatar || "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400"}
         alt={comment.user.name || "User"}
@@ -77,12 +77,12 @@ function CommentCard({
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="font-semibold text-sm text-gray-900">
+            <p className="font-semibold text-sm text-foreground">
               {comment.user.name || "Anonymous"}
             </p>
             <div className="flex items-center gap-2 mt-0.5">
               {comment.rating && <StarRating rating={comment.rating} readonly size="sm" />}
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-muted-foreground">
                 {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
               </span>
             </div>
@@ -90,14 +90,14 @@ function CommentCard({
           {isOwn && (
             <button
               onClick={onDelete}
-              className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-red-500 transition-colors"
+              className="p-1.5 rounded-full hover:bg-muted text-muted-foreground hover:text-red-500 transition-colors"
               data-testid="button-delete-comment"
             >
               <Trash2 className="h-4 w-4" />
             </button>
           )}
         </div>
-        <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+        <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
           {comment.content}
         </p>
       </div>
@@ -151,13 +151,13 @@ export function CommentsSection({ experienceId, currentUserId }: CommentsSection
   return (
     <section className="mb-8">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-heading text-xl font-bold text-gray-900">
+        <h2 className="font-heading text-xl font-bold text-foreground">
           Reviews & Comments
         </h2>
         {ratingData && ratingData.count > 0 && (
           <div className="flex items-center gap-2">
             <StarRating rating={Math.round(ratingData.average)} readonly size="sm" />
-            <span className="text-sm font-medium text-gray-600">
+            <span className="text-sm font-medium text-muted-foreground">
               {ratingData.average.toFixed(1)} ({ratingData.count})
             </span>
           </div>
@@ -165,9 +165,9 @@ export function CommentsSection({ experienceId, currentUserId }: CommentsSection
       </div>
       
       {currentUserId && (
-        <form onSubmit={handleSubmit} className="mb-6 bg-gray-50 rounded-2xl p-4">
+        <form onSubmit={handleSubmit} className="mb-6 bg-muted rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-sm font-medium text-gray-600">Your rating:</span>
+            <span className="text-sm font-medium text-muted-foreground">Your rating:</span>
             <StarRating rating={rating} onRatingChange={setRating} />
           </div>
           <div className="flex gap-2">
@@ -176,7 +176,7 @@ export function CommentsSection({ experienceId, currentUserId }: CommentsSection
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Share your experience..."
-              className="flex-1 bg-white rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 border border-gray-200"
+              className="flex-1 bg-white rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 border border-border"
               data-testid="input-comment"
             />
             <button
@@ -192,11 +192,11 @@ export function CommentsSection({ experienceId, currentUserId }: CommentsSection
       )}
       
       {isLoading ? (
-        <div className="py-8 text-center text-gray-400">Loading comments...</div>
+        <div className="py-8 text-center text-muted-foreground">Loading comments...</div>
       ) : comments.length === 0 ? (
         <div className="py-8 text-center">
-          <p className="text-gray-400 mb-1">No reviews yet</p>
-          <p className="text-sm text-gray-300">Be the first to share your experience!</p>
+          <p className="text-muted-foreground mb-1">No reviews yet</p>
+          <p className="text-sm text-border">Be the first to share your experience!</p>
         </div>
       ) : (
         <div className="divide-y divide-gray-100">

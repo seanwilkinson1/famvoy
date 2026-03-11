@@ -94,7 +94,7 @@ export default function Pods() {
   return (
     <div className="min-h-screen bg-background px-6 pt-14 md:pt-8 pb-32 md:pb-8 md:max-w-6xl md:mx-auto">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="font-heading text-3xl font-bold text-gray-900">Pods</h1>
+        <h1 className="font-heading text-3xl font-bold text-foreground">Pods</h1>
         <button 
           onClick={() => setShowCreateModal(true)}
           className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-bold text-primary transition-colors hover:bg-primary/20 active:scale-95"
@@ -106,7 +106,7 @@ export default function Pods() {
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 flex rounded-2xl bg-gray-100 p-1">
+      <div className="mb-6 flex rounded-2xl bg-muted p-1">
         {[
           { id: "your-pods" as const, icon: Users, label: "Your Pods" },
           { id: "discover" as const, icon: Compass, label: "Discover" },
@@ -118,7 +118,7 @@ export default function Pods() {
               "flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition-all",
               activeTab === tab.id
                 ? "bg-white text-primary shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
+                : "text-muted-foreground hover:text-foreground"
             )}
             data-testid={`tab-${tab.id}`}
           >
@@ -131,13 +131,13 @@ export default function Pods() {
       {/* Search (only on discover tab) */}
       {activeTab === "discover" && (
         <div className="mb-6 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search pods..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-2xl bg-gray-100 py-3 pl-12 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-2xl bg-muted py-3 pl-12 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
             data-testid="input-search-pods"
           />
         </div>
@@ -145,14 +145,14 @@ export default function Pods() {
 
       {/* Pod List */}
       {(activeTab === "your-pods" ? loadingUserPods : loadingDiscoverPods) ? (
-        <div className="text-center py-8 text-gray-400">Loading pods...</div>
+        <div className="text-center py-8 text-muted-foreground">Loading pods...</div>
       ) : displayPods.length === 0 ? (
         <div className="text-center py-12">
           {activeTab === "your-pods" ? (
             <>
-              <Users className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-              <p className="text-gray-500 mb-2">You haven't joined any pods yet</p>
-              <p className="text-sm text-gray-400 mb-4">Create a pod or discover groups to join</p>
+              <Users className="mx-auto h-12 w-12 text-border mb-4" />
+              <p className="text-muted-foreground mb-2">You haven't joined any pods yet</p>
+              <p className="text-sm text-muted-foreground mb-4">Create a pod or discover groups to join</p>
               <button 
                 onClick={() => setActiveTab("discover")}
                 className="text-primary font-bold text-sm"
@@ -163,9 +163,9 @@ export default function Pods() {
             </>
           ) : (
             <>
-              <Compass className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-              <p className="text-gray-500 mb-2">No pods to discover yet</p>
-              <p className="text-sm text-gray-400">Be the first to create a pod!</p>
+              <Compass className="mx-auto h-12 w-12 text-border mb-4" />
+              <p className="text-muted-foreground mb-2">No pods to discover yet</p>
+              <p className="text-sm text-muted-foreground">Be the first to create a pod!</p>
             </>
           )}
         </div>
@@ -202,16 +202,16 @@ export default function Pods() {
               <h2 className="font-heading text-xl font-bold">Create a Pod</h2>
               <button 
                 onClick={() => setShowCreateModal(false)}
-                className="rounded-full p-2 hover:bg-gray-100"
+                className="rounded-full p-2 hover:bg-muted"
                 data-testid="button-close-create-modal"
               >
-                <X className="h-5 w-5 text-gray-500" />
+                <X className="h-5 w-5 text-muted-foreground" />
               </button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Pod Name
                 </label>
                 <input
@@ -219,13 +219,13 @@ export default function Pods() {
                   value={newPodName}
                   onChange={(e) => setNewPodName(e.target.value)}
                   placeholder="e.g., Weekend Soccer Families"
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-xl border border-border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   data-testid="input-pod-name"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Description
                 </label>
                 <textarea
@@ -233,19 +233,19 @@ export default function Pods() {
                   onChange={(e) => setNewPodDescription(e.target.value)}
                   placeholder="What's this pod about?"
                   rows={3}
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                  className="w-full rounded-xl border border-border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                   data-testid="input-pod-description"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Category (optional)
                 </label>
                 <select
                   value={newPodCategory}
                   onChange={(e) => setNewPodCategory(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                  className="w-full rounded-xl border border-border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
                   data-testid="select-pod-category"
                 >
                   <option value="">Select a category</option>

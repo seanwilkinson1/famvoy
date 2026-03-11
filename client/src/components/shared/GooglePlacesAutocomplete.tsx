@@ -201,12 +201,12 @@ export function GooglePlacesAutocomplete({
     return (
       <div className={cn("relative", className)}>
         <div className="relative">
-          <MapPin className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+          <MapPin className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder="Loading..."
             disabled
-            className="w-full rounded-xl border border-gray-200 bg-gray-50 py-4 pl-12 pr-4 text-base font-medium text-gray-400"
+            className="w-full rounded-xl border border-border bg-muted py-4 pl-12 pr-4 text-base font-medium text-muted-foreground"
           />
         </div>
       </div>
@@ -240,7 +240,7 @@ export function GooglePlacesAutocomplete({
       )}
       
       <div className="relative">
-        <MapPin className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+        <MapPin className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
         <input
           ref={inputRef}
           type="text"
@@ -254,40 +254,40 @@ export function GooglePlacesAutocomplete({
           }}
           onFocus={() => predictions.length > 0 && setShowPredictions(true)}
           className={cn(
-            "w-full rounded-xl border bg-white py-4 pl-12 pr-10 text-base font-medium placeholder:text-gray-400 focus:border-primary focus:outline-none",
-            isSelected ? "border-primary bg-primary/5" : "border-gray-200"
+            "w-full rounded-xl border bg-white py-4 pl-12 pr-10 text-base font-medium placeholder:text-muted-foreground focus:border-primary focus:outline-none",
+            isSelected ? "border-primary bg-primary/5" : "border-border"
           )}
           data-testid="input-location-autocomplete"
         />
         {isSearching && (
-          <Loader2 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 animate-spin" />
+          <Loader2 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground animate-spin" />
         )}
         {isSelected && !isSearching && (
           <button
             onClick={handleClear}
-            className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+            className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-border flex items-center justify-center hover:bg-gray-300"
             data-testid="button-clear-location"
           >
-            <X className="h-3 w-3 text-gray-600" />
+            <X className="h-3 w-3 text-muted-foreground" />
           </button>
         )}
       </div>
 
       {showPredictions && predictions.length > 0 && (
-        <div className="absolute z-50 mt-2 w-full rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden">
+        <div className="absolute z-50 mt-2 w-full rounded-xl border border-border bg-white shadow-lg overflow-hidden">
           {predictions.map((prediction) => (
             <button
               key={prediction.place_id}
               onClick={() => handleSelectPrediction(prediction)}
-              className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-start gap-3 border-b border-gray-100 last:border-0"
+              className="w-full px-4 py-3 text-left hover:bg-muted flex items-start gap-3 border-b border-border last:border-0"
               data-testid={`place-suggestion-${prediction.place_id}`}
             >
               <MapPin className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <p className="text-sm font-medium text-foreground truncate">
                   {prediction.structured_formatting.main_text}
                 </p>
-                <p className="text-xs text-gray-500 truncate">
+                <p className="text-xs text-muted-foreground truncate">
                   {prediction.structured_formatting.secondary_text}
                 </p>
               </div>

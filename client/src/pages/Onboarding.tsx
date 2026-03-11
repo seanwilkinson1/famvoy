@@ -83,20 +83,20 @@ function OnboardingInner() {
   };
 
   return (
-    <div className="min-h-screen bg-soft-beige md:max-w-2xl md:mx-auto md:px-8">
+    <div className="min-h-screen bg-background md:max-w-2xl md:mx-auto md:px-8">
       <div className="max-w-md mx-auto px-6 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-warm-teal to-warm-teal/80 flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
             <Heart className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-outfit font-bold text-charcoal mb-2">
+          <h1 className="text-2xl font-heading font-bold text-foreground mb-2">
             Welcome to FamVoy!
           </h1>
-          <p className="text-charcoal/60">
+          <p className="text-muted-foreground">
             Let's set up your family profile
           </p>
         </motion.div>
@@ -106,7 +106,7 @@ function OnboardingInner() {
             <div
               key={s}
               className={`flex-1 h-1.5 rounded-full transition-colors ${
-                s <= step ? 'bg-warm-teal' : 'bg-charcoal/10'
+                s <= step ? 'bg-primary' : 'bg-foreground/10'
               }`}
             />
           ))}
@@ -122,12 +122,12 @@ function OnboardingInner() {
           {step === 1 && (
             <div className="space-y-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-warm-teal/10 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-warm-teal" />
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h2 className="font-outfit font-semibold text-charcoal">Your Family</h2>
-                  <p className="text-sm text-charcoal/60">Tell us about yourselves</p>
+                  <h2 className="font-heading font-semibold text-foreground">Your Family</h2>
+                  <p className="text-sm text-muted-foreground">Tell us about yourselves</p>
                 </div>
               </div>
 
@@ -138,13 +138,13 @@ function OnboardingInner() {
                   size="lg"
                 />
               </div>
-              <p className="text-xs text-center text-charcoal/50 -mt-2 mb-4">
+              <p className="text-xs text-center text-muted-foreground -mt-2 mb-4">
                 Add a family photo (optional)
               </p>
 
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="name" className="text-charcoal">Family Name</Label>
+                  <Label htmlFor="name" className="text-foreground">Family Name</Label>
                   <Input
                     id="name"
                     placeholder="The Smiths"
@@ -156,7 +156,7 @@ function OnboardingInner() {
                 </div>
 
                 <div>
-                  <Label htmlFor="location" className="text-charcoal">Your City</Label>
+                  <Label htmlFor="location" className="text-foreground">Your City</Label>
                   <div className="mt-1.5">
                     <GooglePlacesAutocomplete
                       value={formData.location}
@@ -175,17 +175,17 @@ function OnboardingInner() {
           {step === 2 && (
             <div className="space-y-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-warm-coral/10 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-warm-coral" />
+                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-accent" />
                 </div>
                 <div>
-                  <h2 className="font-outfit font-semibold text-charcoal">Your Kids</h2>
-                  <p className="text-sm text-charcoal/60">Help us find age-appropriate activities</p>
+                  <h2 className="font-heading font-semibold text-foreground">Your Kids</h2>
+                  <p className="text-sm text-muted-foreground">Help us find age-appropriate activities</p>
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="kids" className="text-charcoal">Kids Info</Label>
+                <Label htmlFor="kids" className="text-foreground">Kids Info</Label>
                 <Input
                   id="kids"
                   placeholder="2 kids • ages 4 & 7"
@@ -194,13 +194,13 @@ function OnboardingInner() {
                   className="mt-1.5"
                   data-testid="input-kids"
                 />
-                <p className="text-xs text-charcoal/50 mt-1.5">
+                <p className="text-xs text-muted-foreground mt-1.5">
                   Example: "2 kids • ages 4 & 7" or "1 toddler"
                 </p>
               </div>
 
               <div>
-                <Label htmlFor="bio" className="text-charcoal">Family Bio (optional)</Label>
+                <Label htmlFor="bio" className="text-foreground">Family Bio (optional)</Label>
                 <Textarea
                   id="bio"
                   placeholder="Tell other families a bit about yourselves..."
@@ -217,12 +217,12 @@ function OnboardingInner() {
           {step === 3 && (
             <div className="space-y-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-warm-teal/10 flex items-center justify-center">
-                  <Heart className="w-5 h-5 text-warm-teal" />
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Heart className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h2 className="font-outfit font-semibold text-charcoal">Your Interests</h2>
-                  <p className="text-sm text-charcoal/60">Select what your family enjoys</p>
+                  <h2 className="font-heading font-semibold text-foreground">Your Interests</h2>
+                  <p className="text-sm text-muted-foreground">Select what your family enjoys</p>
                 </div>
               </div>
 
@@ -235,9 +235,9 @@ function OnboardingInner() {
                       onClick={() => toggleInterest(interest)}
                       className="px-4 py-2 rounded-full text-sm font-medium transition-all border-2"
                       style={{
-                        backgroundColor: isSelected ? '#2A9D8F' : '#ffffff',
+                        backgroundColor: isSelected ? '#1A1A1A' : '#ffffff',
                         color: isSelected ? '#ffffff' : '#333333',
-                        borderColor: isSelected ? '#2A9D8F' : 'rgba(51,51,51,0.2)',
+                        borderColor: isSelected ? '#1A1A1A' : 'rgba(51,51,51,0.2)',
                         boxShadow: isSelected ? '0 4px 6px -1px rgba(42, 157, 143, 0.3)' : 'none',
                       }}
                       data-testid={`interest-${interest.toLowerCase()}`}
@@ -275,7 +275,7 @@ function OnboardingInner() {
             disabled={!canProceed() || onboardingMutation.isPending}
             className="flex-1 rounded-full transition-all"
             style={{
-              backgroundColor: (!canProceed() || onboardingMutation.isPending) ? '#d1d5db' : '#2A9D8F',
+              backgroundColor: (!canProceed() || onboardingMutation.isPending) ? '#d1d5db' : '#1A1A1A',
               color: (!canProceed() || onboardingMutation.isPending) ? '#6b7280' : '#ffffff',
               cursor: (!canProceed() || onboardingMutation.isPending) ? 'not-allowed' : 'pointer',
               boxShadow: (!canProceed() || onboardingMutation.isPending) ? 'none' : '0 10px 15px -3px rgba(42, 157, 143, 0.3)',

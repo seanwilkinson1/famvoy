@@ -48,14 +48,14 @@ function TripsInner() {
 
     if (phase === "traveling") {
       return (
-        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 animate-pulse">
+        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-kindred-green/10 text-kindred-green animate-pulse">
           Traveling Now
         </span>
       );
     }
     if (phase === "completed") {
       return (
-        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">
+        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-border text-muted-foreground">
           Completed
         </span>
       );
@@ -63,7 +63,7 @@ function TripsInner() {
 
     // Planning phase -- show workflow status
     const styles: Record<string, string> = {
-      draft: "bg-gray-100 text-gray-600",
+      draft: "bg-muted text-muted-foreground",
       confirming: "bg-yellow-100 text-yellow-700",
       confirmed: "bg-green-100 text-green-700",
       booking_in_progress: "bg-blue-100 text-blue-700",
@@ -98,20 +98,20 @@ function TripsInner() {
   if (isLoading) {
     return (
       <div className="p-4 space-y-4">
-        <div className="h-8 w-32 bg-gray-200 rounded animate-pulse" />
+        <div className="h-8 w-32 bg-border rounded animate-pulse" />
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-32 bg-gray-200 rounded-2xl animate-pulse" />
+          <div key={i} className="h-32 bg-border rounded-2xl animate-pulse" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 md:pb-8 md:max-w-6xl md:mx-auto md:px-8">
+    <div className="min-h-screen bg-muted pb-20 md:pb-8 md:max-w-6xl md:mx-auto md:px-8">
       {/* Header */}
-      <div className="bg-white px-4 pt-14 md:pt-8 pb-4 border-b border-gray-100 md:border-b-0 sticky top-0 z-10 md:max-w-6xl md:mx-auto">
+      <div className="bg-white px-4 pt-14 md:pt-8 pb-4 border-b border-border md:border-b-0 sticky top-0 z-10 md:max-w-6xl md:mx-auto">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-charcoal font-heading">Your Trips</h1>
+          <h1 className="text-2xl font-bold text-foreground font-heading">Your Trips</h1>
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white active:scale-95 transition-transform"
@@ -127,11 +127,11 @@ function TripsInner() {
       <div className="p-4 space-y-6 md:max-w-6xl md:mx-auto">
         {userTrips.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <Plane className="w-10 h-10 text-gray-400" />
+            <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4">
+              <Plane className="w-10 h-10 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">No trips yet</h3>
-            <p className="text-gray-500 mb-6 max-w-xs">
+            <h3 className="text-lg font-semibold text-foreground mb-2">No trips yet</h3>
+            <p className="text-muted-foreground mb-6 max-w-xs">
               Start planning your first family adventure!
             </p>
             <button 
@@ -146,28 +146,28 @@ function TripsInner() {
           <>
             {travelingTrips.length > 0 && (
               <section>
-                <h2 className="text-lg font-semibold text-charcoal mb-3">Traveling Now</h2>
+                <h2 className="text-lg font-semibold text-foreground mb-3">Traveling Now</h2>
                 <div className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:space-y-0">
                   {travelingTrips.map((trip: any) => (
                     <Link key={trip.id} href={`/trip/${trip.id}`}>
                       <div
-                        className="bg-teal-50 rounded-2xl p-4 border-2 border-teal-200 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                        className="bg-kindred-green/5 rounded-2xl p-4 border-2 border-kindred-green/20 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                         data-testid={`card-trip-traveling-${trip.id}`}
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold text-charcoal">{trip.name}</h3>
+                              <h3 className="font-semibold text-foreground">{trip.name}</h3>
                               {getBadge(trip)}
                             </div>
-                            <div className="flex items-center gap-1 text-sm text-gray-500">
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
                               <MapPin className="w-4 h-4" />
                               <span>{trip.destination || "No destination set"}</span>
                             </div>
                           </div>
-                          <ChevronRight className="w-5 h-5 text-gray-400" />
+                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
                             <span>
@@ -190,28 +190,28 @@ function TripsInner() {
 
             {upcomingTrips.length > 0 && (
               <section>
-                <h2 className="text-lg font-semibold text-charcoal mb-3">Upcoming</h2>
+                <h2 className="text-lg font-semibold text-foreground mb-3">Upcoming</h2>
                 <div className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:space-y-0">
                   {upcomingTrips.map((trip: any) => (
                     <Link key={trip.id} href={`/trip/${trip.id}`}>
                       <div
-                        className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                        className="bg-white rounded-2xl p-4 border border-border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                         data-testid={`card-trip-${trip.id}`}
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold text-charcoal">{trip.name}</h3>
+                              <h3 className="font-semibold text-foreground">{trip.name}</h3>
                               {getBadge(trip)}
                             </div>
-                            <div className="flex items-center gap-1 text-sm text-gray-500">
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
                               <MapPin className="w-4 h-4" />
                               <span>{trip.destination || "No destination set"}</span>
                             </div>
                           </div>
-                          <ChevronRight className="w-5 h-5 text-gray-400" />
+                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
                             <span>
@@ -234,28 +234,28 @@ function TripsInner() {
 
             {pastTrips.length > 0 && (
               <section>
-                <h2 className="text-lg font-semibold text-charcoal mb-3">Past Trips</h2>
+                <h2 className="text-lg font-semibold text-foreground mb-3">Past Trips</h2>
                 <div className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:space-y-0">
                   {pastTrips.map((trip: any) => (
                     <Link key={trip.id} href={`/trip/${trip.id}`}>
                       <div
-                        className="bg-gray-50 rounded-2xl p-4 border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors opacity-75"
+                        className="bg-muted rounded-2xl p-4 border border-border cursor-pointer hover:bg-muted transition-colors opacity-75"
                         data-testid={`card-trip-past-${trip.id}`}
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold text-charcoal">{trip.name}</h3>
+                              <h3 className="font-semibold text-foreground">{trip.name}</h3>
                               {getBadge(trip)}
                             </div>
-                            <div className="flex items-center gap-1 text-sm text-gray-500">
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
                               <MapPin className="w-4 h-4" />
                               <span>{trip.destination || "No destination set"}</span>
                             </div>
                           </div>
-                          <ChevronRight className="w-5 h-5 text-gray-400" />
+                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
                             <span>
@@ -277,11 +277,11 @@ function TripsInner() {
       {showCreateModal && createPortal(
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-end md:items-center md:justify-center">
           <div className="bg-white rounded-t-3xl md:rounded-2xl w-full md:max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+            <div className="flex items-center justify-between p-4 border-b border-border">
               <h3 className="font-heading text-lg font-bold">Plan a New Trip</h3>
               <button 
                 onClick={() => setShowCreateModal(false)}
-                className="rounded-full bg-gray-100 p-2"
+                className="rounded-full bg-muted p-2"
                 data-testid="button-close-modal"
               >
                 <X className="h-5 w-5" />
@@ -289,18 +289,18 @@ function TripsInner() {
             </div>
             <div className="p-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Trip Name</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Trip Name</label>
                 <input
                   type="text"
                   placeholder="e.g., Summer Road Trip"
                   value={tripName}
                   onChange={(e) => setTripName(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-primary focus:outline-none"
+                  className="w-full rounded-xl border border-border px-4 py-3 text-sm focus:border-primary focus:outline-none"
                   data-testid="input-trip-name"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Destination</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Destination</label>
                 <GooglePlacesAutocomplete
                   value={tripDestination}
                   onChange={setTripDestination}
@@ -315,7 +315,7 @@ function TripsInner() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Trip Dates</label>
+                <label className="block text-sm font-medium text-foreground mb-2">Trip Dates</label>
                 <DateRangePicker
                   startDate={tripStartDate}
                   endDate={tripEndDate}

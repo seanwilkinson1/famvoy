@@ -52,7 +52,7 @@ export default function AdminDashboard() {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </AdminLayout>
     );
@@ -161,9 +161,9 @@ export default function AdminDashboard() {
                 <div>
                   <p className="text-sm font-medium text-slate-500">Active Pods</p>
                   <p className="text-3xl font-bold text-slate-900 mt-1">{stats?.activePods || 0}</p>
-                  <p className="text-sm text-teal-600 mt-1">Family groups connected</p>
+                  <p className="text-sm text-primary mt-1">Family groups connected</p>
                 </div>
-                <div className="bg-teal-50 text-teal-600 p-3 rounded-xl">
+                <div className="bg-primary/5 text-primary p-3 rounded-xl">
                   <Users className="h-6 w-6" />
                 </div>
               </div>
@@ -178,7 +178,7 @@ export default function AdminDashboard() {
             <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-slate-100">
               <CardTitle className="text-lg font-semibold text-slate-900">Recent Users</CardTitle>
               <Link href="/admin/users">
-                <Button variant="ghost" size="sm" className="text-teal-600 hover:text-teal-700 hover:bg-teal-50" data-testid="button-view-all-users">
+                <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/5" data-testid="button-view-all-users">
                   View All
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
@@ -209,7 +209,7 @@ export default function AdminDashboard() {
             <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-slate-100">
               <CardTitle className="text-lg font-semibold text-slate-900">Recent Trips</CardTitle>
               <Link href="/admin/trips">
-                <Button variant="ghost" size="sm" className="text-teal-600 hover:text-teal-700 hover:bg-teal-50" data-testid="button-view-all-trips">
+                <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/5" data-testid="button-view-all-trips">
                   View All
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
@@ -246,7 +246,7 @@ export default function AdminDashboard() {
             <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-slate-100">
               <CardTitle className="text-lg font-semibold text-slate-900">Pending Bookings</CardTitle>
               <Link href="/admin/bookings">
-                <Button variant="ghost" size="sm" className="text-teal-600 hover:text-teal-700 hover:bg-teal-50" data-testid="button-view-all-bookings">
+                <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/5" data-testid="button-view-all-bookings">
                   View All
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>

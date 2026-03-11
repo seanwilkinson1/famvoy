@@ -66,13 +66,13 @@ export default function Dreams() {
   }
 
   return (
-    <div className="min-h-screen bg-warm-cream pb-24 md:max-w-6xl md:mx-auto md:px-8">
+    <div className="min-h-screen bg-background pb-24 md:max-w-6xl md:mx-auto md:px-8">
       {/* Header */}
       <div className="bg-white border-b px-4 pt-4 pb-4">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-display font-bold text-charcoal">Dream Board</h1>
+              <h1 className="text-xl font-display font-bold text-foreground">Dream Board</h1>
               <p className="text-sm text-muted-foreground">Places you want to explore</p>
             </div>
             <Button
@@ -108,7 +108,7 @@ export default function Dreams() {
           </div>
         ) : (
           <div className="text-center py-12">
-            <Compass className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+            <Compass className="h-12 w-12 text-border mx-auto mb-3" />
             <p className="text-muted-foreground text-sm">
               No dream destinations yet. Add places you'd love to visit!
             </p>

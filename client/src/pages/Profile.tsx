@@ -256,7 +256,7 @@ function ProfileInner() {
         <div className="mb-6 flex justify-between">
           <button
             onClick={() => setIsEditing(false)}
-            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
             data-testid="button-cancel-edit"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -280,23 +280,23 @@ function ProfileInner() {
               onImageChange={(url) => setEditForm({ ...editForm, avatar: url })}
               size="lg"
             />
-            <p className="text-xs text-gray-500 mt-2">Tap to change photo</p>
+            <p className="text-xs text-muted-foreground mt-2">Tap to change photo</p>
           </div>
           
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Family Name</label>
+            <label className="block text-sm font-bold text-foreground mb-2">Family Name</label>
             <input
               type="text"
               value={editForm.name}
               onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-border bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
               placeholder="Your family name"
               data-testid="input-edit-name"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Location</label>
+            <label className="block text-sm font-bold text-foreground mb-2">Location</label>
             <GooglePlacesAutocomplete
               value={editForm.location}
               onChange={(value) => setEditForm({ ...editForm, location: value })}
@@ -308,23 +308,23 @@ function ProfileInner() {
           </div>
           
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Kids</label>
+            <label className="block text-sm font-bold text-foreground mb-2">Kids</label>
             <input
               type="text"
               value={editForm.kids}
               onChange={(e) => setEditForm({ ...editForm, kids: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-border bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
               placeholder="e.g., 2 Kids (ages 3 & 7)"
               data-testid="input-edit-kids"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Bio</label>
+            <label className="block text-sm font-bold text-foreground mb-2">Bio</label>
             <textarea
               value={editForm.bio}
               onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none resize-none"
+              className="w-full rounded-xl border border-border bg-white p-4 text-base font-medium focus:border-primary focus:outline-none resize-none"
               rows={3}
               placeholder="Tell other families about you..."
               data-testid="input-edit-bio"
@@ -332,7 +332,7 @@ function ProfileInner() {
           </div>
           
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Interests</label>
+            <label className="block text-sm font-bold text-foreground mb-2">Interests</label>
             <div className="flex flex-wrap gap-2">
               {INTEREST_OPTIONS.map((interest) => (
                 <button
@@ -352,7 +352,7 @@ function ProfileInner() {
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-foreground mb-2">
               <Heart className="inline-block h-4 w-4 mr-1 text-rose-500" />
               Family Values
             </label>
@@ -375,7 +375,7 @@ function ProfileInner() {
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-foreground mb-2">
               <Globe className="inline-block h-4 w-4 mr-1 text-blue-500" />
               Languages We Speak
             </label>
@@ -398,21 +398,21 @@ function ProfileInner() {
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-foreground mb-2">
               🐾 Pets
             </label>
             <input
               type="text"
               value={editForm.pets}
               onChange={(e) => setEditForm({ ...editForm, pets: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-border bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
               placeholder="e.g., Dog named Max, 2 cats"
               data-testid="input-edit-pets"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-foreground mb-2">
               <Quote className="inline-block h-4 w-4 mr-1 text-purple-500" />
               Family Motto
             </label>
@@ -420,21 +420,21 @@ function ProfileInner() {
               type="text"
               value={editForm.familyMotto}
               onChange={(e) => setEditForm({ ...editForm, familyMotto: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-border bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
               placeholder="e.g., Adventure awaits!"
               data-testid="input-edit-motto"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-foreground mb-2">
               <Star className="inline-block h-4 w-4 mr-1 text-amber-500" />
               Favorite Traditions
             </label>
             <textarea
               value={editForm.favoriteTraditions}
               onChange={(e) => setEditForm({ ...editForm, favoriteTraditions: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none resize-none"
+              className="w-full rounded-xl border border-border bg-white p-4 text-base font-medium focus:border-primary focus:outline-none resize-none"
               rows={2}
               placeholder="e.g., Sunday pancakes, Friday movie nights"
               data-testid="input-edit-traditions"
@@ -442,23 +442,23 @@ function ProfileInner() {
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              <Plane className="inline-block h-4 w-4 mr-1 text-teal-500" />
+            <label className="block text-sm font-bold text-foreground mb-2">
+              <Plane className="inline-block h-4 w-4 mr-1 text-kindred-green" />
               Dream Vacation
             </label>
             <input
               type="text"
               value={editForm.dreamVacation}
               onChange={(e) => setEditForm({ ...editForm, dreamVacation: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-border bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
               placeholder="e.g., Disney World, Japan"
               data-testid="input-edit-dream-vacation"
             />
           </div>
 
-          <div className="border-t border-gray-200 pt-6">
+          <div className="border-t border-border pt-6">
             <div className="flex items-center justify-between mb-4">
-              <label className="block text-sm font-bold text-gray-700">
+              <label className="block text-sm font-bold text-foreground">
                 <Users className="inline-block h-4 w-4 mr-1 text-primary" />
                 Family Members
               </label>
@@ -473,9 +473,9 @@ function ProfileInner() {
             </div>
 
             {familyMembers.length === 0 ? (
-              <div className="text-center py-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-                <UserPlus className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">No family members added yet</p>
+              <div className="text-center py-8 bg-muted rounded-xl border-2 border-dashed border-border">
+                <UserPlus className="h-8 w-8 text-border mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No family members added yet</p>
                 <button
                   onClick={() => setShowAddMemberModal(true)}
                   className="mt-2 text-sm text-primary font-bold"
@@ -486,8 +486,8 @@ function ProfileInner() {
             ) : (
               <div className="space-y-3">
                 {familyMembers.map((member) => (
-                  <div key={member.id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200">
-                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
+                  <div key={member.id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-border">
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
                       {member.photo ? (
                         <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
                       ) : (
@@ -497,16 +497,16 @@ function ProfileInner() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-gray-900 truncate">{member.name}</p>
+                      <p className="font-bold text-foreground truncate">{member.name}</p>
                       <p className="text-xs text-primary">{member.role}</p>
                       {member.ageGroup && (
-                        <p className="text-xs text-gray-400">{member.ageGroup}</p>
+                        <p className="text-xs text-muted-foreground">{member.ageGroup}</p>
                       )}
                     </div>
                     <button
                       onClick={() => deleteMemberMutation.mutate(member.id)}
                       disabled={deleteMemberMutation.isPending}
-                      className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                      className="p-2 text-muted-foreground hover:text-red-500 transition-colors"
                       data-testid={`button-delete-member-${member.id}`}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -537,7 +537,7 @@ function ProfileInner() {
       <div className="flex justify-between items-center px-6 pt-16 md:pt-8 pb-2">
         <button
           onClick={() => setIsEditing(true)}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           data-testid="button-edit-profile"
         >
           <Edit2 className="h-4 w-4" />
@@ -545,7 +545,7 @@ function ProfileInner() {
         </button>
         <button
           onClick={() => setLocation("/settings")}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           data-testid="button-settings"
         >
           <SettingsIcon className="h-4 w-4" />
@@ -566,10 +566,10 @@ function ProfileInner() {
 
           {/* Info */}
           <div className="flex-1 min-w-0">
-            <h1 className="font-heading text-2xl font-bold text-gray-900" data-testid="text-username">
+            <h1 className="font-heading text-2xl font-bold text-foreground" data-testid="text-username">
               {currentUser?.name || "Loading..."}
             </h1>
-            <p className="text-gray-500 text-sm">
+            <p className="text-muted-foreground text-sm">
               @{(currentUser?.name || "family").toLowerCase().replace(/\s+/g, '')}
             </p>
 
@@ -580,22 +580,22 @@ function ProfileInner() {
                 onClick={() => {}}
                 data-testid="button-following"
               >
-                <span className="text-gray-900 font-bold">{followingCount}</span>
-                <span className="text-gray-500 ml-1">following</span>
+                <span className="text-foreground font-bold">{followingCount}</span>
+                <span className="text-muted-foreground ml-1">following</span>
               </button>
               <button
                 className="text-sm"
                 onClick={() => {}}
                 data-testid="button-followers"
               >
-                <span className="text-gray-900 font-bold">{followersCount}</span>
-                <span className="text-gray-500 ml-1">followers</span>
+                <span className="text-foreground font-bold">{followersCount}</span>
+                <span className="text-muted-foreground ml-1">followers</span>
               </button>
             </div>
 
             {/* Location chip */}
             {currentUser?.location && (
-              <div className="flex items-center gap-1.5 mt-2 text-sm text-gray-500">
+              <div className="flex items-center gap-1.5 mt-2 text-sm text-muted-foreground">
                 <MapPin className="h-3.5 w-3.5 text-primary" />
                 <span>{currentUser.location}</span>
               </div>
@@ -603,57 +603,57 @@ function ProfileInner() {
 
             {/* Bio */}
             {currentUser?.bio && (
-              <p className="text-gray-600 text-sm mt-2 max-w-md">{currentUser.bio}</p>
+              <p className="text-muted-foreground text-sm mt-2 max-w-md">{currentUser.bio}</p>
             )}
           </div>
         </div>
 
         {/* Travel Stats Card */}
-        <div className="mt-6 bg-white border border-gray-100 shadow-sm rounded-2xl p-4">
+        <div className="mt-6 bg-white border border-border shadow-sm rounded-2xl p-4">
           {!travelStats || travelStats.totalTrips === 0 ? (
             <div className="flex items-center justify-around">
               <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{userTrips.length}</p>
-                <p className="text-gray-500 text-xs">Trips</p>
+                <p className="text-2xl font-bold text-foreground">{userTrips.length}</p>
+                <p className="text-muted-foreground text-xs">Trips</p>
               </div>
-              <div className="w-px h-8 bg-gray-200" />
+              <div className="w-px h-8 bg-border" />
               <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{userCheckins.length}</p>
-                <p className="text-gray-500 text-xs">Experiences</p>
+                <p className="text-2xl font-bold text-foreground">{userCheckins.length}</p>
+                <p className="text-muted-foreground text-xs">Experiences</p>
               </div>
-              <div className="w-px h-8 bg-gray-200" />
+              <div className="w-px h-8 bg-border" />
               <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{userBadges.length}</p>
-                <p className="text-gray-500 text-xs">Badges</p>
+                <p className="text-2xl font-bold text-foreground">{userBadges.length}</p>
+                <p className="text-muted-foreground text-xs">Badges</p>
               </div>
             </div>
           ) : (
             <div>
               <div className="flex items-center justify-around">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-900">{travelStats.totalTrips}</p>
-                  <p className="text-gray-500 text-xs">Trips</p>
+                  <p className="text-2xl font-bold text-foreground">{travelStats.totalTrips}</p>
+                  <p className="text-muted-foreground text-xs">Trips</p>
                 </div>
-                <div className="w-px h-8 bg-gray-200" />
+                <div className="w-px h-8 bg-border" />
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-900">{travelStats.totalDays}</p>
-                  <p className="text-gray-500 text-xs">Days</p>
+                  <p className="text-2xl font-bold text-foreground">{travelStats.totalDays}</p>
+                  <p className="text-muted-foreground text-xs">Days</p>
                 </div>
-                <div className="w-px h-8 bg-gray-200" />
+                <div className="w-px h-8 bg-border" />
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-900">{travelStats.destinationsVisited}</p>
-                  <p className="text-gray-500 text-xs">Destinations</p>
+                  <p className="text-2xl font-bold text-foreground">{travelStats.destinationsVisited}</p>
+                  <p className="text-muted-foreground text-xs">Destinations</p>
                 </div>
-                <div className="w-px h-8 bg-gray-200" />
+                <div className="w-px h-8 bg-border" />
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-900">{travelStats.photosCapured}</p>
-                  <p className="text-gray-500 text-xs">Photos</p>
+                  <p className="text-2xl font-bold text-foreground">{travelStats.photosCapured}</p>
+                  <p className="text-muted-foreground text-xs">Photos</p>
                 </div>
               </div>
               {travelStats.favoriteTrip && travelStats.favoriteTrip.rating && (
-                <div className="mt-3 pt-3 border-t border-gray-200 text-center">
-                  <p className="text-gray-500 text-xs">Favorite Trip</p>
-                  <p className="text-gray-900 text-sm font-medium">{travelStats.favoriteTrip.name}</p>
+                <div className="mt-3 pt-3 border-t border-border text-center">
+                  <p className="text-muted-foreground text-xs">Favorite Trip</p>
+                  <p className="text-foreground text-sm font-medium">{travelStats.favoriteTrip.name}</p>
                 </div>
               )}
             </div>
@@ -664,7 +664,7 @@ function ProfileInner() {
         <div className="mt-4 flex gap-3">
           <button
             onClick={handleShareProfile}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-xl text-gray-700 font-medium text-sm hover:bg-gray-50 transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-border rounded-xl text-foreground font-medium text-sm hover:bg-muted transition-colors"
             data-testid="button-share-profile"
           >
             <Share2 className="h-4 w-4" />
@@ -672,7 +672,7 @@ function ProfileInner() {
           </button>
           <button
             onClick={() => {}}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-xl text-gray-700 font-medium text-sm hover:bg-gray-50 transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-border rounded-xl text-foreground font-medium text-sm hover:bg-muted transition-colors"
             data-testid="button-invite-friends"
           >
             <UserPlus className="h-4 w-4" />
@@ -682,7 +682,7 @@ function ProfileInner() {
       </div>
 
       {/* Tabs */}
-      <div className="mt-6 bg-white sticky top-14 z-20 border-b border-gray-200">
+      <div className="mt-6 bg-white sticky top-14 z-20 border-b border-border">
         <div className="flex">
           {[
             { id: "experiences", label: "Experiences" },
@@ -697,7 +697,7 @@ function ProfileInner() {
                 "flex-1 py-4 text-sm font-bold transition-all border-b-2",
                 activeTab === tab.id
                   ? "text-primary border-primary"
-                  : "text-gray-500 border-transparent hover:text-gray-700"
+                  : "text-muted-foreground border-transparent hover:text-foreground"
               )}
               data-testid={`button-tab-${tab.id}`}
             >
@@ -713,11 +713,11 @@ function ProfileInner() {
           <div>
             {formattedUserExperiences.length === 0 ? (
               <div className="py-12 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <MapPin className="h-8 w-8 text-gray-300" />
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MapPin className="h-8 w-8 text-border" />
                 </div>
-                <p className="text-gray-500 font-medium">No experiences shared yet</p>
-                <p className="text-gray-400 text-sm mt-1">Share your first family adventure!</p>
+                <p className="text-muted-foreground font-medium">No experiences shared yet</p>
+                <p className="text-muted-foreground text-sm mt-1">Share your first family adventure!</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -734,13 +734,13 @@ function ProfileInner() {
             {/* Bio */}
             {currentUser?.bio && (
               <div>
-                <p className="text-gray-700">{currentUser.bio}</p>
+                <p className="text-foreground">{currentUser.bio}</p>
               </div>
             )}
 
             {/* Kids info */}
             {currentUser?.kids && (
-              <div className="flex items-center gap-2 text-gray-600">
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <Users className="h-4 w-4 text-primary" />
                 <span>{currentUser.kids}</span>
               </div>
@@ -748,7 +748,7 @@ function ProfileInner() {
 
             {/* Location */}
             {currentUser?.location && (
-              <div className="flex items-center gap-2 text-gray-600">
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <MapPin className="h-4 w-4 text-primary" />
                 <span>{currentUser.location}</span>
               </div>
@@ -757,7 +757,7 @@ function ProfileInner() {
             {/* Family Members */}
             {familyMembers.length > 0 && (
               <div>
-                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
                   <Users className="h-5 w-5 text-primary" />
                   Family Members
                 </h3>
@@ -770,7 +770,7 @@ function ProfileInner() {
                     <div className="flex flex-wrap gap-4">
                       {adultMembers.map((member) => (
                         <div key={member.id} className="flex flex-col items-center" data-testid={`family-member-${member.id}`}>
-                          <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-gray-200 bg-gray-100">
+                          <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-gray-200 bg-muted">
                             {member.photo ? (
                               <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
                             ) : (
@@ -779,7 +779,7 @@ function ProfileInner() {
                               </div>
                             )}
                           </div>
-                          <p className="mt-1 text-sm font-bold text-gray-900">{member.name}</p>
+                          <p className="mt-1 text-sm font-bold text-foreground">{member.name}</p>
                           <p className="text-xs text-primary font-medium">{member.role}</p>
                         </div>
                       ))}
@@ -795,7 +795,7 @@ function ProfileInner() {
                     <div className="flex flex-wrap gap-4">
                       {kidMembers.map((member) => (
                         <div key={member.id} className="flex flex-col items-center" data-testid={`family-member-${member.id}`}>
-                          <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-gray-200 bg-gray-100">
+                          <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-gray-200 bg-muted">
                             {member.photo ? (
                               <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
                             ) : (
@@ -804,10 +804,10 @@ function ProfileInner() {
                               </div>
                             )}
                           </div>
-                          <p className="mt-1 text-sm font-bold text-gray-900">{member.name}</p>
+                          <p className="mt-1 text-sm font-bold text-foreground">{member.name}</p>
                           <p className="text-xs text-secondary font-medium">{member.role}</p>
                           {member.ageGroup && (
-                            <p className="text-xs text-gray-400">{member.ageGroup}</p>
+                            <p className="text-xs text-muted-foreground">{member.ageGroup}</p>
                           )}
                         </div>
                       ))}
@@ -820,7 +820,7 @@ function ProfileInner() {
             {/* Interests */}
             {currentUser?.interests && currentUser.interests.length > 0 && (
               <div>
-                <h3 className="font-bold text-gray-900 mb-3">Interests</h3>
+                <h3 className="font-bold text-foreground mb-3">Interests</h3>
                 <div className="flex flex-wrap gap-2">
                   {currentUser.interests.map((interest) => (
                     <span
@@ -837,7 +837,7 @@ function ProfileInner() {
             {/* Family Values */}
             {currentUser?.familyValues && currentUser.familyValues.length > 0 && (
               <div>
-                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <h3 className="font-bold text-foreground mb-3 flex items-center gap-2">
                   <Heart className="h-4 w-4 text-rose-500" />
                   Family Values
                 </h3>
@@ -854,7 +854,7 @@ function ProfileInner() {
             {/* Languages */}
             {currentUser?.languages && currentUser.languages.length > 0 && (
               <div>
-                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <h3 className="font-bold text-foreground mb-3 flex items-center gap-2">
                   <Globe className="h-4 w-4 text-blue-500" />
                   Languages
                 </h3>
@@ -871,51 +871,51 @@ function ProfileInner() {
             {/* Pets */}
             {currentUser?.pets && (
               <div>
-                <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                <h3 className="font-bold text-foreground mb-2 flex items-center gap-2">
                   <span>🐾</span>
                   Pets
                 </h3>
-                <p className="text-gray-600">{currentUser.pets}</p>
+                <p className="text-muted-foreground">{currentUser.pets}</p>
               </div>
             )}
 
             {/* Family Motto */}
             {currentUser?.familyMotto && (
               <div>
-                <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                <h3 className="font-bold text-foreground mb-2 flex items-center gap-2">
                   <Quote className="h-4 w-4 text-purple-500" />
                   Family Motto
                 </h3>
-                <p className="text-gray-600 italic">"{currentUser.familyMotto}"</p>
+                <p className="text-muted-foreground italic">"{currentUser.familyMotto}"</p>
               </div>
             )}
 
             {/* Favorite Traditions */}
             {currentUser?.favoriteTraditions && (
               <div>
-                <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                <h3 className="font-bold text-foreground mb-2 flex items-center gap-2">
                   <Star className="h-4 w-4 text-amber-500" />
                   Favorite Traditions
                 </h3>
-                <p className="text-gray-600">{currentUser.favoriteTraditions}</p>
+                <p className="text-muted-foreground">{currentUser.favoriteTraditions}</p>
               </div>
             )}
 
             {/* Dream Vacation */}
             {currentUser?.dreamVacation && (
               <div>
-                <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                  <Plane className="h-4 w-4 text-teal-500" />
+                <h3 className="font-bold text-foreground mb-2 flex items-center gap-2">
+                  <Plane className="h-4 w-4 text-kindred-green" />
                   Dream Vacation
                 </h3>
-                <p className="text-gray-600">{currentUser.dreamVacation}</p>
+                <p className="text-muted-foreground">{currentUser.dreamVacation}</p>
               </div>
             )}
 
             {/* Badges */}
             {userBadges.length > 0 && (
               <div>
-                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <h3 className="font-bold text-foreground mb-3 flex items-center gap-2">
                   <Award className="h-4 w-4 text-amber-500" />
                   Badges
                 </h3>
@@ -937,7 +937,7 @@ function ProfileInner() {
             {/* Pods */}
             {pods.length > 0 && (
               <div>
-                <h3 className="font-bold text-gray-900 mb-3">Pods</h3>
+                <h3 className="font-bold text-foreground mb-3">Pods</h3>
                 <div className="space-y-3">
                   {pods.map((pod) => (
                     <PodCard key={pod.id} pod={pod} />
@@ -952,11 +952,11 @@ function ProfileInner() {
           <div>
             {formattedSavedExperiences.length === 0 ? (
               <div className="py-12 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Heart className="h-8 w-8 text-gray-300" />
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Heart className="h-8 w-8 text-border" />
                 </div>
-                <p className="text-gray-500 font-medium">No saved experiences yet</p>
-                <p className="text-gray-400 text-sm mt-1">Save experiences you want to try!</p>
+                <p className="text-muted-foreground font-medium">No saved experiences yet</p>
+                <p className="text-muted-foreground text-sm mt-1">Save experiences you want to try!</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -972,18 +972,18 @@ function ProfileInner() {
           <div className="space-y-4">
             {userTrips.length === 0 ? (
               <div className="py-12 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Plane className="h-8 w-8 text-gray-300" />
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Plane className="h-8 w-8 text-border" />
                 </div>
-                <p className="text-gray-500 font-medium">No trips planned yet</p>
-                <p className="text-gray-400 text-sm mt-1">Join a pod and start planning your first trip!</p>
+                <p className="text-muted-foreground font-medium">No trips planned yet</p>
+                <p className="text-muted-foreground text-sm mt-1">Join a pod and start planning your first trip!</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {userTrips.map((trip: any) => (
                   <div 
                     key={trip.id}
-                    className="rounded-xl bg-white p-4 shadow-sm border border-gray-100 cursor-pointer"
+                    className="rounded-xl bg-white p-4 shadow-sm border border-border cursor-pointer"
                     onClick={() => setLocation(`/trip/${trip.id}`)}
                     data-testid={`trip-card-${trip.id}`}
                   >
@@ -993,23 +993,23 @@ function ProfileInner() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <h4 className="font-bold text-gray-900 line-clamp-1">{trip.name}</h4>
+                          <h4 className="font-bold text-foreground line-clamp-1">{trip.name}</h4>
                           <span className={cn(
                             "text-xs px-2 py-0.5 rounded-full font-medium shrink-0",
                             trip.status === "confirmed" 
                               ? "bg-green-100 text-green-700" 
                               : trip.status === "confirming"
                               ? "bg-orange-100 text-orange-700"
-                              : "bg-gray-100 text-gray-600"
+                              : "bg-muted text-muted-foreground"
                           )}>
                             {trip.status === "confirmed" ? "Confirmed" : trip.status === "confirming" ? "In Progress" : "Draft"}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1 text-sm text-gray-500">
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <MapPin className="h-3 w-3" />
                           <span>{trip.destination}</span>
                         </div>
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           {new Date(trip.startDate).toLocaleDateString()} - {new Date(trip.endDate).toLocaleDateString()}
                         </p>
                         {trip.pod && (
@@ -1056,14 +1056,14 @@ function AddMemberModal({
   return (
     <div className="fixed inset-0 bg-black/50 z-[100] flex items-end sm:items-center justify-center">
       <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[85vh] overflow-y-auto animate-slide-up mb-20 sm:mb-0 mx-4">
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+        <div className="sticky top-0 bg-white border-b border-border px-6 py-4 flex items-center justify-between">
           <h2 className="font-heading text-xl font-bold">Add Family Member</h2>
           <button
             onClick={() => {
               setShowModal(false);
               setNewMember({ name: "", role: "", ageGroup: "", isAdult: true, photo: "" });
             }}
-            className="p-2 rounded-full bg-gray-100"
+            className="p-2 rounded-full bg-muted"
           >
             <X className="h-5 w-5" />
           </button>
@@ -1079,19 +1079,19 @@ function AddMemberModal({
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Name</label>
+            <label className="block text-sm font-bold text-foreground mb-2">Name</label>
             <input
               type="text"
               value={newMember.name}
               onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-border bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
               placeholder="e.g., Emma"
               data-testid="input-member-name"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Role (Adults)</label>
+            <label className="block text-sm font-bold text-foreground mb-2">Role (Adults)</label>
             <div className="flex flex-wrap gap-2 mb-3">
               {FAMILY_ROLES.adults.map((role) => (
                 <button
@@ -1109,7 +1109,7 @@ function AddMemberModal({
                 </button>
               ))}
             </div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Role (Kids)</label>
+            <label className="block text-sm font-bold text-foreground mb-2">Role (Kids)</label>
             <div className="flex flex-wrap gap-2">
               {FAMILY_ROLES.kids.map((role) => (
                 <button
@@ -1130,7 +1130,7 @@ function AddMemberModal({
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Age Group</label>
+            <label className="block text-sm font-bold text-foreground mb-2">Age Group</label>
             <div className="flex flex-wrap gap-2">
               {AGE_GROUPS.map((age) => (
                 <button
