@@ -6,6 +6,7 @@ interface ProgressRingProps {
   total: number
   size?: number
   strokeWidth?: number
+  showLabel?: boolean
   className?: string
 }
 
@@ -14,6 +15,7 @@ function ProgressRing({
   total,
   size = 40,
   strokeWidth = 2.5,
+  showLabel = true,
   className,
 }: ProgressRingProps) {
   const radius = (size - strokeWidth) / 2
@@ -45,9 +47,11 @@ function ProgressRing({
           className="transition-all duration-500 ease-out"
         />
       </svg>
-      <span className="absolute text-xs font-medium text-foreground">
-        {current}/{total}
-      </span>
+      {showLabel && (
+        <span className="absolute text-xs font-medium text-foreground">
+          {current}/{total}
+        </span>
+      )}
     </div>
   )
 }

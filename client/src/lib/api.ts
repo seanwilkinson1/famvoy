@@ -746,7 +746,7 @@ export const api = {
       return res.json();
     },
 
-    create: async (data: { name: string; destination: string; startDate: string; endDate: string; podId?: number }): Promise<any> => {
+    create: async (data: { name: string; destination: string; startDate: string; endDate: string; podId?: number; adultsCount?: number; kidsCount?: number; googlePlaceId?: string }): Promise<any> => {
       const res = await fetchWithAuth(`${API_BASE}/trips`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -766,7 +766,7 @@ export const api = {
       return res.json();
     },
 
-    update: async (tripId: number, data: Partial<{ name: string; destination: string; startDate: string; endDate: string; aiSummary: string }>): Promise<any> => {
+    update: async (tripId: number, data: Partial<{ name: string; destination: string; startDate: string; endDate: string; aiSummary: string; travelStyleInterests: string[]; travelStylePace: string; travelStyleBudget: string; adultsCount: number; kidsCount: number; googlePlaceId: string; status: string }>): Promise<any> => {
       const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

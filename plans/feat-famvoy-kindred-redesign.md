@@ -279,13 +279,13 @@ Use the trip planner PRD model. New tables (already partially in schema from pre
 
 ### Acceptance Criteria
 
-- [ ] 5-step wizard navigable with back/forward
-- [ ] Each step persists data to server
-- [ ] AI generation streams results
-- [ ] Itinerary editor supports drag-reorder, add/swap/remove stops
-- [ ] Days can be locked/unlocked
-- [ ] Wizard state resumes if user navigates away and returns
-- [ ] All pages use Kindred design patterns (pill buttons, progress ring, serif headings)
+- [x] 5-step wizard navigable with back/forward
+- [x] Each step persists data to server
+- [x] AI generation streams results
+- [x] Itinerary editor supports drag-reorder, add/swap/remove stops
+- [x] Days can be locked/unlocked
+- [x] Wizard state resumes if user navigates away and returns
+- [x] All pages use Kindred design patterns (pill buttons, progress ring, serif headings)
 
 ---
 

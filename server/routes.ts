@@ -2061,6 +2061,13 @@ export async function registerRoutes(
         pace: z.string().nullable().optional(),
         kidsAgeGroups: z.array(z.string()).nullable().optional(),
         tripInterests: z.array(z.string()).nullable().optional(),
+        travelStyleInterests: z.array(z.string()).nullable().optional(),
+        travelStylePace: z.string().nullable().optional(),
+        travelStyleBudget: z.string().nullable().optional(),
+        adultsCount: z.number().nullable().optional(),
+        kidsCount: z.number().nullable().optional(),
+        googlePlaceId: z.string().nullable().optional(),
+        status: z.string().optional(),
       });
 
       const parsed = allowedTripUpdate.safeParse(req.body);

@@ -44,6 +44,11 @@ const BookletChapters = lazy(() => import("@/pages/booklet/BookletChapters"));
 const BookletMap = lazy(() => import("@/pages/booklet/BookletMap"));
 const BookletPublish = lazy(() => import("@/pages/booklet/BookletPublish"));
 const Dreams = lazy(() => import("@/pages/Dreams"));
+const TripSetup = lazy(() => import("@/pages/trip-wizard/TripSetup"));
+const TravelStyle = lazy(() => import("@/pages/trip-wizard/TravelStyle"));
+const AIGeneration = lazy(() => import("@/pages/trip-wizard/AIGeneration"));
+const ItineraryEditor = lazy(() => import("@/pages/trip-wizard/ItineraryEditor"));
+const LockAndShare = lazy(() => import("@/pages/trip-wizard/LockAndShare"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
 const AdminTrips = lazy(() => import("@/pages/admin/AdminTrips"));
@@ -95,6 +100,23 @@ function AuthenticatedRouter() {
   const isExplorePage = location === "/explore";
   const isConversationPage = location.startsWith("/conversation/");
   const isAdminPage = location.startsWith("/admin");
+  const isWizardPage = location.startsWith("/trips/new") || location.endsWith("/plan") || location.endsWith("/finalize");
+
+  // Trip wizard pages — full-screen, no nav
+  if (isWizardPage) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Switch>
+          <Route path="/trips/new" component={TripSetup} />
+          <Route path="/trips/new/style" component={TravelStyle} />
+          <Route path="/trips/new/generate" component={AIGeneration} />
+          <Route path="/trip/:id/plan" component={ItineraryEditor} />
+          <Route path="/trip/:id/finalize" component={LockAndShare} />
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
+    );
+  }
 
   // Admin pages have their own layout
   if (isAdminPage) {
