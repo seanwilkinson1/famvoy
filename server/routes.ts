@@ -3665,6 +3665,279 @@ Return ONLY valid JSON, no markdown.`;
     }
   });
 
+  // ==================== BOOKLET ROUTES ====================
+
+  // Get booklet for a trip (auto-assembles if trip is completed and no booklet exists)
+  app.get("/api/trips/:id/booklet", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      await assertTripAccess(user.id, tripId, "read");
+
+      let booklet = await storage.getBookletByTripId(tripId);
+
+      // Auto-assemble if trip is completed but no booklet yet
+      if (!booklet) {
+        booklet = await storage.assembleBooklet(tripId);
+      }
+
+      const chapters = await storage.getBookletChapters(booklet.id);
+      const memories = await storage.getTripMemories(tripId);
+
+      res.json({ booklet, chapters, memories });
+    } catch (error: any) {
+      if (error instanceof NotFoundError) return res.status(404).json({ error: error.message });
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update booklet (title, subtitle, visibility, aiReflection)
+  app.patch("/api/trips/:id/booklet", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      await assertTripAccess(user.id, tripId, "write");
+
+      const booklet = await storage.getBookletByTripId(tripId);
+      if (!booklet) return res.status(404).json({ error: "Booklet not found" });
+
+      const { title, subtitle, coverEmoji, aiReflection, visibility } = req.body;
+      const updated = await storage.updateBooklet(booklet.id, {
+        ...(title !== undefined && { title }),
+        ...(subtitle !== undefined && { subtitle }),
+        ...(coverEmoji !== undefined && { coverEmoji }),
+        ...(aiReflection !== undefined && { aiReflection }),
+        ...(visibility !== undefined && { visibility }),
+      });
+
+      res.json(updated);
+    } catch (error: any) {
+      if (error instanceof NotFoundError) return res.status(404).json({ error: error.message });
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update booklet chapter
+  app.patch("/api/trips/:id/booklet/chapters/:chapterId", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      await assertTripAccess(user.id, tripId, "write");
+
+      const chapterId = parseInt(req.params.chapterId);
+      const { title, quote } = req.body;
+      const updated = await storage.updateBookletChapter(chapterId, {
+        ...(title !== undefined && { title }),
+        ...(quote !== undefined && { quote }),
+      });
+
+      res.json(updated);
+    } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Generate AI reflection (streaming SSE)
+  app.post("/api/trips/:id/booklet/generate-reflection", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      await assertTripAccess(user.id, tripId, "write");
+
+      const trip = await storage.getTripById(tripId);
+      if (!trip) return res.status(404).json({ error: "Trip not found" });
+
+      const booklet = await storage.getBookletByTripId(tripId);
+      if (!booklet) return res.status(404).json({ error: "Booklet not found" });
+
+      const memories = await storage.getTripMemories(tripId);
+      const chapters = await storage.getBookletChapters(booklet.id);
+
+      // Set up SSE
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+
+      const highlightMemories = memories.filter(m => m.isHighlight);
+      const memorySummary = memories.slice(0, 20).map(m =>
+        `${m.emoji || ""} ${m.caption || ""}`.trim()
+      ).filter(Boolean).join("; ");
+
+      const chapterSummary = chapters.map(c => `Day ${c.dayNumber}: ${c.title} in ${c.location}`).join(", ");
+
+      const prompt = `Write a warm, personal 2-3 paragraph reflection about this family trip. Reference specific moments and places from the trip. Keep it heartfelt and nostalgic.
+
+Trip: "${trip.name}" to ${trip.destination}
+Duration: ${trip.startDate} to ${trip.endDate}
+Chapters: ${chapterSummary}
+Memories logged: ${memorySummary || "No memories logged yet"}
+Highlights: ${highlightMemories.map(m => m.caption).filter(Boolean).join("; ") || "None marked"}
+
+Write in second person ("you"), addressing the family. Be warm but not saccharine. Reference 2-3 specific memories or places by name.`;
+
+      const openai = new OpenAI({
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
+      });
+
+      const stream = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are a warm, expressive travel writer who creates personal reflections for family trips." },
+          { role: "user", content: prompt },
+        ],
+        stream: true,
+        max_tokens: 800,
+      });
+
+      let fullReflection = "";
+
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || "";
+        if (content) {
+          fullReflection += content;
+          res.write(`data: ${JSON.stringify({ type: "chunk", content })}\n\n`);
+        }
+      }
+
+      // Save the full reflection
+      await storage.updateBooklet(booklet.id, { aiReflection: fullReflection });
+
+      res.write(`data: ${JSON.stringify({ type: "complete", reflection: fullReflection })}\n\n`);
+      res.end();
+    } catch (error: any) {
+      if (!res.headersSent) {
+        if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+        res.status(500).json({ error: error.message });
+      } else {
+        res.write(`data: ${JSON.stringify({ type: "error", message: error.message })}\n\n`);
+        res.end();
+      }
+    }
+  });
+
+  // Publish booklet
+  app.post("/api/trips/:id/booklet/publish", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      await assertTripAccess(user.id, tripId, "write");
+
+      const booklet = await storage.getBookletByTripId(tripId);
+      if (!booklet) return res.status(404).json({ error: "Booklet not found" });
+
+      const { visibility } = req.body;
+      const updated = await storage.updateBooklet(booklet.id, {
+        visibility: visibility || "public",
+        publishedAt: new Date(),
+      });
+
+      // Update trip status to published
+      await storage.updateTrip(tripId, { status: "published" } as any);
+
+      res.json(updated);
+    } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get trip memories
+  app.get("/api/trips/:id/memories", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      await assertTripAccess(user.id, tripId, "read");
+
+      const dayNumber = req.query.day ? parseInt(req.query.day as string) : undefined;
+      const memories = dayNumber
+        ? await storage.getTripMemoriesByDay(tripId, dayNumber)
+        : await storage.getTripMemories(tripId);
+
+      res.json(memories);
+    } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create trip memory
+  app.post("/api/trips/:id/memories", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      await assertTripAccess(user.id, tripId, "write");
+
+      const { tripStopId, dayNumber, emoji, caption, photos, tag, isHighlight } = req.body;
+      const memory = await storage.createTripMemory({
+        tripId,
+        userId: user.id,
+        tripStopId: tripStopId || null,
+        dayNumber,
+        emoji: emoji || null,
+        caption: caption || null,
+        photos: photos || null,
+        tag: tag || null,
+        isHighlight: isHighlight || false,
+      });
+
+      res.json(memory);
+    } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update trip memory
+  app.patch("/api/trips/:id/memories/:memoryId", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      await assertTripAccess(user.id, tripId, "write");
+
+      const memoryId = parseInt(req.params.memoryId);
+      const { emoji, caption, tag, isHighlight } = req.body;
+      const updated = await storage.updateTripMemory(memoryId, {
+        ...(emoji !== undefined && { emoji }),
+        ...(caption !== undefined && { caption }),
+        ...(tag !== undefined && { tag }),
+        ...(isHighlight !== undefined && { isHighlight }),
+      });
+
+      res.json(updated);
+    } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get all booking options (or by trip item)
   app.get('/api/booking-options', async (req, res) => {
     try {
