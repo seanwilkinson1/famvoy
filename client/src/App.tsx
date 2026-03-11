@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopHeader } from "@/components/layout/TopHeader";
-import { FloatingActionButton } from "@/components/layout/FloatingActionButton";
+
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { PullToRefresh } from "@/components/shared/PullToRefresh";
 import { SignedIn, SignedOut, useAuth } from "@clerk/clerk-react";
@@ -158,7 +158,6 @@ function AuthenticatedRouter() {
             </PullToRefresh>
           )}
         </Suspense>
-        {location === "/" && <FloatingActionButton />}
         {!isConversationPage && <BottomNav />}
       </div>
     </div>

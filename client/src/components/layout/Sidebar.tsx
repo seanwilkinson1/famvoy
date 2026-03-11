@@ -1,4 +1,4 @@
-import { Home, Compass, Plane, Users, MessageCircle, Settings, User, Star } from "lucide-react";
+import { Home, Search, MapPin, User, Plus, MessageCircle, Bell, Settings } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useUser } from "@clerk/clerk-react";
@@ -7,90 +7,95 @@ export function Sidebar() {
   const [location] = useLocation();
   const { user } = useUser();
 
-  const mainTabs = [
+  const navItems = [
     { href: "/", icon: Home, label: "Home" },
-    { href: "/explore", icon: Compass, label: "Explore" },
-    { href: "/trips", icon: Plane, label: "Trips" },
-    { href: "/dreams", icon: Star, label: "Dreams" },
-    { href: "/pods", icon: Users, label: "Pods" },
-    { href: "/chat", icon: MessageCircle, label: "Chat" },
-  ];
-
-  const bottomTabs = [
+    { href: "/explore", icon: Search, label: "Explore" },
+    { href: "/create", icon: Plus, label: "Create" },
+    { href: "/trips", icon: MapPin, label: "Trips" },
     { href: "/profile", icon: User, label: "Profile" },
-    { href: "/settings", icon: Settings, label: "Settings" },
   ];
 
   return (
-    <aside className="hidden md:flex flex-col w-64 bg-card border-r border-border h-screen sticky top-0">
-      <div className="p-6 border-b border-border">
+    <aside className="hidden md:flex flex-col w-64 bg-background border-r border-border/50 h-screen sticky top-0">
+      {/* Wordmark */}
+      <div className="px-6 py-5 flex items-center justify-between">
         <Link href="/">
-          <div className="flex items-center gap-3 cursor-pointer">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">F</span>
-            </div>
-            <span className="font-heading text-xl font-bold text-foreground">FamVoy</span>
-          </div>
+          <span className="font-heading text-2xl font-semibold text-foreground tracking-tight cursor-pointer">
+            FamVoy
+          </span>
         </Link>
+        <div className="flex items-center gap-1">
+          <Link href="/chat">
+            <button className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+              <MessageCircle className="w-5 h-5" />
+            </button>
+          </Link>
+          <button className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors relative">
+            <Bell className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1">
-        {mainTabs.map((tab) => {
-          const isActive = location === tab.href ||
-            (tab.href !== "/" && location.startsWith(tab.href));
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-2 space-y-0.5">
+        {navItems.map((item) => {
+          const isActive = item.href === "/"
+            ? location === "/"
+            : location.startsWith(item.href);
+
           return (
-            <Link key={tab.href} href={tab.href}>
+            <Link key={item.href} href={item.href}>
               <div
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200",
+                  "flex items-center gap-3 px-4 py-2.5 rounded-full cursor-pointer transition-all duration-200",
                   isActive
-                    ? "bg-primary text-primary-foreground shadow-md"
+                    ? "bg-foreground text-background font-semibold"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
-                <tab.icon className={cn("h-5 w-5", isActive && "stroke-[2.5px]")} />
-                <span className="font-medium">{tab.label}</span>
+                <item.icon
+                  className="h-5 w-5"
+                  fill={isActive ? "currentColor" : "none"}
+                  strokeWidth={isActive ? 2 : 1.5}
+                />
+                <span className="text-sm font-medium">{item.label}</span>
               </div>
             </Link>
           );
         })}
       </nav>
 
-      <div className="p-4 border-t border-border space-y-1">
-        {bottomTabs.map((tab) => {
-          const isActive = location === tab.href;
-          return (
-            <Link key={tab.href} href={tab.href}>
-              <div
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200",
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-md"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <tab.icon className={cn("h-5 w-5", isActive && "stroke-[2.5px]")} />
-                <span className="font-medium">{tab.label}</span>
-              </div>
-            </Link>
-          );
-        })}
+      {/* Bottom section */}
+      <div className="px-3 py-2 border-t border-border/50">
+        <Link href="/settings">
+          <div
+            className={cn(
+              "flex items-center gap-3 px-4 py-2.5 rounded-full cursor-pointer transition-all duration-200",
+              location === "/settings"
+                ? "bg-foreground text-background font-semibold"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <Settings className="h-5 w-5" />
+            <span className="text-sm font-medium">Settings</span>
+          </div>
+        </Link>
       </div>
 
+      {/* User profile */}
       {user && (
-        <div className="p-4 border-t border-border">
+        <div className="px-3 py-4 border-t border-border/50">
           <Link href="/profile">
-            <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-muted cursor-pointer transition-colors">
+            <div className="flex items-center gap-3 px-3 py-2 rounded-full hover:bg-muted cursor-pointer transition-colors">
               <img
                 src={user.imageUrl}
                 alt={user.fullName || "User"}
-                className="w-10 h-10 rounded-full object-cover"
+                className="w-9 h-9 rounded-full object-cover ring-2 ring-border/50"
               />
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-foreground truncate text-sm">
                   {user.fullName || user.primaryEmailAddress?.emailAddress}
                 </p>
-                <p className="text-xs text-muted-foreground truncate">View profile</p>
               </div>
             </div>
           </Link>

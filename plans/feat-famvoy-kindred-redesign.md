@@ -203,16 +203,16 @@ Simplify to Kindred pattern:
 
 The center "+" in the BottomNav replaces the FAB.
 
-- [ ] Delete `client/src/components/layout/FloatingActionButton.tsx`
-- [ ] Remove FAB reference from `App.tsx`
+- [x] Delete `client/src/components/layout/FloatingActionButton.tsx`
+- [x] Remove FAB reference from `App.tsx`
 
 ### Acceptance Criteria
 
-- [ ] BottomNav has 5 tabs with center "+" button
-- [ ] "+" opens action sheet with creation options
-- [ ] Sidebar matches mobile nav structure
-- [ ] FAB removed
-- [ ] Dreams, Chat, Pods accessible through new navigation paths
+- [x] BottomNav has 5 tabs with center "+" button
+- [x] "+" opens action sheet with creation options
+- [x] Sidebar matches mobile nav structure
+- [x] FAB removed
+- [x] Dreams, Chat, Pods accessible through new navigation paths
 
 ---
 
