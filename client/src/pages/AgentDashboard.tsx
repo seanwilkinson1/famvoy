@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { apiRequest } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -78,7 +78,6 @@ interface ChatConversation {
 
 export default function AgentDashboard() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("pending");
   const [selectedBooking, setSelectedBooking] = useState<ManualBookingItem | null>(null);
   const [bookingNotes, setBookingNotes] = useState("");
@@ -113,10 +112,10 @@ export default function AgentDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/agent/requests/pending"] });
       queryClient.invalidateQueries({ queryKey: ["/api/agent/requests/assigned"] });
-      toast({ title: "Request claimed successfully" });
+      toast.success("Request claimed successfully");
     },
     onError: (error: any) => {
-      toast({ title: "Failed to claim request", description: error.message, variant: "destructive" });
+      toast.error("Failed to claim request", { description: error.message });
     },
   });
 
@@ -125,13 +124,13 @@ export default function AgentDashboard() {
       apiRequest("PATCH", `/api/agent/manual-bookings/${data.id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/agent/manual-bookings"] });
-      toast({ title: "Booking updated successfully" });
+      toast.success("Booking updated successfully");
       setSelectedBooking(null);
       setBookingNotes("");
       setConfirmationNumber("");
     },
     onError: (error: any) => {
-      toast({ title: "Failed to update booking", description: error.message, variant: "destructive" });
+      toast.error("Failed to update booking", { description: error.message });
     },
   });
 

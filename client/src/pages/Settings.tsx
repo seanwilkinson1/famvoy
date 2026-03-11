@@ -21,7 +21,7 @@ import { useClerk } from "@clerk/clerk-react";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useClerkAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface SettingItemProps {
@@ -82,7 +82,6 @@ export default function Settings() {
   const [, setLocation] = useLocation();
   const { signOut } = useClerk();
   const { user } = useClerkAuth();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   
   const [notifications, setNotifications] = useState({
@@ -127,20 +126,15 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      toast({
-        title: shareLocation ? "Location sharing enabled" : "Location sharing disabled",
-        description: shareLocation 
-          ? "Other families can now see you on the map" 
+      toast.success(shareLocation ? "Location sharing enabled" : "Location sharing disabled", {
+        description: shareLocation
+          ? "Other families can now see you on the map"
           : "Your location is now hidden from the map",
       });
     },
     onError: (error) => {
       setShareLocation(!shareLocation);
-      toast({
-        title: "Error",
-        description: "Failed to update location settings",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to update location settings" });
     },
   });
   
@@ -150,11 +144,7 @@ export default function Settings() {
     
     if (enabled) {
       if (!navigator.geolocation) {
-        toast({
-          title: "Geolocation not supported",
-          description: "Your browser doesn't support location services",
-          variant: "destructive",
-        });
+        toast.error("Geolocation not supported", { description: "Your browser doesn't support location services" });
         setShareLocation(false);
         setIsUpdatingLocation(false);
         return;
@@ -179,11 +169,7 @@ export default function Settings() {
           } else if (error.code === error.TIMEOUT) {
             message = "Location request timed out";
           }
-          toast({
-            title: "Location Error",
-            description: message,
-            variant: "destructive",
-          });
+          toast.error("Location Error", { description: message });
           setShareLocation(false);
           setIsUpdatingLocation(false);
         },

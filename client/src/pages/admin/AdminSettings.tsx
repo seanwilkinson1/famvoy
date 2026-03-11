@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   Settings,
   Bell,
@@ -19,14 +19,13 @@ import {
 } from "lucide-react";
 
 export default function AdminSettings() {
-  const { toast } = useToast();
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
     setSaving(false);
-    toast({ title: "Settings saved successfully" });
+    toast.success("Settings saved successfully");
   };
 
   return (

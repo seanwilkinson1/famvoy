@@ -37,7 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { apiRequest } from "@/lib/queryClient";
 import {
   Search,
@@ -69,7 +69,6 @@ interface User {
 
 export default function AdminUsers() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -110,10 +109,10 @@ export default function AdminUsers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       setEditDialog(false);
-      toast({ title: "User updated successfully" });
+      toast.success("User updated successfully");
     },
     onError: (error: any) => {
-      toast({ title: "Failed to update user", description: error.message, variant: "destructive" });
+      toast.error("Failed to update user", { description: error.message });
     },
   });
 

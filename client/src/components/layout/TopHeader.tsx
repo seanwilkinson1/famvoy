@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MagnifyingGlass, Bell, UsersThree, SpinnerGap, X, ArrowLeft } from "@phosphor-icons/react";
+import { Search, Bell, Users, Loader2, X, ArrowLeft } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useUser } from "@clerk/clerk-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -87,14 +87,14 @@ export function TopHeader() {
               className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-all"
               data-testid="button-search"
             >
-              <MagnifyingGlass weight="bold" className="w-5 h-5" />
+              <Search className="w-5 h-5" />
             </button>
             
             <button 
               className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-all relative"
               data-testid="button-notifications"
             >
-              <Bell weight="bold" className="w-5 h-5" />
+              <Bell className="w-5 h-5" />
             </button>
             
             <Link href="/profile">
@@ -120,11 +120,11 @@ export function TopHeader() {
                 className="p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
                 data-testid="button-close-search"
               >
-                <ArrowLeft weight="bold" className="w-5 h-5" />
+                <ArrowLeft className="w-5 h-5" />
               </button>
               
               <div className="flex-1 relative">
-                <MagnifyingGlass weight="bold" className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="Search families, pods..."
@@ -139,7 +139,7 @@ export function TopHeader() {
                     onClick={() => setSearchQuery("")}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
-                    <X weight="bold" className="w-4 h-4" />
+                    <X className="w-4 h-4" />
                   </button>
                 )}
               </div>
@@ -173,14 +173,14 @@ export function TopHeader() {
             <div className="flex-1 overflow-y-auto">
               {isSearching && (
                 <div className="flex items-center justify-center py-16">
-                  <SpinnerGap weight="bold" className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               )}
 
               {!isSearching && !searchQuery.trim() && (
                 <div className="px-6 py-12 text-center">
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
-                    <MagnifyingGlass weight="bold" className="w-8 h-8 text-muted-foreground/50" />
+                    <Search className="w-8 h-8 text-muted-foreground/50" />
                   </div>
                   <p className="text-muted-foreground font-medium">
                     Search for families to connect with or pods to join
@@ -228,7 +228,7 @@ export function TopHeader() {
                       data-testid={`result-pod-${pod.id}`}
                     >
                       <div className="h-14 w-14 rounded-2xl bg-primary flex items-center justify-center ring-2 ring-border/30">
-                        <UsersThree weight="fill" className="h-7 w-7 text-white" />
+                        <Users className="h-7 w-7 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -252,7 +252,7 @@ export function TopHeader() {
               {showEmptyState && (
                 <div className="flex flex-col items-center justify-center py-20 px-6">
                   <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-5">
-                    <MagnifyingGlass weight="bold" className="h-10 w-10 text-muted-foreground/40" />
+                    <Search className="h-10 w-10 text-muted-foreground/40" />
                   </div>
                   <p className="text-foreground font-semibold text-lg mb-1">No results found</p>
                   <p className="text-sm text-muted-foreground text-center">

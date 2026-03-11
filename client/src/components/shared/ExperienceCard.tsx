@@ -1,4 +1,4 @@
-import { Heart, Clock, CurrencyDollar, Users, MapPin, Star, CheckCircle } from "@phosphor-icons/react";
+import { Heart, Clock, DollarSign, Users, MapPin, Star, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Link } from "wouter";
@@ -94,7 +94,7 @@ export function ExperienceCard({ experience, className, horizontal = false, inde
             data-testid={`button-save-${experience.id}`}
           >
             <Heart
-              weight={isSaved ? "fill" : "regular"}
+              fill={isSaved ? "currentColor" : "none"}
               className={cn("h-5 w-5 transition-colors", isSaved ? "text-secondary" : "text-foreground/60")}
             />
           </button>
@@ -110,20 +110,20 @@ export function ExperienceCard({ experience, className, horizontal = false, inde
           <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             {experience.distance !== undefined && (
               <div className="flex items-center gap-1 text-primary font-medium">
-                <MapPin weight="fill" className="h-3.5 w-3.5" />
+                <MapPin className="h-3.5 w-3.5" />
                 {experience.distance.toFixed(1)} mi
               </div>
             )}
             <div className="flex items-center gap-1">
-              <Clock weight="bold" className="h-3.5 w-3.5" />
+              <Clock className="h-3.5 w-3.5" />
               {experience.duration}
             </div>
             <div className="flex items-center gap-1">
-              <CurrencyDollar weight="bold" className="h-3.5 w-3.5" />
+              <DollarSign className="h-3.5 w-3.5" />
               {experience.cost}
             </div>
             <div className="flex items-center gap-1">
-              <Users weight="bold" className="h-3.5 w-3.5" />
+              <Users className="h-3.5 w-3.5" />
               {experience.ages}
             </div>
           </div>
@@ -147,13 +147,13 @@ export function ExperienceCard({ experience, className, horizontal = false, inde
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               {experience.rating !== undefined && experience.rating > 0 && (
                 <div className="flex items-center gap-1" data-testid={`rating-${experience.id}`}>
-                  <Star weight="fill" className="h-4 w-4 text-amber-400" />
+                  <Star className="h-4 w-4 text-amber-400" />
                   <span className="font-semibold text-foreground">{experience.rating.toFixed(1)}</span>
                 </div>
               )}
               {experience.checkinCount !== undefined && experience.checkinCount > 0 && (
                 <div className="flex items-center gap-1" data-testid={`checkin-count-${experience.id}`}>
-                  <CheckCircle weight="fill" className="h-4 w-4 text-primary" />
+                  <CheckCircle className="h-4 w-4 text-primary" />
                   <span>{experience.checkinCount}</span>
                 </div>
               )}

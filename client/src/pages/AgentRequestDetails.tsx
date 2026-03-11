@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { apiRequest } from "@/lib/queryClient";
 
 interface ConciergeRequestItem {
@@ -47,7 +47,6 @@ export default function AgentRequestDetails() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [bookingForm, setBookingForm] = useState({
     confirmationCode: "",
@@ -99,10 +98,10 @@ export default function AgentRequestDetails() {
       queryClient.invalidateQueries({ queryKey: [`/api/concierge/requests/${id}/items`] });
       setEditingItemId(null);
       setBookingForm({ confirmationCode: "", bookingReference: "", providerName: "", actualPriceCents: "", agentNotes: "" });
-      toast({ title: "Item updated successfully" });
+      toast.success("Item updated successfully");
     },
     onError: (error: any) => {
-      toast({ title: "Failed to update item", description: error.message, variant: "destructive" });
+      toast.error("Failed to update item", { description: error.message });
     },
   });
 
@@ -111,11 +110,11 @@ export default function AgentRequestDetails() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/concierge/requests/${id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/agent/requests/assigned"] });
-      toast({ title: "Request marked as complete!" });
+      toast.success("Request marked as complete!");
       navigate("/agent");
     },
     onError: (error: any) => {
-      toast({ title: "Cannot complete request", description: error.message, variant: "destructive" });
+      toast.error("Cannot complete request", { description: error.message });
     },
   });
 

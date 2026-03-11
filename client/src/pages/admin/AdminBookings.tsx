@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 import {
@@ -132,7 +132,6 @@ interface ManualBooking {
 
 export default function AdminBookings() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("concierge");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -196,10 +195,10 @@ export default function AdminBookings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/manual-bookings"] });
       setBookingDialog(false);
-      toast({ title: "Booking updated successfully" });
+      toast.success("Booking updated successfully");
     },
     onError: (error: any) => {
-      toast({ title: "Failed to update booking", description: error.message, variant: "destructive" });
+      toast.error("Failed to update booking", { description: error.message });
     },
   });
 

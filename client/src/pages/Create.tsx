@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { ChevronLeft, Camera, Clock, Info, X, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
@@ -10,7 +10,6 @@ import { GoogleMapsProvider } from "@/components/shared/GoogleMapsProvider";
 
 function CreateInner() {
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -45,18 +44,10 @@ function CreateInner() {
     try {
       const url = await api.upload.image(file, (percent) => setUploadProgress(percent));
       setUploadedImageUrl(url);
-      toast({
-        title: "Photo uploaded!",
-        description: "Your photo has been saved permanently.",
-        duration: 2000,
-      });
+      toast.success("Photo uploaded!", { description: "Your photo has been saved permanently." });
     } catch (error: any) {
       console.error('Failed to upload image:', error);
-      toast({
-        title: "Upload failed",
-        description: error.message || "Could not upload the photo. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Upload failed", { description: error.message || "Could not upload the photo. Please try again." });
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -96,53 +87,29 @@ function CreateInner() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["experiences"] });
-      toast({
-        title: "Experience Saved!",
-        description: "Your experience has been created successfully.",
-        duration: 3000,
-      });
+      toast.success("Experience Saved!", { description: "Your experience has been created successfully." });
       setTimeout(() => setLocation("/"), 1000);
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create experience",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: error.message || "Failed to create experience" });
     },
   });
 
   const handleSave = () => {
     if (!formData.title) {
-      toast({
-        title: "Title Required",
-        description: "Please add a title for your experience",
-        variant: "destructive",
-      });
+      toast.error("Title Required", { description: "Please add a title for your experience" });
       return;
     }
     if (!formData.duration) {
-      toast({
-        title: "Duration Required",
-        description: "Please add how long the experience takes",
-        variant: "destructive",
-      });
+      toast.error("Duration Required", { description: "Please add how long the experience takes" });
       return;
     }
     if (!uploadedImageUrl) {
-      toast({
-        title: "Photo Required",
-        description: "Please add a photo of your experience",
-        variant: "destructive",
-      });
+      toast.error("Photo Required", { description: "Please add a photo of your experience" });
       return;
     }
     if (!formData.locationLat || !formData.locationLng) {
-      toast({
-        title: "Location Required",
-        description: "Please search and select a location from the suggestions",
-        variant: "destructive",
-      });
+      toast.error("Location Required", { description: "Please search and select a location from the suggestions" });
       return;
     }
     createMutation.mutate();

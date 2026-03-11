@@ -19,7 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { apiRequest } from "@/lib/queryClient";
 import {
   Search,
@@ -55,7 +55,6 @@ interface Pod {
 
 export default function AdminPods() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
@@ -81,10 +80,10 @@ export default function AdminPods() {
       apiRequest("PATCH", `/api/admin/pods/${data.id}`, { isPublic: data.isPublic }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pods"] });
-      toast({ title: "Pod updated" });
+      toast.success("Pod updated");
     },
     onError: (error: any) => {
-      toast({ title: "Failed to update pod", description: error.message, variant: "destructive" });
+      toast.error("Failed to update pod", { description: error.message });
     },
   });
 

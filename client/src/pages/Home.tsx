@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
 import { useState, useEffect, useMemo } from "react";
-import { MapPin, UsersThree, CaretRight, Sparkle, Fire, Heart } from "@phosphor-icons/react";
+import { MapPin, Users, ChevronRight, Sparkles, Flame, Heart } from "lucide-react";
 import { Link } from "wouter";
 import { TravelingNowSection } from "@/components/feed/TravelingNowSection";
 import { RecentAdventuresSection } from "@/components/feed/RecentAdventuresSection";
@@ -183,7 +183,7 @@ export default function Home() {
               className="rounded-xl font-semibold data-[state=active]:bg-card data-[state=active]:shadow-sm"
               data-testid="tab-following"
             >
-              <UsersThree weight="bold" className="h-4 w-4 mr-1.5" />
+              <Users className="h-4 w-4 mr-1.5" />
               Following
             </TabsTrigger>
           </TabsList>
@@ -206,7 +206,7 @@ export default function Home() {
                       )}
                       data-testid={`filter-${filter.toLowerCase().replace(/\s/g, '-')}`}
                     >
-                      {filter === "Nearby" && <MapPin weight="fill" className="inline h-3.5 w-3.5 mr-1.5 -mt-0.5" />}
+                      {filter === "Nearby" && <MapPin className="inline h-3.5 w-3.5 mr-1.5 -mt-0.5" />}
                       {filter}
                     </button>
                   );
@@ -257,11 +257,11 @@ export default function Home() {
                     <section>
                       <div className="mb-5 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Sparkle weight="fill" className="h-5 w-5 text-secondary" />
+                          <Sparkles className="h-5 w-5 text-secondary" />
                           <h2 className="section-title text-xl text-foreground">Suggestions for Today</h2>
                         </div>
                         <button className="text-sm font-semibold text-primary flex items-center gap-0.5 hover:gap-1.5 transition-all" data-testid="button-see-all">
-                          See all <CaretRight weight="bold" className="h-4 w-4" />
+                          See all <ChevronRight className="h-4 w-4" />
                         </button>
                       </div>
                       <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
@@ -279,11 +279,11 @@ export default function Home() {
                     <section>
                       <div className="mb-5 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Fire weight="fill" className="h-5 w-5 text-secondary" />
+                          <Flame className="h-5 w-5 text-secondary" />
                           <h2 className="section-title text-xl text-foreground">Popular with Families</h2>
                         </div>
                         <button className="text-sm font-semibold text-primary flex items-center gap-0.5 hover:gap-1.5 transition-all" data-testid="button-see-all-popular">
-                          See all <CaretRight weight="bold" className="h-4 w-4" />
+                          See all <ChevronRight className="h-4 w-4" />
                         </button>
                       </div>
                       <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
@@ -301,12 +301,12 @@ export default function Home() {
                     <section>
                       <div className="mb-5 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Heart weight="fill" className="h-5 w-5 text-secondary" />
+                          <Heart className="h-5 w-5 text-secondary" />
                           <h2 className="section-title text-xl text-foreground">People You Might Know</h2>
                         </div>
                         <Link href="/explore">
                           <button className="text-sm font-semibold text-primary flex items-center gap-0.5 hover:gap-1.5 transition-all" data-testid="button-see-all-people">
-                            See all <CaretRight weight="bold" className="h-4 w-4" />
+                            See all <ChevronRight className="h-4 w-4" />
                           </button>
                         </Link>
                       </div>
@@ -344,12 +344,12 @@ export default function Home() {
                     <section>
                       <div className="mb-5 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <UsersThree weight="fill" className="h-5 w-5 text-primary" />
+                          <Users className="h-5 w-5 text-primary" />
                           <h2 className="section-title text-xl text-foreground">Pods You Might Like</h2>
                         </div>
                         <Link href="/pods">
                           <button className="text-sm font-semibold text-primary flex items-center gap-0.5 hover:gap-1.5 transition-all" data-testid="button-see-all-pods">
-                            See all <CaretRight weight="bold" className="h-4 w-4" />
+                            See all <ChevronRight className="h-4 w-4" />
                           </button>
                         </Link>
                       </div>
@@ -362,7 +362,7 @@ export default function Home() {
                                 data-testid={`card-pod-${pod.id}`}
                               >
                                 <div className="h-14 w-14 rounded-2xl bg-primary flex items-center justify-center mb-4 shadow-sm">
-                                  <UsersThree weight="fill" className="h-7 w-7 text-white" />
+                                  <Users className="h-7 w-7 text-white" />
                                 </div>
                                 <p className="font-semibold text-foreground truncate">{pod.name}</p>
                                 {pod.description && (
@@ -392,13 +392,13 @@ export default function Home() {
                       </h2>
                       {activeFilter === "Nearby" && locationError && (
                         <div className="mb-4 rounded-2xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800 flex items-center gap-2">
-                          <MapPin weight="fill" className="h-5 w-5 flex-shrink-0" />
+                          <MapPin className="h-5 w-5 flex-shrink-0" />
                           Location access denied. Enable location to see nearby experiences.
                         </div>
                       )}
                       {activeFilter === "Nearby" && !userLocation && !locationError && (
                         <div className="mb-4 rounded-2xl bg-primary/5 border border-primary/20 p-4 text-sm text-primary flex items-center gap-2">
-                          <MapPin weight="fill" className="h-5 w-5 flex-shrink-0" />
+                          <MapPin className="h-5 w-5 flex-shrink-0" />
                           Getting your location...
                         </div>
                       )}
@@ -426,7 +426,7 @@ export default function Home() {
             ) : formattedFollowingExperiences.length === 0 ? (
               <div className="text-center py-16">
                 <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-muted/50 flex items-center justify-center">
-                  <UsersThree weight="bold" className="h-10 w-10 text-muted-foreground/40" />
+                  <Users className="h-10 w-10 text-muted-foreground/40" />
                 </div>
                 <h3 className="font-heading text-xl font-medium text-foreground mb-2">No posts yet</h3>
                 <p className="text-muted-foreground mb-6">

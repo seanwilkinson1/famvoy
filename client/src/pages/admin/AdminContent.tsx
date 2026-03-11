@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { apiRequest } from "@/lib/queryClient";
 import {
   Search,
@@ -57,7 +57,6 @@ interface Experience {
 
 export default function AdminContent() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("experiences");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -90,10 +89,10 @@ export default function AdminContent() {
     mutationFn: (id: number) => apiRequest("DELETE", `/api/admin/experiences/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/experiences"] });
-      toast({ title: "Experience deleted" });
+      toast.success("Experience deleted");
     },
     onError: (error: any) => {
-      toast({ title: "Failed to delete", description: error.message, variant: "destructive" });
+      toast.error("Failed to delete", { description: error.message });
     },
   });
 
@@ -101,7 +100,7 @@ export default function AdminContent() {
     mutationFn: (id: number) => apiRequest("POST", `/api/admin/experiences/${id}/feature`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/experiences"] });
-      toast({ title: "Experience featured" });
+      toast.success("Experience featured");
     },
   });
 

@@ -133,24 +133,24 @@ Secondary pill = `border border-[#D0D0D0] bg-transparent` (outlined).
 
 Consolidate to **Lucide only** (already the shadcn/ui default):
 
-- [ ] Replace all `@phosphor-icons/react` imports with Lucide equivalents
-- [ ] Replace custom `NavIcons.tsx` SVGs with Lucide icons (or keep custom if they're specifically designed for the nav)
-- [ ] Remove `@phosphor-icons/react` from `package.json`
+- [x] Replace all `@phosphor-icons/react` imports with Lucide equivalents
+- [x] Replace custom `NavIcons.tsx` SVGs with Lucide icons (or keep custom if they're specifically designed for the nav)
+- [x] Remove `@phosphor-icons/react` from `package.json`
 
 ### 1.4 Standardize Toasts
 
 Pick **one** toast system — Sonner (already shadcn default in newer versions):
 
-- [ ] Replace all `useToast()` (Radix) calls with `toast()` (Sonner)
-- [ ] Remove `@/components/ui/toast.tsx` and `@/components/ui/toaster.tsx` (Radix versions)
-- [ ] Update `App.tsx` to use Sonner's `<Toaster>` only
+- [x] Replace all `useToast()` (Radix) calls with `toast()` (Sonner)
+- [x] Remove `@/components/ui/toast.tsx` and `@/components/ui/toaster.tsx` (Radix versions)
+- [x] Update `App.tsx` to use Sonner's `<Toaster>` only
 
 ### Acceptance Criteria
 
-- [ ] All new components created and functional
-- [ ] Phosphor icons fully removed
-- [ ] Single toast system (Sonner) in use
-- [ ] Existing pages still render correctly
+- [x] All new components created and functional
+- [x] Phosphor icons fully removed
+- [x] Single toast system (Sonner) in use
+- [x] Existing pages still render correctly
 
 ---
 

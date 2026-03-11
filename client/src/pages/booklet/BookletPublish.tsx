@@ -5,7 +5,7 @@ import { ArrowLeft, Globe, Users, Lock, Loader2, Check, Link2, Mail, Send } from
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const VISIBILITY_OPTIONS = [
   { value: "public", label: "Public", description: "Anyone with the link can view", icon: Globe },
@@ -17,7 +17,6 @@ export default function BookletPublish() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const tripId = parseInt(id!);
 
   const { data, isLoading } = useQuery({
@@ -33,7 +32,7 @@ export default function BookletPublish() {
     onSuccess: () => {
       setIsPublished(true);
       queryClient.invalidateQueries({ queryKey: ["/api/trips", tripId, "booklet"] });
-      toast({ title: "Booklet published!", description: "Your trip booklet is now live." });
+      toast.success("Booklet published!", { description: "Your trip booklet is now live." });
     },
   });
 
@@ -81,7 +80,7 @@ export default function BookletPublish() {
             <button
               onClick={() => {
                 navigator.clipboard.writeText(window.location.origin + `/trips/${tripId}/booklet`);
-                toast({ title: "Link copied!" });
+                toast.success("Link copied!");
               }}
               className="w-full flex items-center gap-3 p-4 bg-white rounded-lg border border-stone-200 hover:border-stone-300 transition-colors"
             >
