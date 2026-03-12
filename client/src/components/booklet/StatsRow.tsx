@@ -16,12 +16,12 @@ export function StatsRow({ totalStops, totalMemories, totalPhotos, daysCount }: 
   ];
 
   return (
-    <div className="flex justify-around py-4 border-y border-stone-200">
+    <div className="flex justify-around py-4 border-y border-border">
       {stats.map(({ icon: Icon, label, value }) => (
         <div key={label} className="flex flex-col items-center gap-1">
-          <Icon className="w-4 h-4 text-stone-400" />
-          <span className="text-lg font-semibold text-stone-800">{value}</span>
-          <span className="text-xs text-stone-500">{label}</span>
+          <Icon className="w-4 h-4 text-muted-foreground" />
+          <span className="text-lg font-semibold text-foreground">{value}</span>
+          <span className="text-xs text-muted-foreground">{label}</span>
         </div>
       ))}
     </div>

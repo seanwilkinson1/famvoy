@@ -36,13 +36,13 @@ export function AIReflectionBlock({
 
   if (!displayText && !isGenerating) {
     return (
-      <div className="bg-stone-50 rounded-xl p-6 text-center">
+      <div className="bg-muted rounded-2xl p-6 text-center">
         <Sparkles className="w-8 h-8 text-amber-500 mx-auto mb-3" />
-        <h3 className="font-serif text-lg text-stone-800 mb-1">AI Reflection</h3>
-        <p className="text-sm text-stone-500 mb-4">
+        <h3 className="font-heading text-lg text-foreground mb-1">AI Reflection</h3>
+        <p className="text-sm text-muted-foreground mb-4">
           Generate a personalized reflection based on your trip memories
         </p>
-        <Button onClick={onGenerate} className="bg-stone-800 text-white hover:bg-stone-700">
+        <Button onClick={onGenerate} className="bg-foreground text-background hover:bg-foreground/90 rounded-full">
           <Sparkles className="w-4 h-4 mr-2" />
           Generate Reflection
         </Button>
@@ -51,18 +51,18 @@ export function AIReflectionBlock({
   }
 
   return (
-    <div className="bg-[#FAF7F2] rounded-xl p-6 border border-stone-200">
+    <div className="bg-background rounded-2xl p-6 border border-border">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-amber-500" />
-          <span className="text-xs font-medium text-stone-500 uppercase tracking-wider">AI Reflection</span>
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">AI Reflection</span>
         </div>
         {!isGenerating && !isEditing && (
           <div className="flex gap-1">
-            <button onClick={startEditing} className="p-1.5 text-stone-400 hover:text-stone-600">
+            <button onClick={startEditing} className="p-1.5 text-muted-foreground hover:text-foreground">
               <Pencil className="w-3.5 h-3.5" />
             </button>
-            <button onClick={onGenerate} className="p-1.5 text-stone-400 hover:text-stone-600">
+            <button onClick={onGenerate} className="p-1.5 text-muted-foreground hover:text-foreground">
               <Sparkles className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -75,7 +75,7 @@ export function AIReflectionBlock({
             ref={textareaRef}
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
-            className="w-full min-h-[150px] bg-white border border-stone-200 rounded-lg p-3 text-stone-700 text-sm font-serif leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-amber-300"
+            className="w-full min-h-[150px] bg-card border border-border rounded-xl p-3 text-foreground text-sm font-heading leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-amber-300"
           />
           <div className="flex justify-end gap-2 mt-2">
             <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
@@ -87,16 +87,16 @@ export function AIReflectionBlock({
           </div>
         </div>
       ) : (
-        <div className="font-serif text-stone-700 leading-relaxed whitespace-pre-wrap">
+        <div className="font-heading text-foreground leading-relaxed whitespace-pre-wrap">
           {displayText}
           {isGenerating && (
-            <span className="inline-block w-0.5 h-4 bg-stone-800 ml-0.5 animate-pulse" />
+            <span className="inline-block w-0.5 h-4 bg-foreground ml-0.5 animate-pulse" />
           )}
         </div>
       )}
 
       {isGenerating && (
-        <div className="flex items-center gap-2 mt-3 text-xs text-stone-400">
+        <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
           <Loader2 className="w-3 h-3 animate-spin" />
           <span>Generating reflection...</span>
         </div>

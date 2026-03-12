@@ -39,7 +39,7 @@ export default function BookletPublish() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#FAF7F2]">
-        <Loader2 className="h-8 w-8 animate-spin text-stone-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -52,12 +52,12 @@ export default function BookletPublish() {
   if (isPublished || alreadyPublished) {
     return (
       <div className="min-h-screen bg-[#FAF7F2]">
-        <div className="sticky top-0 z-10 bg-[#FAF7F2]/80 backdrop-blur-sm border-b border-stone-200/50">
+        <div className="sticky top-0 z-10 bg-[#FAF7F2]/80 backdrop-blur-sm border-b border-border/50">
           <div className="flex items-center gap-3 px-4 py-3 max-w-lg mx-auto">
             <button onClick={() => navigate(`/trips/${tripId}/booklet`)} className="p-1">
-              <ArrowLeft className="w-5 h-5 text-stone-600" />
+              <ArrowLeft className="w-5 h-5 text-muted-foreground" />
             </button>
-            <span className="text-sm font-medium text-stone-600">Published</span>
+            <span className="text-sm font-medium text-muted-foreground">Published</span>
           </div>
         </div>
 
@@ -69,10 +69,10 @@ export default function BookletPublish() {
           <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
             <Check className="w-8 h-8 text-green-600" />
           </div>
-          <h1 className="text-2xl font-serif font-bold text-stone-900 mb-2">
+          <h1 className="text-2xl font-heading font-bold text-foreground mb-2">
             Your booklet is live!
           </h1>
-          <p className="text-stone-500 mb-8">
+          <p className="text-muted-foreground mb-8">
             Share your trip memories with others
           </p>
 
@@ -82,20 +82,20 @@ export default function BookletPublish() {
                 navigator.clipboard.writeText(window.location.origin + `/trips/${tripId}/booklet`);
                 toast.success("Link copied!");
               }}
-              className="w-full flex items-center gap-3 p-4 bg-white rounded-lg border border-stone-200 hover:border-stone-300 transition-colors"
+              className="w-full flex items-center gap-3 p-4 bg-card rounded-2xl border border-border hover:border-border transition-colors"
             >
-              <Link2 className="w-5 h-5 text-stone-400" />
-              <span className="text-sm font-medium text-stone-700">Copy Link</span>
+              <Link2 className="w-5 h-5 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Copy Link</span>
             </button>
 
-            <button className="w-full flex items-center gap-3 p-4 bg-white rounded-lg border border-stone-200 hover:border-stone-300 transition-colors">
-              <Mail className="w-5 h-5 text-stone-400" />
-              <span className="text-sm font-medium text-stone-700">Email</span>
+            <button className="w-full flex items-center gap-3 p-4 bg-card rounded-2xl border border-border hover:border-border transition-colors">
+              <Mail className="w-5 h-5 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Email</span>
             </button>
 
-            <button className="w-full flex items-center gap-3 p-4 bg-white rounded-lg border border-stone-200 hover:border-stone-300 transition-colors">
-              <Send className="w-5 h-5 text-stone-400" />
-              <span className="text-sm font-medium text-stone-700">Send to Pod</span>
+            <button className="w-full flex items-center gap-3 p-4 bg-card rounded-2xl border border-border hover:border-border transition-colors">
+              <Send className="w-5 h-5 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Send to Pod</span>
             </button>
           </div>
 
@@ -114,22 +114,22 @@ export default function BookletPublish() {
   return (
     <div className="min-h-screen bg-[#FAF7F2]">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#FAF7F2]/80 backdrop-blur-sm border-b border-stone-200/50">
+      <div className="sticky top-0 z-10 bg-[#FAF7F2]/80 backdrop-blur-sm border-b border-border/50">
         <div className="flex items-center gap-3 px-4 py-3 max-w-lg mx-auto">
           <button onClick={() => navigate(`/trips/${tripId}/booklet`)} className="p-1">
-            <ArrowLeft className="w-5 h-5 text-stone-600" />
+            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
           </button>
-          <span className="text-sm font-medium text-stone-600">Publish Booklet</span>
+          <span className="text-sm font-medium text-muted-foreground">Publish Booklet</span>
         </div>
       </div>
 
       <div className="max-w-lg mx-auto px-4 pb-24">
         {/* Preview card */}
-        <div className="mt-6 p-5 bg-white rounded-xl border border-stone-200 text-center">
+        <div className="mt-6 p-5 bg-card rounded-xl border border-border text-center">
           {booklet.coverEmoji && <span className="text-3xl mb-2 block">{booklet.coverEmoji}</span>}
-          <h2 className="font-serif text-xl font-bold text-stone-900">{booklet.title}</h2>
-          {booklet.subtitle && <p className="text-sm text-stone-500 mt-1">{booklet.subtitle}</p>}
-          <div className="flex justify-center gap-4 mt-3 text-xs text-stone-400">
+          <h2 className="font-heading text-xl font-bold text-foreground">{booklet.title}</h2>
+          {booklet.subtitle && <p className="text-sm text-muted-foreground mt-1">{booklet.subtitle}</p>}
+          <div className="flex justify-center gap-4 mt-3 text-xs text-muted-foreground">
             <span>{chapters.length} chapters</span>
             <span>{memories.length} memories</span>
           </div>
@@ -137,7 +137,7 @@ export default function BookletPublish() {
 
         {/* Visibility selector */}
         <div className="mt-8">
-          <h3 className="text-xs font-medium text-stone-500 uppercase tracking-wider mb-3">
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
             Who can see this?
           </h3>
           <div className="space-y-2">
@@ -145,18 +145,18 @@ export default function BookletPublish() {
               <button
                 key={value}
                 onClick={() => setSelectedVisibility(value)}
-                className={`w-full flex items-center gap-3 p-4 rounded-lg border transition-colors text-left ${
+                className={`w-full flex items-center gap-3 p-4 rounded-2xl border transition-colors text-left ${
                   selectedVisibility === value
-                    ? "bg-stone-800 border-stone-800 text-white"
-                    : "bg-white border-stone-200 hover:border-stone-300"
+                    ? "bg-foreground border-foreground text-white"
+                    : "bg-card border-border hover:border-border"
                 }`}
               >
-                <Icon className={`w-5 h-5 ${selectedVisibility === value ? "text-white" : "text-stone-400"}`} />
+                <Icon className={`w-5 h-5 ${selectedVisibility === value ? "text-white" : "text-muted-foreground"}`} />
                 <div>
-                  <p className={`text-sm font-medium ${selectedVisibility === value ? "text-white" : "text-stone-700"}`}>
+                  <p className={`text-sm font-medium ${selectedVisibility === value ? "text-white" : "text-foreground"}`}>
                     {label}
                   </p>
-                  <p className={`text-xs ${selectedVisibility === value ? "text-stone-300" : "text-stone-400"}`}>
+                  <p className={`text-xs ${selectedVisibility === value ? "text-muted-foreground/60" : "text-muted-foreground"}`}>
                     {description}
                   </p>
                 </div>
@@ -170,7 +170,7 @@ export default function BookletPublish() {
           <Button
             onClick={() => publishMutation.mutate()}
             disabled={publishMutation.isPending}
-            className="w-full bg-stone-800 text-white hover:bg-stone-700 h-12 text-base"
+            className="w-full bg-foreground text-white hover:bg-foreground/90 h-12 text-base"
           >
             {publishMutation.isPending ? (
               <Loader2 className="w-5 h-5 animate-spin mr-2" />

@@ -53,17 +53,17 @@ export default function BookletChapters() {
   return (
     <div className="min-h-screen bg-[#FAF7F2]">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#FAF7F2]/80 backdrop-blur-sm border-b border-stone-200/50">
+      <div className="sticky top-0 z-10 bg-[#FAF7F2]/80 backdrop-blur-sm border-b border-border/50">
         <div className="flex items-center gap-3 px-4 py-3 max-w-lg mx-auto">
           <button onClick={() => navigate(`/trips/${tripId}/booklet`)} className="p-1">
-            <ArrowLeft className="w-5 h-5 text-stone-600" />
+            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
           </button>
-          <span className="text-sm font-medium text-stone-600">Chapters</span>
+          <span className="text-sm font-medium text-muted-foreground">Chapters</span>
         </div>
       </div>
 
       {/* Day tab strip */}
-      <div className="border-b border-stone-200/50 bg-[#FAF7F2]">
+      <div className="border-b border-border/50 bg-[#FAF7F2]">
         <div className="max-w-lg mx-auto px-4 flex gap-1 overflow-x-auto py-2 scrollbar-hide">
           {chapters.map((chapter: any) => (
             <button
@@ -72,7 +72,7 @@ export default function BookletChapters() {
               className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                 chapter.dayNumber === activeDay
                   ? "text-white"
-                  : "bg-white text-stone-600 border border-stone-200 hover:border-stone-300"
+                  : "bg-card text-muted-foreground border border-border hover:border-border"
               }`}
               style={chapter.dayNumber === activeDay ? { backgroundColor: chapter.accentColor } : {}}
             >
@@ -103,8 +103,8 @@ export default function BookletChapters() {
 
                 {/* Pull quote */}
                 {currentChapter.quote && (
-                  <div className="my-4 py-3 border-l-2 border-stone-300 pl-4">
-                    <p className="font-serif italic text-stone-600">
+                  <div className="my-4 py-3 border-l-2 border-border pl-4">
+                    <p className="font-heading italic text-muted-foreground">
                       &ldquo;{currentChapter.quote}&rdquo;
                     </p>
                   </div>
@@ -132,11 +132,11 @@ export default function BookletChapters() {
         </AnimatePresence>
 
         {/* Prev/Next navigation */}
-        <div className="flex items-center justify-between mt-8 pt-4 border-t border-stone-200">
+        <div className="flex items-center justify-between mt-8 pt-4 border-t border-border">
           {prevChapter ? (
             <button
               onClick={() => setActiveDay(prevChapter.dayNumber)}
-              className="flex items-center gap-1 text-sm text-stone-500 hover:text-stone-700"
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
             >
               <ChevronLeft className="w-4 h-4" />
               <span>Day {prevChapter.dayNumber}</span>
@@ -147,7 +147,7 @@ export default function BookletChapters() {
           {nextChapter ? (
             <button
               onClick={() => setActiveDay(nextChapter.dayNumber)}
-              className="flex items-center gap-1 text-sm text-stone-500 hover:text-stone-700"
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
             >
               <span>Day {nextChapter.dayNumber}</span>
               <ChevronRight className="w-4 h-4" />

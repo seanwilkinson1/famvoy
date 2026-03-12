@@ -524,10 +524,10 @@ Already exists and is functional. Restyle to use pill buttons and Kindred tokens
 
 ### Acceptance Criteria
 
-- [ ] Booklet pages use off-white backgrounds and Kindred typography
-- [ ] Chapter accent colors auto-assigned
-- [ ] AI reflection streams with typewriter effect
-- [ ] Share options styled as Kindred pill buttons
+- [x] Booklet pages use off-white backgrounds and Kindred typography
+- [x] Chapter accent colors auto-assigned
+- [x] AI reflection streams with typewriter effect
+- [x] Share options styled as Kindred pill buttons
 
 ---
 

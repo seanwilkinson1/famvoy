@@ -30,10 +30,10 @@ export function ChapterHeader({ dayNumber, title, location, date, accentColor }:
         >
           Day {dayNumber}
         </span>
-        <h2 className="text-2xl font-serif font-bold text-stone-900 mt-1">
+        <h2 className="text-2xl font-heading font-medium text-foreground mt-1">
           {title}
         </h2>
-        <div className="flex items-center gap-2 mt-1 text-sm text-stone-500">
+        <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
           <span>{location}</span>
           <span>&middot;</span>
           <span>{formattedDate}</span>

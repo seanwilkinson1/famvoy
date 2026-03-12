@@ -14,7 +14,7 @@ interface MemoryGridProps {
 export function MemoryGrid({ memories }: MemoryGridProps) {
   if (memories.length === 0) {
     return (
-      <p className="text-sm text-stone-400 italic py-4">No memories logged for this day</p>
+      <p className="text-sm text-muted-foreground italic py-4">No memories logged for this day</p>
     );
   }
 
@@ -23,7 +23,7 @@ export function MemoryGrid({ memories }: MemoryGridProps) {
       {memories.map((memory) => (
         <div
           key={memory.id}
-          className="rounded-lg overflow-hidden bg-white border border-stone-100 shadow-sm"
+          className="rounded-2xl overflow-hidden bg-card border border-border shadow-sm"
         >
           {memory.photos?.[0] ? (
             <div className="aspect-square relative">
@@ -39,13 +39,13 @@ export function MemoryGrid({ memories }: MemoryGridProps) {
               )}
             </div>
           ) : (
-            <div className="aspect-square flex items-center justify-center bg-stone-50 p-3">
+            <div className="aspect-square flex items-center justify-center bg-muted p-3">
               <span className="text-4xl">{memory.emoji || "📸"}</span>
             </div>
           )}
           {memory.caption && (
             <div className="p-2">
-              <p className="text-xs text-stone-600 line-clamp-2">{memory.caption}</p>
+              <p className="text-xs text-muted-foreground line-clamp-2">{memory.caption}</p>
             </div>
           )}
         </div>
