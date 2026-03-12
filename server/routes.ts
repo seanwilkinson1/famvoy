@@ -120,20 +120,24 @@ export async function registerRoutes(
       if (!user) {
         return res.status(404).json({ message: "User not found", needsOnboarding: true });
       }
-      
-      if (!user.email) {
-        try {
-          const clerkUser = await clerkClient.users.getUser(userId);
+
+      let isVerified = false;
+      try {
+        const clerkUser = await clerkClient.users.getUser(userId);
+        if (!user.email) {
           const email = clerkUser.emailAddresses?.[0]?.emailAddress || null;
           if (email) {
             user = await storage.updateUserProfile(user.id, { email });
           }
-        } catch (e) {
-          console.error("Failed to fetch email from Clerk:", e);
         }
+        isVerified = clerkUser.emailAddresses?.some(
+          (e: any) => e.verification?.status === "verified"
+        ) ?? false;
+      } catch (e) {
+        console.error("Failed to fetch Clerk user:", e);
       }
-      
-      res.json(user);
+
+      res.json({ ...user, isVerified });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });

@@ -484,11 +484,11 @@ Replace throughout codebase:
 
 ### Acceptance Criteria
 
-- [ ] Verification badge displays for verified users
-- [ ] Profile completeness nudge shows for incomplete profiles
-- [ ] Onboarding is 5 single-question steps with Kindred design
-- [ ] Interest tags use emoji + pill pattern
-- [ ] "Last active" timestamp on profiles
+- [x] Verification badge displays for verified users
+- [x] Profile completeness nudge shows for incomplete profiles
+- [x] Onboarding is 5 single-question steps with Kindred design
+- [x] Interest tags use emoji + pill pattern
+- [x] "Last active" timestamp on profiles
 
 ---
 

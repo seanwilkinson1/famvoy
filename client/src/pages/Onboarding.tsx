@@ -1,20 +1,54 @@
 import { useState } from "react";
 import { useUser, useAuth } from "@clerk/clerk-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { Heart, Users, Sparkles, ArrowRight, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { ArrowRight, Plus, X } from "lucide-react";
 import { ImageUpload } from "@/components/shared/ImageUpload";
 import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
 import { GoogleMapsProvider } from "@/components/shared/GoogleMapsProvider";
 
 const INTEREST_OPTIONS = [
-  "Hiking", "Food", "Nature", "Art", "Sports", "Music",
-  "Science", "Reading", "Gaming", "Travel", "Crafts", "Beach"
+  { label: "Hiking", emoji: "🥾" },
+  { label: "Beach", emoji: "🏖️" },
+  { label: "Parks", emoji: "🌳" },
+  { label: "Museums", emoji: "🏛️" },
+  { label: "Sports", emoji: "⚽" },
+  { label: "Art", emoji: "🎨" },
+  { label: "Music", emoji: "🎵" },
+  { label: "Cooking", emoji: "🍳" },
+  { label: "Reading", emoji: "📚" },
+  { label: "Travel", emoji: "✈️" },
+  { label: "Camping", emoji: "🏕️" },
+  { label: "Nature", emoji: "🌿" },
+  { label: "Science", emoji: "🔬" },
+  { label: "Swimming", emoji: "🏊" },
+  { label: "Food", emoji: "🍕" },
+  { label: "Dance", emoji: "💃" },
 ];
+
+const TOTAL_STEPS = 5;
+
+function ProgressRing({ step, total }: { step: number; total: number }) {
+  const radius = 20;
+  const circumference = 2 * Math.PI * radius;
+  const progress = (step / total) * circumference;
+
+  return (
+    <div className="relative w-12 h-12 flex items-center justify-center">
+      <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
+        <circle cx="24" cy="24" r={radius} fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
+        <circle
+          cx="24" cy="24" r={radius} fill="none" stroke="currentColor" strokeWidth="2.5"
+          className="text-foreground transition-all duration-500"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference - progress}
+          strokeLinecap="round"
+        />
+      </svg>
+      <span className="absolute text-xs font-medium text-foreground">{step}/{total}</span>
+    </div>
+  );
+}
 
 function OnboardingInner() {
   const { user: clerkUser } = useUser();
@@ -29,18 +63,22 @@ function OnboardingInner() {
     bio: "",
     avatar: clerkUser?.imageUrl || "",
   });
+  const [familyMembers, setFamilyMembers] = useState<{ name: string; age: string }[]>([]);
 
   const onboardingMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const token = await getToken();
       const res = await fetch('/api/auth/onboarding', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           ...data,
+          kids: familyMembers.length > 0
+            ? familyMembers.map(m => `${m.name} (${m.age})`).join(", ")
+            : data.kids,
           avatar: data.avatar || clerkUser?.imageUrl || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400',
         }),
       });
@@ -61,8 +99,20 @@ function OnboardingInner() {
     }));
   };
 
+  const addFamilyMember = () => {
+    setFamilyMembers(prev => [...prev, { name: "", age: "" }]);
+  };
+
+  const removeFamilyMember = (index: number) => {
+    setFamilyMembers(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateFamilyMember = (index: number, field: "name" | "age", value: string) => {
+    setFamilyMembers(prev => prev.map((m, i) => i === index ? { ...m, [field]: value } : m));
+  };
+
   const handleNext = () => {
-    if (step < 3) {
+    if (step < TOTAL_STEPS) {
       setStep(step + 1);
     } else {
       onboardingMutation.mutate(formData);
@@ -71,229 +121,200 @@ function OnboardingInner() {
 
   const canProceed = () => {
     switch (step) {
-      case 1:
-        return formData.name.length > 0 && formData.location.length > 0;
-      case 2:
-        return formData.kids.length > 0;
-      case 3:
-        return formData.interests.length > 0;
-      default:
-        return true;
+      case 1: return formData.name.length > 0;
+      case 2: return formData.location.length > 0;
+      case 3: return true; // family members optional
+      case 4: return formData.interests.length >= 1;
+      case 5: return true; // photo optional
+      default: return true;
     }
   };
 
   return (
-    <div className="min-h-screen bg-background md:max-w-2xl md:mx-auto md:px-8">
-      <div className="max-w-md mx-auto px-6 py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
-          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
-            <Heart className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl font-heading font-bold text-foreground mb-2">
-            Welcome to FamVoy!
-          </h1>
-          <p className="text-muted-foreground">
-            Let's set up your family profile
-          </p>
-        </motion.div>
-
-        <div className="flex gap-2 mb-8">
-          {[1, 2, 3].map((s) => (
-            <div
-              key={s}
-              className={`flex-1 h-1.5 rounded-full transition-colors ${
-                s <= step ? 'bg-primary' : 'bg-foreground/10'
-              }`}
-            />
-          ))}
-        </div>
-
-        <motion.div
-          key={step}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          className="bg-white rounded-3xl p-6 shadow-sm"
-        >
-          {step === 1 && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h2 className="font-heading font-semibold text-foreground">Your Family</h2>
-                  <p className="text-sm text-muted-foreground">Tell us about yourselves</p>
-                </div>
-              </div>
-
-              <div className="flex justify-center mb-4">
-                <ImageUpload
-                  currentImage={formData.avatar}
-                  onImageChange={(url) => setFormData(prev => ({ ...prev, avatar: url }))}
-                  size="lg"
-                />
-              </div>
-              <p className="text-xs text-center text-muted-foreground -mt-2 mb-4">
-                Add a family photo (optional)
-              </p>
-
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="name" className="text-foreground">Family Name</Label>
-                  <Input
-                    id="name"
-                    placeholder="The Smiths"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    className="mt-1.5"
-                    data-testid="input-family-name"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="location" className="text-foreground">Your City</Label>
-                  <div className="mt-1.5">
-                    <GooglePlacesAutocomplete
-                      value={formData.location}
-                      onChange={(value) => setFormData(prev => ({ ...prev, location: value }))}
-                      onPlaceSelect={(place) => setFormData(prev => ({ ...prev, location: place.name }))}
-                      placeholder="San Francisco, CA"
-                      showCurrentLocation={false}
-                      isSelected={false}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-accent" />
-                </div>
-                <div>
-                  <h2 className="font-heading font-semibold text-foreground">Your Kids</h2>
-                  <p className="text-sm text-muted-foreground">Help us find age-appropriate activities</p>
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="kids" className="text-foreground">Kids Info</Label>
-                <Input
-                  id="kids"
-                  placeholder="2 kids • ages 4 & 7"
-                  value={formData.kids}
-                  onChange={(e) => setFormData(prev => ({ ...prev, kids: e.target.value }))}
-                  className="mt-1.5"
-                  data-testid="input-kids"
-                />
-                <p className="text-xs text-muted-foreground mt-1.5">
-                  Example: "2 kids • ages 4 & 7" or "1 toddler"
-                </p>
-              </div>
-
-              <div>
-                <Label htmlFor="bio" className="text-foreground">Family Bio (optional)</Label>
-                <Textarea
-                  id="bio"
-                  placeholder="Tell other families a bit about yourselves..."
-                  value={formData.bio}
-                  onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
-                  className="mt-1.5 resize-none"
-                  rows={3}
-                  data-testid="input-bio"
-                />
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Heart className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h2 className="font-heading font-semibold text-foreground">Your Interests</h2>
-                  <p className="text-sm text-muted-foreground">Select what your family enjoys</p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {INTEREST_OPTIONS.map((interest) => {
-                  const isSelected = formData.interests.includes(interest);
-                  return (
-                    <button
-                      key={interest}
-                      onClick={() => toggleInterest(interest)}
-                      className="px-4 py-2 rounded-full text-sm font-medium transition-all border-2"
-                      style={{
-                        backgroundColor: isSelected ? '#1A1A1A' : '#ffffff',
-                        color: isSelected ? '#ffffff' : '#333333',
-                        borderColor: isSelected ? '#1A1A1A' : 'rgba(51,51,51,0.2)',
-                        boxShadow: isSelected ? '0 4px 6px -1px rgba(42, 157, 143, 0.3)' : 'none',
-                      }}
-                      data-testid={`interest-${interest.toLowerCase()}`}
-                    >
-                      {isSelected && (
-                        <Check className="w-3 h-3 inline mr-1" />
-                      )}
-                      {interest}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </motion.div>
-
-        <div className="mt-6 flex gap-3">
-          {step > 1 && (
-            <Button
-              variant="outline"
-              onClick={() => setStep(step - 1)}
-              className="flex-1 rounded-full"
-              style={{
-                border: '2px solid #333',
-                color: '#333',
-                backgroundColor: 'transparent',
-              }}
-              data-testid="button-back"
-            >
-              Back
-            </Button>
-          )}
-          <Button
-            onClick={handleNext}
-            disabled={!canProceed() || onboardingMutation.isPending}
-            className="flex-1 rounded-full transition-all"
-            style={{
-              backgroundColor: (!canProceed() || onboardingMutation.isPending) ? '#d1d5db' : '#1A1A1A',
-              color: (!canProceed() || onboardingMutation.isPending) ? '#6b7280' : '#ffffff',
-              cursor: (!canProceed() || onboardingMutation.isPending) ? 'not-allowed' : 'pointer',
-              boxShadow: (!canProceed() || onboardingMutation.isPending) ? 'none' : '0 10px 15px -3px rgba(42, 157, 143, 0.3)',
-            }}
-            data-testid="button-next"
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header with progress ring */}
+      <div className="flex items-center justify-between px-6 pt-14 md:pt-8">
+        {step > 1 ? (
+          <button
+            onClick={() => setStep(step - 1)}
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            data-testid="button-back"
           >
-            {onboardingMutation.isPending ? (
-              <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-            ) : step === 3 ? (
-              <>
-                Get Started
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </>
-            ) : (
-              'Continue'
-            )}
-          </Button>
-        </div>
+            Back
+          </button>
+        ) : (
+          <div />
+        )}
+        <ProgressRing step={step} total={TOTAL_STEPS} />
+        {step < TOTAL_STEPS ? (
+          <button
+            onClick={() => setStep(step + 1)}
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Skip
+          </button>
+        ) : (
+          <div />
+        )}
+      </div>
+
+      {/* Step content */}
+      <div className="flex-1 flex flex-col justify-center px-6 max-w-md mx-auto w-full">
+        {step === 1 && (
+          <div className="space-y-8">
+            <h1 className="font-heading text-3xl font-medium text-foreground text-center leading-tight">
+              What's your family name?
+            </h1>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              className="w-full text-center text-2xl font-medium text-foreground bg-transparent border-b-2 border-border focus:border-foreground outline-none pb-3 transition-colors"
+              placeholder="The Wilkinsons"
+              autoFocus
+              data-testid="input-family-name"
+            />
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="space-y-8">
+            <h1 className="font-heading text-3xl font-medium text-foreground text-center leading-tight">
+              Where are you based?
+            </h1>
+            <GooglePlacesAutocomplete
+              value={formData.location}
+              onChange={(value) => setFormData(prev => ({ ...prev, location: value }))}
+              onPlaceSelect={(place) => setFormData(prev => ({ ...prev, location: place.name }))}
+              placeholder="Search your city..."
+              showCurrentLocation={false}
+              isSelected={false}
+            />
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-6">
+            <h1 className="font-heading text-3xl font-medium text-foreground text-center leading-tight">
+              Who's in your family?
+            </h1>
+            <p className="text-sm text-muted-foreground text-center">
+              Add your family members so we can suggest great experiences
+            </p>
+
+            <div className="space-y-3">
+              {familyMembers.map((member, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={member.name}
+                    onChange={(e) => updateFamilyMember(i, "name", e.target.value)}
+                    className="flex-1 rounded-xl border border-border bg-background px-4 py-3 text-sm focus:border-foreground outline-none"
+                    placeholder="Name"
+                  />
+                  <input
+                    type="text"
+                    value={member.age}
+                    onChange={(e) => updateFamilyMember(i, "age", e.target.value)}
+                    className="w-24 rounded-xl border border-border bg-background px-4 py-3 text-sm focus:border-foreground outline-none"
+                    placeholder="Age"
+                  />
+                  <button
+                    onClick={() => removeFamilyMember(i)}
+                    className="p-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={addFamilyMember}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Add family member
+            </button>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="space-y-6">
+            <h1 className="font-heading text-3xl font-medium text-foreground text-center leading-tight">
+              What does your family love?
+            </h1>
+            <p className="text-sm text-muted-foreground text-center">
+              Select at least one interest
+            </p>
+
+            <div className="flex flex-wrap gap-2 justify-center">
+              {INTEREST_OPTIONS.map(({ label, emoji }) => {
+                const isSelected = formData.interests.includes(label);
+                return (
+                  <button
+                    key={label}
+                    onClick={() => toggleInterest(label)}
+                    className={cn(
+                      "rounded-full px-4 py-2.5 text-sm font-medium transition-all border",
+                      isSelected
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-background text-foreground border-border hover:bg-muted"
+                    )}
+                    data-testid={`interest-${label.toLowerCase()}`}
+                  >
+                    {emoji} {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {step === 5 && (
+          <div className="space-y-8">
+            <h1 className="font-heading text-3xl font-medium text-foreground text-center leading-tight">
+              Add a family photo
+            </h1>
+            <p className="text-sm text-muted-foreground text-center">
+              Help other families get to know you
+            </p>
+
+            <div className="flex justify-center">
+              <ImageUpload
+                currentImage={formData.avatar}
+                onImageChange={(url) => setFormData(prev => ({ ...prev, avatar: url }))}
+                size="lg"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Sticky footer with Next button */}
+      <div className="sticky bottom-0 px-6 py-6 bg-background" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }}>
+        <button
+          onClick={handleNext}
+          disabled={!canProceed() || onboardingMutation.isPending}
+          className={cn(
+            "w-full max-w-md mx-auto flex items-center justify-center gap-2 py-4 rounded-full font-medium text-base transition-all",
+            canProceed() && !onboardingMutation.isPending
+              ? "bg-foreground text-background"
+              : "bg-muted text-muted-foreground cursor-not-allowed"
+          )}
+          data-testid="button-next"
+        >
+          {onboardingMutation.isPending ? (
+            <div className="w-5 h-5 rounded-full border-2 border-background border-t-transparent animate-spin" />
+          ) : step === TOTAL_STEPS ? (
+            <>
+              Get Started
+              <ArrowRight className="w-4 h-4" />
+            </>
+          ) : (
+            'Next'
+          )}
+        </button>
       </div>
     </div>
   );
