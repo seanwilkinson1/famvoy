@@ -1,6 +1,6 @@
 import { PodCard } from "@/components/shared/PodCard";
 import { Plus, Search, Users, Compass, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { api } from "@/lib/api";
@@ -31,6 +31,13 @@ export default function Pods() {
   
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (window.location.search.includes("create=true")) {
+      setShowCreateModal(true);
+      window.history.replaceState({}, "", "/pods");
+    }
+  }, []);
 
   const { data: currentUser } = useQuery({
     queryKey: ["currentUser"],

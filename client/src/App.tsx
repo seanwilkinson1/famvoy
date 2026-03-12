@@ -200,7 +200,7 @@ function AuthenticatedRouter() {
             </PullToRefresh>
           )}
         </Suspense>
-        {!isConversationPage && <BottomNav />}
+        {!isConversationPage && !isExplorePage && <BottomNav />}
       </div>
     </div>
   );

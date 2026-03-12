@@ -1,28 +1,22 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
-import { FamilySwipeCard, SwipeButtons } from "@/components/shared/FamilySwipeCard";
-import { MatchModal } from "@/components/shared/MatchModal";
 import { ExploreMap, MapBounds } from "@/components/shared/ExploreMap";
 import { GoogleMapsProvider, useGoogleMapsContext } from "@/components/shared/GoogleMapsProvider";
-import { Search, Navigation, Map, Users, Compass, X, ChevronDown, MessageCircle, MapPin, Filter, SlidersHorizontal, Locate, Clock, DollarSign, Star, CheckCircle2, ArrowRight, Loader2, Plane, MapPinned, Eye, EyeOff, Check } from "lucide-react";
+import { Search, Navigation, X, MapPin, Filter, Loader2, Users, Eye, EyeOff, Check, List, Map as MapIcon, ChevronDown, Calendar } from "lucide-react";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation, Link } from "wouter";
+import { useLocation } from "wouter";
 import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { FAMILY_VALUES } from "@/lib/constants";
 import type { User, Experience, Pod } from "@shared/schema";
-import { format } from "date-fns";
+import { BottomNav } from "@/components/layout/BottomNav";
 
-type ExploreTab = "map" | "discover" | "connections";
-type FilterModalType = "categories" | "pods" | "interests" | null;
+type ViewMode = "map" | "list";
 
 const CATEGORIES = ["All", "Outdoor", "Indoor", "Food", "Sports", "Arts", "Education", "Entertainment"];
 const INTERESTS = ["Adventure", "Education", "Creativity", "Nature & Outdoors", "Arts & Culture", "Health & Wellness", "Community", "Quality Time"];
-const AGE_RANGES = ["All Ages", "0-2", "3-5", "5-8", "8-12", "12+"];
-const COST_OPTIONS = ["Any Cost", "Free", "$", "$$", "$$$"];
 
 function useUserLocation() {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -51,17 +45,55 @@ function useUserLocation() {
   return { location, error };
 }
 
-interface FilterBottomSheetProps {
+// Unified filter bottom sheet component
+function UnifiedFilterSheet({
+  isOpen,
+  onClose,
+  categoryFilter,
+  setCategoryFilter,
+  selectedInterests,
+  setSelectedInterests,
+  selectedPodFilter,
+  setSelectedPodFilter,
+  followingFilter,
+  setFollowingFilter,
+  showPeopleOnMap,
+  setShowPeopleOnMap,
+  userPods,
+  resultCount,
+}: {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
-  description: string;
-  children: React.ReactNode;
-  onClear: () => void;
-  onApply: () => void;
-}
+  categoryFilter: string;
+  setCategoryFilter: (v: string) => void;
+  selectedInterests: string[];
+  setSelectedInterests: (v: string[]) => void;
+  selectedPodFilter: number | "all";
+  setSelectedPodFilter: (v: number | "all") => void;
+  followingFilter: boolean;
+  setFollowingFilter: (v: boolean) => void;
+  showPeopleOnMap: boolean;
+  setShowPeopleOnMap: (v: boolean) => void;
+  userPods: Pod[];
+  resultCount: number;
+}) {
+  const [podSearchQuery, setPodSearchQuery] = useState("");
 
-function FilterBottomSheet({ isOpen, onClose, title, description, children, onClear, onApply }: FilterBottomSheetProps) {
+  const filteredPods = useMemo(() => {
+    const nonDirectPods = userPods.filter((p: Pod) => !p.isDirect);
+    if (!podSearchQuery) return nonDirectPods;
+    return nonDirectPods.filter((p: Pod) =>
+      p.name.toLowerCase().includes(podSearchQuery.toLowerCase())
+    );
+  }, [userPods, podSearchQuery]);
+
+  const clearAll = () => {
+    setCategoryFilter("All");
+    setSelectedInterests([]);
+    setSelectedPodFilter("all");
+    setFollowingFilter(false);
+  };
+
   return createPortal(
     <AnimatePresence>
       {isOpen && (
@@ -84,28 +116,193 @@ function FilterBottomSheet({ isOpen, onClose, title, description, children, onCl
               <div className="w-10 h-1 bg-border rounded-full" />
             </div>
             <div className="px-5 pb-8">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-foreground">Filters</h3>
                 <button
-                  onClick={onClear}
+                  onClick={clearAll}
                   className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                  data-testid={`filter-modal-clear-${title.toLowerCase()}`}
+                  data-testid="filter-clear-all"
                 >
-                  Clear
+                  Clear all
                 </button>
               </div>
-              <p className="text-sm text-muted-foreground mb-4">{description}</p>
 
-              <div className="overflow-y-auto max-h-[50vh]">
-                {children}
+              <div className="overflow-y-auto max-h-[60vh] space-y-6">
+                {/* Categories */}
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-3">Categories</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {CATEGORIES.map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => setCategoryFilter(cat)}
+                        className={cn(
+                          "px-4 py-2 rounded-full text-sm font-medium transition-colors",
+                          categoryFilter === cat
+                            ? "bg-foreground text-background"
+                            : "bg-muted text-foreground hover:bg-muted/80"
+                        )}
+                        data-testid={`filter-category-${cat.toLowerCase()}`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="h-px bg-border" />
+
+                {/* Interests */}
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-3">Interests</h4>
+                  <div className="space-y-2">
+                    {INTERESTS.map((interest) => (
+                      <button
+                        key={interest}
+                        onClick={() => {
+                          setSelectedInterests(
+                            selectedInterests.includes(interest)
+                              ? selectedInterests.filter(i => i !== interest)
+                              : [...selectedInterests, interest]
+                          );
+                        }}
+                        className={cn(
+                          "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors",
+                          selectedInterests.includes(interest)
+                            ? "bg-foreground/10 text-foreground"
+                            : "bg-muted text-foreground hover:bg-muted/80"
+                        )}
+                        data-testid={`filter-interest-${interest.toLowerCase().replace(/\s+/g, "-")}`}
+                      >
+                        <span className="font-medium">{interest}</span>
+                        <div className={cn(
+                          "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                          selectedInterests.includes(interest)
+                            ? "bg-foreground border-foreground"
+                            : "border-border"
+                        )}>
+                          {selectedInterests.includes(interest) && (
+                            <Check className="h-3 w-3 text-white" />
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="h-px bg-border" />
+
+                {/* Pods */}
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-3">Pods</h4>
+                  <div className="relative mb-3">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Search pods..."
+                      value={podSearchQuery}
+                      onChange={(e) => setPodSearchQuery(e.target.value)}
+                      className="w-full rounded-xl bg-muted py-3 pl-10 pr-4 text-foreground text-sm outline-none placeholder:text-muted-foreground border border-border focus:ring-2 focus:ring-primary/20"
+                      data-testid="input-pod-search"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => setSelectedPodFilter("all")}
+                      className={cn(
+                        "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors",
+                        selectedPodFilter === "all"
+                          ? "bg-foreground/10 text-foreground"
+                          : "bg-muted text-foreground hover:bg-muted/80"
+                      )}
+                      data-testid="filter-pod-all"
+                    >
+                      <span className="font-medium">All Pods</span>
+                      {selectedPodFilter === "all" && (
+                        <div className="w-5 h-5 rounded-full bg-foreground flex items-center justify-center">
+                          <Check className="h-3 w-3 text-white" />
+                        </div>
+                      )}
+                    </button>
+                    {filteredPods.map((pod: Pod) => (
+                      <button
+                        key={pod.id}
+                        onClick={() => setSelectedPodFilter(pod.id)}
+                        className={cn(
+                          "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors",
+                          selectedPodFilter === pod.id
+                            ? "bg-foreground/10 text-foreground"
+                            : "bg-muted text-foreground hover:bg-muted/80"
+                        )}
+                        data-testid={`filter-pod-${pod.id}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center">
+                            <Users className="h-4 w-4 text-background" />
+                          </div>
+                          <span className="font-medium truncate">{pod.name}</span>
+                        </div>
+                        {selectedPodFilter === pod.id && (
+                          <div className="w-5 h-5 rounded-full bg-foreground flex items-center justify-center flex-shrink-0">
+                            <Check className="h-3 w-3 text-white" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                    {filteredPods.length === 0 && (
+                      <div className="text-center py-4 text-muted-foreground">
+                        {podSearchQuery ? "No pods match your search" : "You haven't joined any pods yet"}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="h-px bg-border" />
+
+                {/* Toggles */}
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setFollowingFilter(!followingFilter)}
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-muted hover:bg-muted/80 transition-colors"
+                    data-testid="filter-toggle-following"
+                  >
+                    <span className="font-medium text-foreground">Following only</span>
+                    <div className={cn(
+                      "w-11 h-6 rounded-full transition-colors relative",
+                      followingFilter ? "bg-foreground" : "bg-border"
+                    )}>
+                      <div className={cn(
+                        "absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform",
+                        followingFilter ? "translate-x-[22px]" : "translate-x-0.5"
+                      )} />
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setShowPeopleOnMap(!showPeopleOnMap)}
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-muted hover:bg-muted/80 transition-colors"
+                    data-testid="filter-toggle-people"
+                  >
+                    <span className="font-medium text-foreground">Show People</span>
+                    <div className={cn(
+                      "w-11 h-6 rounded-full transition-colors relative",
+                      showPeopleOnMap ? "bg-foreground" : "bg-border"
+                    )}>
+                      <div className={cn(
+                        "absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform",
+                        showPeopleOnMap ? "translate-x-[22px]" : "translate-x-0.5"
+                      )} />
+                    </div>
+                  </button>
+                </div>
               </div>
 
               <button
-                onClick={onApply}
+                onClick={onClose}
                 className="w-full mt-4 py-3 px-6 bg-foreground text-background font-medium rounded-full hover:bg-foreground/90 transition-colors"
-                data-testid={`filter-modal-apply-${title.toLowerCase()}`}
+                data-testid="filter-apply"
               >
-                Show
+                Show {resultCount} results
               </button>
             </div>
           </motion.div>
@@ -117,16 +314,12 @@ function FilterBottomSheet({ isOpen, onClose, title, description, children, onCl
 }
 
 function ExploreInner() {
-  const [activeTab, setActiveTab] = useState<ExploreTab>("map");
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("map");
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentFamilyIndex, setCurrentFamilyIndex] = useState(0);
-  const [showMatch, setShowMatch] = useState(false);
-  const [matchedFamily, setMatchedFamily] = useState<User | null>(null);
-  const [matchedPodId, setMatchedPodId] = useState<number | undefined>(undefined);
-  
-  const [familySearchQuery, setFamilySearchQuery] = useState("");
-  
+  const [showSearchOverlay, setShowSearchOverlay] = useState(false);
+  const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
+  const [showFilterSheet, setShowFilterSheet] = useState(false);
+
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [maxDistance, setMaxDistance] = useState(50);
@@ -136,21 +329,19 @@ function ExploreInner() {
   const [isSearchingPlaces, setIsSearchingPlaces] = useState(false);
   const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
   const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
-  
+
   const [selectedPodFilter, setSelectedPodFilter] = useState<number | "all">("all");
   const [showPeopleOnMap, setShowPeopleOnMap] = useState(true);
-  const [showTripsDrawer, setShowTripsDrawer] = useState(false);
   const [followingFilter, setFollowingFilter] = useState(false);
-  
-  const [activeFilterModal, setActiveFilterModal] = useState<FilterModalType>(null);
-  const [podSearchQuery, setPodSearchQuery] = useState("");
+
   const [visibleBounds, setVisibleBounds] = useState<MapBounds | null>(null);
-  
+
   const { location: userLocation } = useUserLocation();
   const { isLoaded: mapsLoaded } = useGoogleMapsContext();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
+  // Google Places autocomplete setup
   useEffect(() => {
     if (mapsLoaded && !autocompleteServiceRef.current && typeof google !== 'undefined' && google.maps?.places) {
       autocompleteServiceRef.current = new google.maps.places.AutocompleteService();
@@ -196,19 +387,11 @@ function ExploreInner() {
           });
           setSearchQuery(prediction.description);
           setPlacePredictions([]);
+          setShowSearchOverlay(false);
         }
       }
     );
   };
-
-  const messageMutation = useMutation({
-    mutationFn: async (otherUserId: number) => {
-      return api.pods.createDirect(otherUserId);
-    },
-    onSuccess: (pod) => {
-      setLocation(`/pod/${pod.id}`);
-    },
-  });
 
   const { data: currentUser } = useQuery({
     queryKey: ["currentUser"],
@@ -225,18 +408,6 @@ function ExploreInner() {
     queryKey: ["experienceSearch", searchQuery],
     queryFn: () => api.experiences.search(searchQuery),
     enabled: searchQuery.length > 1,
-  });
-
-  const { data: discoverFamilies = [], isLoading: loadingFamilies } = useQuery({
-    queryKey: ["discoverFamilies", userLocation?.lat, userLocation?.lng],
-    queryFn: () => api.families.discover(userLocation?.lat, userLocation?.lng),
-    enabled: activeTab === "discover" && familySearchQuery.length < 2,
-  });
-
-  const { data: familySearchResults = [], isLoading: searchingFamilies } = useQuery({
-    queryKey: ["familySearch", familySearchQuery],
-    queryFn: () => api.families.search(familySearchQuery),
-    enabled: familySearchQuery.length >= 2,
   });
 
   const { data: nearbyExperiences = [] } = useQuery({
@@ -270,11 +441,10 @@ function ExploreInner() {
       const followingIds = new Set(connections.map((c: User) => c.id));
       people = people.filter(p => followingIds.has(p.id));
     }
-    // Filter by selected interests - people's interests must include at least one selected interest
     if (selectedInterests.length > 0) {
       people = people.filter(p => {
         const personInterests = p.interests || [];
-        return selectedInterests.some(interest => 
+        return selectedInterests.some(interest =>
           personInterests.some((pi: string) => pi.toLowerCase().includes(interest.toLowerCase()))
         );
       });
@@ -282,38 +452,8 @@ function ExploreInner() {
     return people;
   }, [explorePeople, selectedPodFilter, followingFilter, connections, selectedInterests]);
 
-  const { data: exploreTrips = [] } = useQuery({
-    queryKey: ["exploreTrips"],
-    queryFn: () => api.explore.getTrips(),
-  });
-
-  const swipeMutation = useMutation({
-    mutationFn: async ({ swipedUserId, liked }: { swipedUserId: number; liked: boolean }) => {
-      return api.families.swipe(swipedUserId, liked);
-    },
-    onSuccess: (result, variables) => {
-      if (result.matched) {
-        const family = discoverFamilies[currentFamilyIndex];
-        setMatchedFamily(family);
-        setMatchedPodId(result.podId);
-        setShowMatch(true);
-        queryClient.invalidateQueries({ queryKey: ["connections"] });
-        queryClient.invalidateQueries({ queryKey: ["userPods"] });
-      }
-      setCurrentFamilyIndex((prev) => prev + 1);
-      queryClient.invalidateQueries({ queryKey: ["discoverFamilies"] });
-    },
-  });
-
-  const handleSwipe = (liked: boolean) => {
-    const family = discoverFamilies[currentFamilyIndex];
-    if (family) {
-      swipeMutation.mutate({ swipedUserId: family.id, liked });
-    }
-  };
-
-  const displayExperiences = searchQuery.length > 1 
-    ? searchResults 
+  const displayExperiences = searchQuery.length > 1
+    ? searchResults
     : (nearbyExperiences.length > 0 ? nearbyExperiences : experiences);
 
   const filteredExperiences = useMemo(() => {
@@ -321,38 +461,37 @@ function ExploreInner() {
       if (categoryFilter !== "All" && exp.category !== categoryFilter) {
         return false;
       }
-      
+
       if ('distance' in exp && typeof (exp as any).distance === 'number') {
         const distanceKm = (exp as any).distance / 1000;
         if (distanceKm > maxDistance) {
           return false;
         }
       }
-      
-      // Filter by selected interests - experience tags must include at least one selected interest
+
       if (selectedInterests.length > 0) {
         const expTags = (exp as any).tags || [];
-        const hasMatchingInterest = selectedInterests.some(interest => 
+        const hasMatchingInterest = selectedInterests.some(interest =>
           expTags.some((tag: string) => tag.toLowerCase().includes(interest.toLowerCase()))
         );
         if (!hasMatchingInterest) {
           return false;
         }
       }
-      
+
       return true;
     });
   }, [displayExperiences, categoryFilter, maxDistance, selectedInterests]);
 
   const isInBounds = useCallback((lat: number, lng: number, bounds: MapBounds | null) => {
     if (!bounds) return true;
-    return lat >= bounds.south && lat <= bounds.north && 
+    return lat >= bounds.south && lat <= bounds.north &&
            lng >= bounds.west && lng <= bounds.east;
   }, []);
 
   const experiencesInView = useMemo(() => {
     if (!visibleBounds) return filteredExperiences;
-    return filteredExperiences.filter(exp => 
+    return filteredExperiences.filter(exp =>
       isInBounds(exp.locationLat, exp.locationLng, visibleBounds)
     );
   }, [filteredExperiences, visibleBounds, isInBounds]);
@@ -361,7 +500,7 @@ function ExploreInner() {
     ...formatExperience(exp as any),
     distance: 'distance' in exp ? (exp as any).distance : undefined,
   })), [experiencesInView]);
-  
+
   const activeFiltersCount = [
     categoryFilter !== "All",
     selectedPodFilter !== "all",
@@ -376,55 +515,86 @@ function ExploreInner() {
     setFollowingFilter(false);
   };
 
-  const filteredPods = useMemo(() => {
-    const nonDirectPods = userPods.filter((p: Pod) => !p.isDirect);
-    if (!podSearchQuery) return nonDirectPods;
-    return nonDirectPods.filter((p: Pod) => 
-      p.name.toLowerCase().includes(podSearchQuery.toLowerCase())
-    );
-  }, [userPods, podSearchQuery]);
-
-  const currentFamily = discoverFamilies[currentFamilyIndex];
-  const nextFamily = discoverFamilies[currentFamilyIndex + 1];
+  // Pin tap handler — sets selected experience for bottom sheet
+  const handlePinTap = useCallback((experience: Experience) => {
+    setSelectedExperience(experience);
+  }, []);
 
   return (
-    <div className="fixed inset-0 md:left-64 top-0 bottom-0 w-full md:w-auto overflow-hidden bg-muted z-30">
-      {/* Map View */}
+    <div className={cn(
+      "fixed md:left-64 top-0 left-0 right-0 w-full md:w-auto overflow-hidden bg-muted",
+      viewMode === "list" ? "bottom-0 z-10" : "bottom-0 z-30"
+    )}>
       <div className="relative h-full md:flex">
-        {/* Interactive Map */}
-        <div className="absolute inset-0 h-full w-full md:relative md:flex-1">
+        {/* Map layer — always rendered, hidden in list view on mobile */}
+        <div className={cn(
+          "absolute inset-0 h-full w-full md:relative md:flex-1",
+          viewMode === "list" && "hidden md:block"
+        )}>
           <ExploreMap
             experiences={filteredExperiences}
             userLocation={userLocation}
             searchLocation={searchLocation}
             people={showPeopleOnMap ? filteredExplorePeople : []}
             onBoundsChange={setVisibleBounds}
+            onExperienceClick={handlePinTap}
           />
         </div>
 
-        {/* Kindred-style Search Bar */}
+        {/* Kindred-style Three-Part Search Bar */}
         <div className="absolute top-4 left-0 right-0 z-40 px-4 pt-safe">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Anywhere"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                if (searchLocation) setSearchLocation(null);
-              }}
-              className="w-full rounded-full bg-card py-3.5 pl-12 pr-12 text-foreground text-sm font-medium shadow-lg border border-border outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20"
-              data-testid="input-search-main"
-            />
-            {isSearchingPlaces ? (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
-              </div>
-            ) : searchQuery && (
+            <div className="flex items-center bg-card rounded-full shadow-lg border border-border overflow-hidden">
+              {/* Search segment */}
               <button
-                onClick={() => { setSearchQuery(""); setSearchLocation(null); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-muted p-1"
+                onClick={() => {
+                  setShowSearchOverlay(!showSearchOverlay);
+                }}
+                className="flex-1 flex items-center gap-2.5 px-4 py-3.5 text-left min-w-0"
+                data-testid="search-segment-location"
+              >
+                <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className={cn(
+                  "text-sm font-medium truncate",
+                  searchQuery ? "text-foreground" : "text-muted-foreground"
+                )}>
+                  {searchQuery || "Anywhere"}
+                </span>
+              </button>
+
+              <div className="w-px h-8 bg-border" />
+
+              {/* Date segment (placeholder) */}
+              <button
+                className="flex items-center gap-2 px-4 py-3.5 text-left"
+                data-testid="search-segment-date"
+              >
+                <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Anytime</span>
+              </button>
+
+              <div className="w-px h-8 bg-border" />
+
+              {/* Filter segment */}
+              <button
+                onClick={() => setShowFilterSheet(true)}
+                className="flex items-center gap-2 px-4 py-3.5 relative"
+                data-testid="search-segment-filter"
+              >
+                <Filter className="h-4 w-4 text-foreground" />
+                {activeFiltersCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-foreground text-background text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Search clear button */}
+            {searchQuery && (
+              <button
+                onClick={() => { setSearchQuery(""); setSearchLocation(null); setShowSearchOverlay(false); }}
+                className="absolute right-[7.5rem] top-1/2 -translate-y-1/2 rounded-full bg-muted p-1 z-10"
                 data-testid="button-clear-search"
               >
                 <X className="h-3 w-3 text-muted-foreground" />
@@ -432,162 +602,129 @@ function ExploreInner() {
             )}
           </div>
 
-          {/* Place Predictions */}
-          {placePredictions.length > 0 && (
-            <div className="mt-2 rounded-xl bg-card shadow-lg overflow-hidden border border-border">
-              {placePredictions.map((prediction) => (
-                <button
-                  key={prediction.place_id}
-                  onClick={() => handlePlaceSelect(prediction)}
-                  className="w-full px-4 py-3 text-left hover:bg-muted flex items-start gap-3 border-b border-border last:border-0"
-                  data-testid={`place-prediction-${prediction.place_id}`}
-                >
-                  <MapPin className="h-5 w-5 text-foreground mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {prediction.structured_formatting.main_text}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {prediction.structured_formatting.secondary_text}
-                    </p>
+          {/* Search Overlay — shows when search segment is tapped */}
+          <AnimatePresence>
+            {showSearchOverlay && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.15 }}
+                className="mt-2 rounded-xl bg-card shadow-lg overflow-hidden border border-border"
+              >
+                <div className="p-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Search a destination..."
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        if (searchLocation) setSearchLocation(null);
+                      }}
+                      autoFocus
+                      className="w-full rounded-xl bg-muted py-3 pl-10 pr-10 text-foreground text-sm outline-none placeholder:text-muted-foreground border border-border focus:ring-2 focus:ring-primary/20"
+                      data-testid="input-search-main"
+                    />
+                    {isSearchingPlaces && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+                      </div>
+                    )}
                   </div>
-                </button>
-              ))}
-            </div>
+                </div>
+
+                {/* Place Predictions */}
+                {placePredictions.length > 0 && (
+                  <div className="border-t border-border">
+                    {placePredictions.map((prediction) => (
+                      <button
+                        key={prediction.place_id}
+                        onClick={() => handlePlaceSelect(prediction)}
+                        className="w-full px-4 py-3 text-left hover:bg-muted flex items-start gap-3 border-b border-border last:border-0"
+                        data-testid={`place-prediction-${prediction.place_id}`}
+                      >
+                        <MapPin className="h-5 w-5 text-foreground mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {prediction.structured_formatting.main_text}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {prediction.structured_formatting.secondary_text}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {searchQuery.length > 0 && placePredictions.length === 0 && !isSearchingPlaces && (
+                  <div className="px-4 py-3 text-sm text-muted-foreground border-t border-border">
+                    No places found
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Dismiss search overlay on outside tap */}
+        {showSearchOverlay && (
+          <div
+            className="absolute inset-0 z-35"
+            onClick={() => setShowSearchOverlay(false)}
+          />
+        )}
+
+        {/* Map / List Toggle — bottom center on mobile */}
+        <div className={cn(
+          "absolute left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 md:hidden",
+          viewMode === "list" ? "bottom-[calc(var(--bottom-nav-height,80px)+1rem)]" : "bottom-6"
+        )}>
+          {viewMode === "map" ? (
+            <button
+              onClick={() => setViewMode("list")}
+              className="flex items-center gap-2 px-5 py-3 bg-foreground text-background rounded-full shadow-lg text-sm font-semibold active:scale-95 transition-transform"
+              data-testid="toggle-list-view"
+            >
+              <List className="h-4 w-4" />
+              List
+            </button>
+          ) : (
+            <button
+              onClick={() => setViewMode("map")}
+              className="flex items-center gap-2 px-5 py-3 bg-foreground text-background rounded-full shadow-lg text-sm font-semibold active:scale-95 transition-transform"
+              data-testid="toggle-map-view"
+            >
+              <MapIcon className="h-4 w-4" />
+              Map
+            </button>
           )}
         </div>
 
-        {/* Kindred-style Filter Chips */}
-        <div className="absolute top-[4.5rem] left-0 right-0 z-30 px-4 pt-safe">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
-            {activeFiltersCount > 0 && (
-              <button
-                onClick={clearAllFilters}
-                className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium shadow-sm"
-                data-testid="filter-clear-all"
-              >
-                <X className="h-3.5 w-3.5" />
-                Clear ({activeFiltersCount})
-              </button>
-            )}
-
-            <button
-              onClick={() => setActiveFilterModal("categories")}
-              className={cn(
-                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border shadow-sm transition-all",
-                categoryFilter !== "All"
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-card text-foreground border-border"
-              )}
-              data-testid="filter-chip-categories"
-            >
-              {categoryFilter !== "All" ? categoryFilter : "Categories"}
-              <ChevronDown className="h-3.5 w-3.5" />
-            </button>
-
-            <button
-              onClick={() => setActiveFilterModal("pods")}
-              className={cn(
-                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border shadow-sm transition-all",
-                selectedPodFilter !== "all"
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-card text-foreground border-border"
-              )}
-              data-testid="filter-chip-pods"
-            >
-              {selectedPodFilter !== "all"
-                ? userPods.find((p: Pod) => p.id === selectedPodFilter)?.name || "Pod"
-                : "Pods"}
-              <ChevronDown className="h-3.5 w-3.5" />
-            </button>
-
-            <button
-              onClick={() => setActiveFilterModal("interests")}
-              className={cn(
-                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border shadow-sm transition-all",
-                selectedInterests.length > 0
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-card text-foreground border-border"
-              )}
-              data-testid="filter-chip-interests"
-            >
-              Interests
-              {selectedInterests.length > 0 && (
-                <span className="bg-background/20 text-xs px-1.5 rounded-full">{selectedInterests.length}</span>
-              )}
-              <ChevronDown className="h-3.5 w-3.5" />
-            </button>
-
-            <button
-              onClick={() => setFollowingFilter(!followingFilter)}
-              className={cn(
-                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border shadow-sm transition-all",
-                followingFilter
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-card text-foreground border-border"
-              )}
-              data-testid="filter-chip-following"
-            >
-              <Users className="h-3.5 w-3.5" />
-              Following
-            </button>
-
-            <button
-              onClick={() => setShowPeopleOnMap(!showPeopleOnMap)}
-              className={cn(
-                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border shadow-sm transition-all",
-                showPeopleOnMap
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-card text-muted-foreground border-border"
-              )}
-              data-testid="toggle-people-map"
-            >
-              {showPeopleOnMap ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-              People
-            </button>
+        {/* Result count pill — map view only, above toggle */}
+        {viewMode === "map" && (
+          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30 md:hidden">
+            <div className="px-3 py-1.5 bg-card/90 backdrop-blur-sm rounded-full shadow-sm border border-border text-xs font-medium text-muted-foreground">
+              {formattedExperiences.length} {formattedExperiences.length === 1 ? "experience" : "experiences"}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Map Overlays */}
-        <div className="absolute right-4 top-36 flex flex-col gap-3 z-20">
-          <button className="rounded-full bg-white p-3 shadow-lg shadow-black/5 active:scale-90 transition-transform" data-testid="button-locate">
-            <Navigation className="h-6 w-6 text-primary fill-primary" />
-          </button>
-        </div>
-
-        {/* Bottom Sheet */}
-        <motion.div
-          drag="y"
-          dragConstraints={{ top: 0, bottom: 0 }}
-          dragElastic={0.2}
-          dragSnapToOrigin
-          onDragEnd={(_, info) => {
-            if (info.offset.y < -50) setIsExpanded(true);
-            if (info.offset.y > 50) setIsExpanded(false);
-          }}
-          animate={{ y: 0, height: isExpanded ? "70%" : "140px" }}
-          transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl bg-background shadow-[0_-4px_24px_rgba(0,0,0,0.08)] border-t border-border overflow-hidden md:hidden"
-        >
-          <div className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing" onClick={() => setIsExpanded(!isExpanded)}>
-            <div className="h-1.5 w-12 rounded-full bg-border" />
-          </div>
-
-          <div className="px-6 pt-2 h-[calc(100%-32px)] overflow-hidden flex flex-col">
-            <div className="mb-4 flex items-center justify-between">
+        {/* Mobile List View */}
+        {viewMode === "list" && (
+          <div className="absolute inset-0 z-20 bg-background overflow-y-auto pt-24 px-4 md:hidden" style={{ paddingBottom: 'calc(var(--bottom-nav-height, 80px) + 4rem)' }}>
+            <div className="mb-4">
               <h3 className="font-heading text-lg font-bold text-foreground">
-                {searchQuery ? `Results for "${searchQuery}"` : `${formattedExperiences.length} experiences in view`}
+                {searchQuery ? `Results for "${searchQuery}"` : `${formattedExperiences.length} experiences`}
               </h3>
             </div>
-
-            <div className={cn(
-              "flex-1 space-y-4 no-scrollbar",
-              isExpanded ? "overflow-y-auto pb-32" : "overflow-hidden"
-            )}>
+            <div className="space-y-4">
               {loadingExperiences ? (
-                <div className="text-center py-4 text-muted-foreground">Loading...</div>
+                <div className="text-center py-8 text-muted-foreground">Loading...</div>
               ) : formattedExperiences.length === 0 ? (
-                <div className="text-center py-4">
+                <div className="text-center py-8">
                   <div className="text-muted-foreground mb-2">No experiences match your filters</div>
                   <button
                     onClick={clearAllFilters}
@@ -597,34 +734,6 @@ function ExploreInner() {
                     Reset filters
                   </button>
                 </div>
-              ) : !isExpanded ? (
-                <div 
-                  className="flex gap-3 overflow-x-auto no-scrollbar cursor-pointer"
-                  onClick={() => setIsExpanded(true)}
-                >
-                  {formattedExperiences.slice(0, 5).map((exp) => (
-                    <div 
-                      key={exp.id} 
-                      className="flex-shrink-0 w-24"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setLocation(`/experience/${exp.id}`);
-                      }}
-                    >
-                      <img 
-                        src={exp.image} 
-                        alt={exp.title}
-                        className="w-24 h-16 object-cover rounded-xl"
-                      />
-                      <p className="text-xs font-medium text-foreground mt-1 truncate">{exp.title}</p>
-                    </div>
-                  ))}
-                  {formattedExperiences.length > 5 && (
-                    <div className="flex-shrink-0 w-24 h-16 bg-muted rounded-xl flex items-center justify-center">
-                      <span className="text-xs font-medium text-muted-foreground">+{formattedExperiences.length - 5} more</span>
-                    </div>
-                  )}
-                </div>
               ) : (
                 formattedExperiences.map((exp) => (
                   <ExperienceCard key={exp.id} experience={exp} className="shadow-none border border-border" />
@@ -632,7 +741,83 @@ function ExploreInner() {
               )}
             </div>
           </div>
-        </motion.div>
+        )}
+
+        {/* Single Experience Bottom Sheet (pin tap) — mobile only */}
+        <AnimatePresence>
+          {selectedExperience && viewMode === "map" && (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 z-40 md:hidden"
+                onClick={() => setSelectedExperience(null)}
+              />
+              <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 28, stiffness: 300 }}
+                drag="y"
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={0.2}
+                onDragEnd={(_, info) => {
+                  if (info.offset.y > 80) setSelectedExperience(null);
+                }}
+                className="absolute bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl shadow-[0_-4px_24px_rgba(0,0,0,0.12)] border-t border-border overflow-hidden md:hidden"
+              >
+                <div className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
+                  <div className="h-1.5 w-12 rounded-full bg-border" />
+                </div>
+                <div
+                  className="cursor-pointer"
+                  onClick={() => setLocation(`/experience/${selectedExperience.id}`)}
+                >
+                  {/* Image */}
+                  <div className="px-4 pb-3">
+                    <img
+                      src={selectedExperience.image}
+                      alt={selectedExperience.title}
+                      className="w-full h-44 object-cover rounded-2xl"
+                    />
+                  </div>
+
+                  {/* Details */}
+                  <div className="px-5 pb-6">
+                    <h3 className="font-heading text-lg font-bold text-foreground mb-1">
+                      {selectedExperience.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      {selectedExperience.locationName}
+                    </p>
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      {selectedExperience.duration && (
+                        <span>{selectedExperience.duration}</span>
+                      )}
+                      {selectedExperience.duration && selectedExperience.cost && (
+                        <span>·</span>
+                      )}
+                      {selectedExperience.cost && (
+                        <span className="text-foreground font-medium">{selectedExperience.cost}</span>
+                      )}
+                      {selectedExperience.ages && (
+                        <>
+                          <span>·</span>
+                          <span>{selectedExperience.ages}</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="mt-4 py-2.5 px-4 bg-muted rounded-full text-center">
+                      <span className="text-sm font-semibold text-foreground">View details</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
         {/* Desktop Side Panel */}
         <div className="hidden md:flex md:flex-col md:w-[400px] bg-background border-l border-border h-full overflow-hidden">
@@ -663,171 +848,26 @@ function ExploreInner() {
         </div>
       </div>
 
-      {/* Categories Filter Modal */}
-      <FilterBottomSheet
-        isOpen={activeFilterModal === "categories"}
-        onClose={() => setActiveFilterModal(null)}
-        title="Categories"
-        description="Filter experiences by category type"
-        onClear={() => setCategoryFilter("All")}
-        onApply={() => setActiveFilterModal(null)}
-      >
-        <div className="space-y-2">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setCategoryFilter(cat)}
-              className={cn(
-                "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors",
-                categoryFilter === cat
-                  ? "bg-foreground/10 text-foreground"
-                  : "bg-muted text-foreground hover:bg-muted/80"
-              )}
-              data-testid={`filter-modal-category-${cat.toLowerCase()}`}
-            >
-              <span className="font-medium">{cat}</span>
-              {categoryFilter === cat && (
-                <div className="w-5 h-5 rounded-full bg-foreground flex items-center justify-center">
-                  <Check className="h-3 w-3 text-white" />
-                </div>
-              )}
-            </button>
-          ))}
-        </div>
-      </FilterBottomSheet>
-
-      {/* Pods Filter Modal */}
-      <FilterBottomSheet
-        isOpen={activeFilterModal === "pods"}
-        onClose={() => setActiveFilterModal(null)}
-        title="Pods"
-        description="Filter to see people from specific pods"
-        onClear={() => {
-          setSelectedPodFilter("all");
-          setPodSearchQuery("");
-        }}
-        onApply={() => setActiveFilterModal(null)}
-      >
-        <div className="space-y-3">
-          {/* Search field for pods */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search pods..."
-              value={podSearchQuery}
-              onChange={(e) => setPodSearchQuery(e.target.value)}
-              className="w-full rounded-xl bg-muted py-3 pl-10 pr-4 text-foreground text-sm outline-none placeholder:text-muted-foreground border border-border focus:ring-2 focus:ring-primary/20"
-              data-testid="input-pod-search"
-            />
-          </div>
-
-          {/* All option */}
-          <button
-            onClick={() => setSelectedPodFilter("all")}
-            className={cn(
-              "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors",
-              selectedPodFilter === "all"
-                ? "bg-foreground/10 text-foreground"
-                : "bg-muted text-foreground hover:bg-muted/80"
-            )}
-            data-testid="filter-modal-pod-all"
-          >
-            <span className="font-medium">All Pods</span>
-            {selectedPodFilter === "all" && (
-              <div className="w-5 h-5 rounded-full bg-foreground flex items-center justify-center">
-                <Check className="h-3 w-3 text-white" />
-              </div>
-            )}
-          </button>
-
-          {/* Pod list */}
-          {filteredPods.map((pod: Pod) => (
-            <button
-              key={pod.id}
-              onClick={() => setSelectedPodFilter(pod.id)}
-              className={cn(
-                "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors",
-                selectedPodFilter === pod.id
-                  ? "bg-foreground/10 text-foreground"
-                  : "bg-muted text-foreground hover:bg-muted/80"
-              )}
-              data-testid={`filter-modal-pod-${pod.id}`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center">
-                  <Users className="h-4 w-4 text-background" />
-                </div>
-                <span className="font-medium truncate">{pod.name}</span>
-              </div>
-              {selectedPodFilter === pod.id && (
-                <div className="w-5 h-5 rounded-full bg-foreground flex items-center justify-center flex-shrink-0">
-                  <Check className="h-3 w-3 text-white" />
-                </div>
-              )}
-            </button>
-          ))}
-
-          {filteredPods.length === 0 && (
-            <div className="text-center py-4 text-muted-foreground">
-              {podSearchQuery ? "No pods match your search" : "You haven't joined any pods yet"}
-            </div>
-          )}
-        </div>
-      </FilterBottomSheet>
-
-      {/* Interests Filter Modal */}
-      <FilterBottomSheet
-        isOpen={activeFilterModal === "interests"}
-        onClose={() => setActiveFilterModal(null)}
-        title="Interests"
-        description="Find families and experiences matching your interests"
-        onClear={() => setSelectedInterests([])}
-        onApply={() => setActiveFilterModal(null)}
-      >
-        <div className="space-y-2">
-          {INTERESTS.map((interest) => (
-            <button
-              key={interest}
-              onClick={() => {
-                setSelectedInterests(prev => 
-                  prev.includes(interest) 
-                    ? prev.filter(i => i !== interest)
-                    : [...prev, interest]
-                );
-              }}
-              className={cn(
-                "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors",
-                selectedInterests.includes(interest)
-                  ? "bg-foreground/10 text-foreground"
-                  : "bg-muted text-foreground hover:bg-muted/80"
-              )}
-              data-testid={`filter-modal-interest-${interest.toLowerCase().replace(/\s+/g, "-")}`}
-            >
-              <span className="font-medium">{interest}</span>
-              <div className={cn(
-                "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
-                selectedInterests.includes(interest)
-                  ? "bg-foreground border-foreground"
-                  : "border-border"
-              )}>
-                {selectedInterests.includes(interest) && (
-                  <Check className="h-3 w-3 text-white" />
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
-      </FilterBottomSheet>
-
-      {/* Match Modal */}
-      <MatchModal
-        isOpen={showMatch}
-        onClose={() => setShowMatch(false)}
-        matchedFamily={matchedFamily}
-        currentUser={currentUser || null}
-        podId={matchedPodId}
+      {/* Unified Filter Sheet */}
+      <UnifiedFilterSheet
+        isOpen={showFilterSheet}
+        onClose={() => setShowFilterSheet(false)}
+        categoryFilter={categoryFilter}
+        setCategoryFilter={setCategoryFilter}
+        selectedInterests={selectedInterests}
+        setSelectedInterests={setSelectedInterests}
+        selectedPodFilter={selectedPodFilter}
+        setSelectedPodFilter={setSelectedPodFilter}
+        followingFilter={followingFilter}
+        setFollowingFilter={setFollowingFilter}
+        showPeopleOnMap={showPeopleOnMap}
+        setShowPeopleOnMap={setShowPeopleOnMap}
+        userPods={userPods}
+        resultCount={formattedExperiences.length}
       />
+
+      {/* Show BottomNav in list view only */}
+      {viewMode === "list" && <BottomNav />}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useEffect, useRef, useState } from "react";
-import { Home, Search, Plus, MapPin, User, Plane, Sparkles, Camera } from "lucide-react";
+import { Home, Search, Plus, MapPin, User, Plane, Users, Camera } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -20,7 +20,7 @@ const tabs = [
 const createActions = [
   { href: "/trips", icon: Plane, label: "Plan a Trip" },
   { href: "/create", icon: MapPin, label: "Create Experience" },
-  { href: "/dreams", icon: Sparkles, label: "Add a Dream" },
+  { href: "/pods?create=true", icon: Users, label: "Create a Pod" },
   { href: "/trips?log=true", icon: Camera, label: "Log a Memory" },
 ];
 
