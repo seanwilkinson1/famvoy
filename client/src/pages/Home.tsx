@@ -166,7 +166,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background md:pb-8 md:max-w-6xl md:mx-auto md:px-8" style={{ paddingBottom: 'calc(var(--bottom-nav-height, 80px) + 2rem)' }}>
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-background/80 px-6 pt-14 md:pt-8 pb-4 backdrop-blur-md md:backdrop-blur-none">
+      <div className="sticky top-0 z-40 bg-background/80 px-6 pt-4 md:pt-8 pb-4 backdrop-blur-md md:backdrop-blur-none">
         <p className="text-sm font-medium text-muted-foreground">Good morning,</p>
         <h1 className="font-heading text-3xl font-medium text-foreground tracking-tight">
           {currentUser?.name || "Loading..."}
