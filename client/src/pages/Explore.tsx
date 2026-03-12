@@ -70,7 +70,7 @@ function FilterBottomSheet({ isOpen, onClose, title, description, children, onCl
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 z-[100]"
+            className="fixed inset-0 bg-black/40 z-[100]"
             onClick={onClose}
           />
           <motion.div
@@ -78,31 +78,31 @@ function FilterBottomSheet({ isOpen, onClose, title, description, children, onCl
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 z-[110] bg-gray-900 rounded-t-3xl max-h-[85vh] overflow-hidden"
+            className="fixed bottom-0 left-0 right-0 z-[110] bg-background rounded-t-3xl max-h-[85vh] overflow-hidden border-t border-border"
           >
             <div className="flex justify-center pt-3 pb-2">
-              <div className="w-10 h-1 bg-gray-600 rounded-full" />
+              <div className="w-10 h-1 bg-border rounded-full" />
             </div>
-            <div className="px-4 pb-8">
+            <div className="px-5 pb-8">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-bold text-white">{title}</h3>
+                <h3 className="text-lg font-semibold text-foreground">{title}</h3>
                 <button
                   onClick={onClear}
-                  className="text-sm font-medium text-muted-foreground hover:text-white transition-colors"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                   data-testid={`filter-modal-clear-${title.toLowerCase()}`}
                 >
                   Clear
                 </button>
               </div>
               <p className="text-sm text-muted-foreground mb-4">{description}</p>
-              
+
               <div className="overflow-y-auto max-h-[50vh]">
                 {children}
               </div>
-              
+
               <button
                 onClick={onApply}
-                className="w-full mt-4 py-3 px-6 bg-accent text-white font-semibold rounded-full hover:bg-accent/90 transition-colors"
+                className="w-full mt-4 py-3 px-6 bg-foreground text-background font-medium rounded-full hover:bg-foreground/90 transition-colors"
                 data-testid={`filter-modal-apply-${title.toLowerCase()}`}
               >
                 Show
@@ -402,19 +402,19 @@ function ExploreInner() {
           />
         </div>
 
-        {/* Fixed Search Bar - Always visible at top */}
+        {/* Kindred-style Search Bar */}
         <div className="absolute top-4 left-0 right-0 z-40 px-4 pt-safe">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search experiences and families"
+              placeholder="Anywhere"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 if (searchLocation) setSearchLocation(null);
               }}
-              className="w-full rounded-full bg-gray-900 py-4 pl-12 pr-12 text-white text-base shadow-xl outline-none placeholder:text-muted-foreground"
+              className="w-full rounded-full bg-card py-3.5 pl-12 pr-12 text-foreground text-sm font-medium shadow-lg border border-border outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20"
               data-testid="input-search-main"
             />
             {isSearchingPlaces ? (
@@ -424,27 +424,27 @@ function ExploreInner() {
             ) : searchQuery && (
               <button
                 onClick={() => { setSearchQuery(""); setSearchLocation(null); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-gray-700 p-1"
+                className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-muted p-1"
                 data-testid="button-clear-search"
               >
-                <X className="h-3 w-3 text-border" />
+                <X className="h-3 w-3 text-muted-foreground" />
               </button>
             )}
           </div>
 
           {/* Place Predictions */}
           {placePredictions.length > 0 && (
-            <div className="mt-2 rounded-xl bg-gray-800/95 shadow-lg overflow-hidden backdrop-blur-sm">
+            <div className="mt-2 rounded-xl bg-card shadow-lg overflow-hidden border border-border">
               {placePredictions.map((prediction) => (
                 <button
                   key={prediction.place_id}
                   onClick={() => handlePlaceSelect(prediction)}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-700/50 flex items-start gap-3 border-b border-gray-700 last:border-0"
+                  className="w-full px-4 py-3 text-left hover:bg-muted flex items-start gap-3 border-b border-border last:border-0"
                   data-testid={`place-prediction-${prediction.place_id}`}
                 >
-                  <MapPin className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
+                  <MapPin className="h-5 w-5 text-foreground mt-0.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">
+                    <p className="text-sm font-medium text-foreground truncate">
                       {prediction.structured_formatting.main_text}
                     </p>
                     <p className="text-xs text-muted-foreground truncate">
@@ -457,101 +457,92 @@ function ExploreInner() {
           )}
         </div>
 
-        {/* Filter Chips Row - Below search bar */}
-        <div className="absolute top-20 left-0 right-0 z-30 px-4 pt-safe">
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-2">
-            {/* Clear Filter with Badge */}
+        {/* Kindred-style Filter Chips */}
+        <div className="absolute top-[4.5rem] left-0 right-0 z-30 px-4 pt-safe">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
             {activeFiltersCount > 0 && (
               <button
                 onClick={clearAllFilters}
-                className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full bg-gray-900 text-white text-sm font-medium shadow-xl"
+                className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium shadow-sm"
                 data-testid="filter-clear-all"
               >
-                <X className="h-4 w-4" />
-                Clear
-                <span className="bg-accent text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
-                  {activeFiltersCount}
-                </span>
+                <X className="h-3.5 w-3.5" />
+                Clear ({activeFiltersCount})
               </button>
             )}
 
-            {/* Categories Dropdown Chip */}
             <button
               onClick={() => setActiveFilterModal("categories")}
               className={cn(
-                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium shadow-xl transition-all",
+                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border shadow-sm transition-all",
                 categoryFilter !== "All"
-                  ? "bg-accent text-white"
-                  : "bg-gray-900 text-white"
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-card text-foreground border-border"
               )}
               data-testid="filter-chip-categories"
             >
               {categoryFilter !== "All" ? categoryFilter : "Categories"}
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="h-3.5 w-3.5" />
             </button>
 
-            {/* Pods Dropdown Chip */}
             <button
               onClick={() => setActiveFilterModal("pods")}
               className={cn(
-                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium shadow-xl transition-all",
+                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border shadow-sm transition-all",
                 selectedPodFilter !== "all"
-                  ? "bg-accent text-white"
-                  : "bg-gray-900 text-white"
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-card text-foreground border-border"
               )}
               data-testid="filter-chip-pods"
             >
-              {selectedPodFilter !== "all" 
+              {selectedPodFilter !== "all"
                 ? userPods.find((p: Pod) => p.id === selectedPodFilter)?.name || "Pod"
                 : "Pods"}
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="h-3.5 w-3.5" />
             </button>
 
-            {/* Interests Dropdown Chip */}
             <button
               onClick={() => setActiveFilterModal("interests")}
               className={cn(
-                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium shadow-xl transition-all",
+                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border shadow-sm transition-all",
                 selectedInterests.length > 0
-                  ? "bg-accent text-white"
-                  : "bg-gray-900 text-white"
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-card text-foreground border-border"
               )}
               data-testid="filter-chip-interests"
             >
               Interests
               {selectedInterests.length > 0 && (
-                <span className="bg-white/20 text-xs px-1.5 rounded-full">{selectedInterests.length}</span>
+                <span className="bg-background/20 text-xs px-1.5 rounded-full">{selectedInterests.length}</span>
               )}
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="h-3.5 w-3.5" />
             </button>
 
-            {/* People You Follow Toggle Chip */}
             <button
               onClick={() => setFollowingFilter(!followingFilter)}
               className={cn(
-                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium shadow-xl transition-all",
+                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border shadow-sm transition-all",
                 followingFilter
-                  ? "bg-primary text-white"
-                  : "bg-gray-900 text-white"
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-card text-foreground border-border"
               )}
               data-testid="filter-chip-following"
             >
-              <Users className="h-4 w-4" />
-              People you follow
+              <Users className="h-3.5 w-3.5" />
+              Following
             </button>
 
-            {/* Toggle People on Map */}
             <button
               onClick={() => setShowPeopleOnMap(!showPeopleOnMap)}
               className={cn(
-                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium shadow-xl transition-all",
+                "flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border shadow-sm transition-all",
                 showPeopleOnMap
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-900 text-muted-foreground"
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-card text-muted-foreground border-border"
               )}
               data-testid="toggle-people-map"
             >
-              {showPeopleOnMap ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+              {showPeopleOnMap ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
               People
             </button>
           </div>
@@ -576,7 +567,7 @@ function ExploreInner() {
           }}
           animate={{ y: 0, height: isExpanded ? "70%" : "140px" }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="absolute bottom-0 left-0 right-0 z-30 rounded-t-[32px] bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.12)] overflow-hidden md:hidden"
+          className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl bg-background shadow-[0_-4px_24px_rgba(0,0,0,0.08)] border-t border-border overflow-hidden md:hidden"
         >
           <div className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing" onClick={() => setIsExpanded(!isExpanded)}>
             <div className="h-1.5 w-12 rounded-full bg-border" />
@@ -644,9 +635,9 @@ function ExploreInner() {
         </motion.div>
 
         {/* Desktop Side Panel */}
-        <div className="hidden md:flex md:flex-col md:w-[400px] bg-white border-l border-border h-full overflow-hidden">
+        <div className="hidden md:flex md:flex-col md:w-[400px] bg-background border-l border-border h-full overflow-hidden">
           <div className="px-6 py-4 border-b border-border">
-            <h3 className="font-heading text-lg font-bold text-foreground">
+            <h3 className="font-heading text-lg font-semibold text-foreground">
               {searchQuery ? `Results for "${searchQuery}"` : `${formattedExperiences.length} experiences in view`}
             </h3>
           </div>
@@ -689,14 +680,14 @@ function ExploreInner() {
               className={cn(
                 "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors",
                 categoryFilter === cat
-                  ? "bg-accent/20 text-accent"
-                  : "bg-gray-800 text-white hover:bg-gray-700"
+                  ? "bg-foreground/10 text-foreground"
+                  : "bg-muted text-foreground hover:bg-muted/80"
               )}
               data-testid={`filter-modal-category-${cat.toLowerCase()}`}
             >
               <span className="font-medium">{cat}</span>
               {categoryFilter === cat && (
-                <div className="w-5 h-5 rounded-full bg-accent flex items-center justify-center">
+                <div className="w-5 h-5 rounded-full bg-foreground flex items-center justify-center">
                   <Check className="h-3 w-3 text-white" />
                 </div>
               )}
@@ -726,7 +717,7 @@ function ExploreInner() {
               placeholder="Search pods..."
               value={podSearchQuery}
               onChange={(e) => setPodSearchQuery(e.target.value)}
-              className="w-full rounded-xl bg-gray-800 py-3 pl-10 pr-4 text-white text-sm outline-none placeholder:text-muted-foreground border border-gray-700 focus:border-gray-600"
+              className="w-full rounded-xl bg-muted py-3 pl-10 pr-4 text-foreground text-sm outline-none placeholder:text-muted-foreground border border-border focus:ring-2 focus:ring-primary/20"
               data-testid="input-pod-search"
             />
           </div>
@@ -737,14 +728,14 @@ function ExploreInner() {
             className={cn(
               "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors",
               selectedPodFilter === "all"
-                ? "bg-accent/20 text-accent"
-                : "bg-gray-800 text-white hover:bg-gray-700"
+                ? "bg-foreground/10 text-foreground"
+                : "bg-muted text-foreground hover:bg-muted/80"
             )}
             data-testid="filter-modal-pod-all"
           >
             <span className="font-medium">All Pods</span>
             {selectedPodFilter === "all" && (
-              <div className="w-5 h-5 rounded-full bg-accent flex items-center justify-center">
+              <div className="w-5 h-5 rounded-full bg-foreground flex items-center justify-center">
                 <Check className="h-3 w-3 text-white" />
               </div>
             )}
@@ -758,19 +749,19 @@ function ExploreInner() {
               className={cn(
                 "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors",
                 selectedPodFilter === pod.id
-                  ? "bg-accent/20 text-accent"
-                  : "bg-gray-800 text-white hover:bg-gray-700"
+                  ? "bg-foreground/10 text-foreground"
+                  : "bg-muted text-foreground hover:bg-muted/80"
               )}
               data-testid={`filter-modal-pod-${pod.id}`}
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-coral to-amber-400 flex items-center justify-center">
-                  <Users className="h-4 w-4 text-white" />
+                <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center">
+                  <Users className="h-4 w-4 text-background" />
                 </div>
                 <span className="font-medium truncate">{pod.name}</span>
               </div>
               {selectedPodFilter === pod.id && (
-                <div className="w-5 h-5 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
+                <div className="w-5 h-5 rounded-full bg-foreground flex items-center justify-center flex-shrink-0">
                   <Check className="h-3 w-3 text-white" />
                 </div>
               )}
@@ -808,8 +799,8 @@ function ExploreInner() {
               className={cn(
                 "w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors",
                 selectedInterests.includes(interest)
-                  ? "bg-accent/20 text-accent"
-                  : "bg-gray-800 text-white hover:bg-gray-700"
+                  ? "bg-foreground/10 text-foreground"
+                  : "bg-muted text-foreground hover:bg-muted/80"
               )}
               data-testid={`filter-modal-interest-${interest.toLowerCase().replace(/\s+/g, "-")}`}
             >
@@ -817,8 +808,8 @@ function ExploreInner() {
               <div className={cn(
                 "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
                 selectedInterests.includes(interest)
-                  ? "bg-accent border-accent"
-                  : "border-gray-600"
+                  ? "bg-foreground border-foreground"
+                  : "border-border"
               )}>
                 {selectedInterests.includes(interest) && (
                   <Check className="h-3 w-3 text-white" />

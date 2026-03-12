@@ -1,10 +1,10 @@
-import { Heart, Clock, DollarSign, Users, MapPin, Star, CheckCircle } from "lucide-react";
+import { Heart, Clock, DollarSign, Users, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Link } from "wouter";
-// Note: useState still needed for isSaved state
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { ImageCarousel } from "@/components/ui/image-carousel";
 import type { ExperienceWithFamily } from "@/lib/types";
 
 interface ExperienceCardProps {
@@ -14,7 +14,7 @@ interface ExperienceCardProps {
   index?: number;
 }
 
-export function ExperienceCard({ experience, className, horizontal = false, index = 0 }: ExperienceCardProps) {
+export function ExperienceCard({ experience, className, horizontal = false }: ExperienceCardProps) {
   const [isSaved, setIsSaved] = useState(false);
   const queryClient = useQueryClient();
 
@@ -38,127 +38,93 @@ export function ExperienceCard({ experience, className, horizontal = false, inde
     },
   });
 
-  // Handle image URL - ensure it starts with proper protocol or path
-  const imageUrl = experience.image?.startsWith('/objects') 
-    ? experience.image 
-    : experience.image || 'https://images.unsplash.com/photo-1609220136736-443140cffec6?w=800';
+  const imageUrl = experience.image?.startsWith('/objects')
+    ? experience.image
+    : experience.image || '';
+  const images = imageUrl ? [imageUrl] : [];
 
   return (
     <Link href={`/experience/${experience.id}`}>
       <div
         className={cn(
-          "group relative overflow-hidden rounded-2xl bg-card cursor-pointer transition-[transform,box-shadow] duration-300 shadow-md hover:shadow-lg hover:-translate-y-1",
+          "group relative overflow-hidden rounded-2xl bg-card cursor-pointer transition-all duration-300 hover:-translate-y-0.5",
           horizontal ? "w-[280px] flex-shrink-0" : "w-full",
           className
         )}
         data-testid={`card-experience-${experience.id}`}
       >
-        {/* Image Container */}
-        <div 
-          className={cn(
-            "relative w-full overflow-hidden bg-muted",
-            horizontal ? "h-40" : "aspect-[4/3]"
-          )}
-        >
-          <img
-            src={imageUrl}
+        {/* 1. Image carousel with dot indicators */}
+        <div className="relative">
+          <ImageCarousel
+            images={images}
             alt={experience.title}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.src = 'https://images.unsplash.com/photo-1609220136736-443140cffec6?w=800';
-            }}
+            aspectRatio={horizontal ? "h-40" : "aspect-[4/3]"}
           />
-          
-          {/* Gradient Overlay on hover */}
-          <div
-            className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent transition-opacity duration-300 opacity-0 group-hover:opacity-100"
-          />
-          
-          {/* Category Badge */}
-          {experience.category && (
-            <div className="absolute left-3 top-3 px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm text-xs font-semibold text-foreground shadow-sm">
-              {experience.category}
-            </div>
-          )}
 
-          {/* Save Button */}
+          {/* Heart/save overlay (top-right) */}
           <button
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               saveMutation.mutate();
             }}
-            className="absolute right-3 top-3 rounded-full bg-white/90 p-2 backdrop-blur-sm transition-all hover:bg-white hover:scale-110 active:scale-90 z-10 shadow-sm"
+            className="absolute right-3 top-3 rounded-full bg-white/90 p-2 backdrop-blur-sm transition-all hover:bg-white hover:scale-110 active:scale-90 z-10"
             data-testid={`button-save-${experience.id}`}
           >
             <Heart
               fill={isSaved ? "currentColor" : "none"}
-              className={cn("h-5 w-5 transition-colors", isSaved ? "text-secondary" : "text-foreground/60")}
+              className={cn("h-5 w-5 transition-colors", isSaved ? "text-foreground" : "text-foreground/50")}
             />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-4">
-          <h3 className="mb-2 font-semibold text-base leading-tight text-foreground line-clamp-1" data-testid={`text-title-${experience.id}`}>
+        <div className="p-4 space-y-1.5">
+          {/* 3. Location text (bold, small, uppercase tracking) */}
+          {experience.family && (
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              {experience.family}
+            </p>
+          )}
+
+          {/* 4. Title (larger, sans-serif semibold) */}
+          <h3
+            className="font-semibold text-[15px] leading-snug text-foreground line-clamp-2"
+            data-testid={`text-title-${experience.id}`}
+          >
             {experience.title}
           </h3>
 
-          {/* Meta Row */}
-          <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {/* 5. Metadata row (icons + text) */}
+          <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
             {experience.distance !== undefined && (
-              <div className="flex items-center gap-1 text-primary font-medium">
+              <span className="flex items-center gap-1">
                 <MapPin className="h-3.5 w-3.5" />
                 {experience.distance.toFixed(1)} mi
-              </div>
+              </span>
             )}
-            <div className="flex items-center gap-1">
+            <span className="flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" />
               {experience.duration}
-            </div>
-            <div className="flex items-center gap-1">
+            </span>
+            <span className="flex items-center gap-1">
               <DollarSign className="h-3.5 w-3.5" />
               {experience.cost}
-            </div>
-            <div className="flex items-center gap-1">
+            </span>
+            <span className="flex items-center gap-1">
               <Users className="h-3.5 w-3.5" />
               {experience.ages}
-            </div>
+            </span>
           </div>
 
-          {/* Family Row */}
-          <div className="flex items-center justify-between pt-3 border-t border-border/50">
-            <div className="flex items-center gap-2">
-              <img
-                src={experience.familyAvatar || 'https://images.unsplash.com/photo-1609220136736-443140cffec6?w=100'}
-                alt={experience.family || "Family"}
-                className="h-7 w-7 rounded-full object-cover ring-2 ring-background"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = 'https://images.unsplash.com/photo-1609220136736-443140cffec6?w=100';
-                }}
-              />
-              <span className="text-sm text-muted-foreground font-medium truncate max-w-[100px]">
-                {experience.family || "Family"}
+          {/* 6. Category tag (green outlined pill) */}
+          {experience.category && (
+            <div className="flex gap-1.5 pt-1.5">
+              <span className="inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-medium border border-emerald-500/30 text-emerald-600 bg-emerald-50">
+                {experience.category}
               </span>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              {experience.rating !== undefined && experience.rating > 0 && (
-                <div className="flex items-center gap-1" data-testid={`rating-${experience.id}`}>
-                  <Star className="h-4 w-4 text-amber-400" />
-                  <span className="font-semibold text-foreground">{experience.rating.toFixed(1)}</span>
-                </div>
-              )}
-              {experience.checkinCount !== undefined && experience.checkinCount > 0 && (
-                <div className="flex items-center gap-1" data-testid={`checkin-count-${experience.id}`}>
-                  <CheckCircle className="h-4 w-4 text-primary" />
-                  <span>{experience.checkinCount}</span>
-                </div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </Link>

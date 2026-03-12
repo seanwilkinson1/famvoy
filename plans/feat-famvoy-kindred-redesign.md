@@ -416,12 +416,12 @@ Kindred-inspired sections:
 
 ### Acceptance Criteria
 
-- [ ] Explore map view with bottom sheet (mobile) and split view (desktop)
-- [ ] "Search this area" pill button with debounced fetch
-- [ ] All cards use ImageCarousel with dot indicators
-- [ ] Cards follow Kindred anatomy (image, location, title, metadata, tags)
-- [ ] Home feed reorganized with Kindred section patterns
-- [ ] Filter chips are pill-shaped with icons
+- [x] Explore map view with bottom sheet (mobile) and split view (desktop)
+- [x] "Search this area" pill button with debounced fetch
+- [x] All cards use ImageCarousel with dot indicators
+- [x] Cards follow Kindred anatomy (image, location, title, metadata, tags)
+- [x] Home feed reorganized with Kindred section patterns
+- [x] Filter chips are pill-shaped with icons
 
 ---
 

@@ -1,12 +1,13 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PodCard } from "@/components/shared/PodCard";
+import { TripCard } from "@/components/shared/TripCard";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatExperience } from "@/lib/types";
 import { useState, useEffect, useMemo } from "react";
-import { MapPin, Users, ChevronRight, Sparkles, Flame, Heart } from "lucide-react";
+import { MapPin, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import { TravelingNowSection } from "@/components/feed/TravelingNowSection";
 import { RecentAdventuresSection } from "@/components/feed/RecentAdventuresSection";
@@ -37,21 +38,21 @@ function isToddlerFriendly(ages: string): boolean {
 
 function parseDurationToHours(duration: string): number | null {
   const normalized = duration.toLowerCase().replace(/[–—]/g, '-');
-  
+
   const rangeMatch = normalized.match(/([\d.]+)\s*-\s*([\d.]+)\s*(hrs?|hours?|mins?|minutes?)/);
   if (rangeMatch) {
     const avg = (parseFloat(rangeMatch[1]) + parseFloat(rangeMatch[2])) / 2;
     if (rangeMatch[3].startsWith('min')) return avg / 60;
     return avg;
   }
-  
+
   const singleMatch = normalized.match(/([\d.]+)\s*(hrs?|hours?|mins?|minutes?)/);
   if (singleMatch) {
     const val = parseFloat(singleMatch[1]);
     if (singleMatch[2].startsWith('min')) return val / 60;
     return val;
   }
-  
+
   return null;
 }
 
@@ -98,9 +99,9 @@ export default function Home() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: followingExperiences = [], isLoading: followingLoading } = useQuery({
-    queryKey: ["followingExperiences"],
-    queryFn: api.following.getExperiences,
+  const { data: userTrips = [] } = useQuery({
+    queryKey: ["/api/users/me/trips"],
+    queryFn: api.users.getMyTrips,
     enabled: !!currentUser,
   });
 
@@ -126,10 +127,13 @@ export default function Home() {
   });
 
   const formattedExperiences = experiences.map(exp => formatExperience(exp as any));
-  const formattedFollowingExperiences = followingExperiences.map(exp => ({
-    ...formatExperience(exp as any),
-    creator: exp.creator,
-  }));
+
+  const upcomingTrips = useMemo(() => {
+    return (userTrips as any[])
+      .filter((t: any) => t.status !== "completed")
+      .sort((a: any, b: any) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+      .slice(0, 6);
+  }, [userTrips]);
 
   const filteredExperiences = useMemo(() => {
     if (activeFilter === "All") return formattedExperiences;
@@ -162,313 +166,216 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background md:pb-8 md:max-w-6xl md:mx-auto md:px-8" style={{ paddingBottom: 'calc(var(--bottom-nav-height, 80px) + 2rem)' }}>
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-background/80 px-6 pt-14 md:pt-8 pb-4 backdrop-blur-md md:backdrop-blur-none md:max-w-6xl md:mx-auto">
+      <div className="sticky top-0 z-40 bg-background/80 px-6 pt-14 md:pt-8 pb-4 backdrop-blur-md md:backdrop-blur-none">
         <p className="text-sm font-medium text-muted-foreground">Good morning,</p>
         <h1 className="font-heading text-3xl font-medium text-foreground tracking-tight">
-          {currentUser?.name || "Loading..."} 👋
+          {currentUser?.name || "Loading..."}
         </h1>
-        
-        {/* Main Tabs for Discover / Following */}
-        <Tabs defaultValue="discover" className="mt-6">
-          <TabsList className="grid w-full grid-cols-2 h-12 p-1 bg-muted/50 rounded-2xl">
-            <TabsTrigger 
-              value="discover" 
-              className="rounded-xl font-semibold data-[state=active]:bg-card data-[state=active]:shadow-sm"
-              data-testid="tab-discover"
-            >
-              Discover
-            </TabsTrigger>
-            <TabsTrigger 
-              value="following"
-              className="rounded-xl font-semibold data-[state=active]:bg-card data-[state=active]:shadow-sm"
-              data-testid="tab-following"
-            >
-              <Users className="h-4 w-4 mr-1.5" />
-              Following
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="discover" className="mt-6">
-            {/* Filters */}
-            <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
-              <div className="flex w-max space-x-2 pb-4 px-6">
-                {filters.map((filter) => {
-                  const isActive = activeFilter === filter;
-                  return (
-                    <button
-                      key={filter}
-                      onClick={() => setActiveFilter(filter)}
-                      className={cn(
-                        "rounded-full px-5 py-2.5 text-sm font-semibold transition-all active:scale-95",
-                        isActive
-                          ? "bg-foreground text-background shadow-lg"
-                          : "bg-card text-muted-foreground shadow-sm hover:bg-muted border border-border/50"
-                      )}
-                      data-testid={`filter-${filter.toLowerCase().replace(/\s/g, '-')}`}
-                    >
-                      {filter === "Nearby" && <MapPin className="inline h-3.5 w-3.5 mr-1.5 -mt-0.5" />}
-                      {filter}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+      </div>
 
-            <div className="space-y-10 mt-2">
-              {isLoading ? (
-                <div className="text-center py-12 text-muted-foreground">Loading experiences...</div>
-              ) : (
-                <>
-                  {/* Traveling Now */}
-                  {activeFilter === "All" && <TravelingNowSection />}
+      <div className="px-6">
+        {/* Filter chips */}
+        <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
+          <div className="flex w-max space-x-2 pb-4 px-6">
+            {filters.map((filter) => {
+              const isActive = activeFilter === filter;
+              return (
+                <button
+                  key={filter}
+                  onClick={() => setActiveFilter(filter)}
+                  className={cn(
+                    "rounded-full px-4 py-2 text-sm font-medium transition-all active:scale-95",
+                    isActive
+                      ? "bg-foreground text-background"
+                      : "bg-card text-muted-foreground border border-border hover:bg-muted"
+                  )}
+                  data-testid={`filter-${filter.toLowerCase().replace(/\s/g, '-')}`}
+                >
+                  {filter === "Nearby" && <MapPin className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />}
+                  {filter}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-                  {/* Recent Adventures */}
-                  {activeFilter === "All" && <RecentAdventuresSection />}
+        {isLoading ? (
+          <div className="text-center py-12 text-muted-foreground">Loading...</div>
+        ) : (
+          <div className="space-y-10 mt-2">
+            {activeFilter === "All" ? (
+              <>
+                {/* Traveling Now */}
+                <TravelingNowSection />
 
-                  {/* Anniversary Memory Cards */}
-                  {memories.length > 0 && activeFilter === "All" && (
-                    <section className="mb-6">
-                      {memories.map((trip: any) => {
-                        const yearsAgo = new Date().getFullYear() - new Date(trip.startDate + "T00:00:00").getFullYear();
-                        return (
-                          <Link key={trip.id} href={`/trip/${trip.id}/book`}>
-                            <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/20 p-5 cursor-pointer hover:shadow-md transition-shadow">
-                              <p className="text-xs font-medium text-primary uppercase tracking-wider mb-1">
-                                {yearsAgo} year{yearsAgo !== 1 ? "s" : ""} ago today
-                              </p>
-                              <p className="font-display font-bold text-foreground text-lg">
-                                {trip.name}
-                              </p>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {trip.destination}
-                              </p>
-                              <p className="text-xs text-primary font-medium mt-2">
-                                Relive this trip →
-                              </p>
+                {/* Your Trips */}
+                {upcomingTrips.length > 0 && (
+                  <section>
+                    <div className="mb-4 flex items-center justify-between">
+                      <h2 className="font-heading text-xl font-medium text-foreground">Your Trips</h2>
+                      <Link href="/trips">
+                        <button className="text-sm font-medium text-muted-foreground flex items-center gap-0.5 hover:text-foreground transition-colors">
+                          See all <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </Link>
+                    </div>
+                    <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
+                      <div className="flex w-max space-x-4 pb-4 px-6">
+                        {upcomingTrips.map((trip: any) => (
+                          <TripCard key={trip.id} trip={trip} horizontal />
+                        ))}
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                {/* Recent Adventures */}
+                <RecentAdventuresSection />
+
+                {/* Anniversary Memories */}
+                {memories.length > 0 && (
+                  <section>
+                    <div className="mb-4">
+                      <h2 className="font-heading text-xl font-medium text-foreground">On This Day</h2>
+                    </div>
+                    {memories.map((trip: any) => {
+                      const yearsAgo = new Date().getFullYear() - new Date(trip.startDate + "T00:00:00").getFullYear();
+                      return (
+                        <Link key={trip.id} href={`/trip/${trip.id}/book`}>
+                          <div className="rounded-2xl bg-card border border-border p-5 cursor-pointer hover:bg-muted/50 transition-all">
+                            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-1">
+                              {yearsAgo} year{yearsAgo !== 1 ? "s" : ""} ago today
+                            </p>
+                            <h3 className="font-semibold text-[15px] text-foreground">
+                              {trip.name}
+                            </h3>
+                            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {trip.destination}
+                            </p>
+                            <p className="text-xs font-medium text-foreground mt-2">
+                              Relive this trip →
+                            </p>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </section>
+                )}
+
+                {/* Discover Experiences */}
+                <section>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="font-heading text-xl font-medium text-foreground">Discover</h2>
+                    <Link href="/explore">
+                      <button className="text-sm font-medium text-muted-foreground flex items-center gap-0.5 hover:text-foreground transition-colors">
+                        See all <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </Link>
+                  </div>
+                  <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
+                    <div className="flex w-max space-x-4 pb-4 px-6">
+                      {formattedExperiences.slice(0, 6).map((exp) => (
+                        <ExperienceCard key={exp.id} experience={exp} horizontal />
+                      ))}
+                    </div>
+                  </div>
+                </section>
+
+                {/* People You Might Know */}
+                {suggestedFamilies.length > 0 && (
+                  <section>
+                    <div className="mb-4 flex items-center justify-between">
+                      <h2 className="font-heading text-xl font-medium text-foreground">People You Might Know</h2>
+                      <Link href="/explore">
+                        <button className="text-sm font-medium text-muted-foreground flex items-center gap-0.5 hover:text-foreground transition-colors">
+                          See all <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </Link>
+                    </div>
+                    <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
+                      <div className="flex w-max space-x-4 pb-4 px-6">
+                        {suggestedFamilies.slice(0, 8).map((family) => (
+                          <Link key={family.id} href={`/family/${family.id}`}>
+                            <div
+                              className="w-36 flex-shrink-0 rounded-2xl bg-card p-4 cursor-pointer text-center transition-all hover:-translate-y-0.5"
+                              data-testid={`card-family-${family.id}`}
+                            >
+                              <Avatar className="h-16 w-16 mx-auto mb-3">
+                                <AvatarImage src={family.avatar || undefined} className="object-cover" />
+                                <AvatarFallback className="bg-muted text-muted-foreground text-lg font-semibold">
+                                  {(family.name || "?")[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <p className="font-semibold text-sm text-foreground truncate">{family.name}</p>
+                              {family.location && (
+                                <p className="text-xs text-muted-foreground truncate mt-0.5">{family.location}</p>
+                              )}
+                              {family.kids && (
+                                <p className="text-[11px] text-muted-foreground/70 mt-1 truncate">{family.kids}</p>
+                              )}
                             </div>
                           </Link>
-                        );
-                      })}
-                    </section>
-                  )}
+                        ))}
+                      </div>
+                    </div>
+                  </section>
+                )}
 
-                  {/* Suggestions - only show when "All" filter is active */}
-                  {activeFilter === "All" && (
-                    <section>
-                      <div className="mb-5 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="h-5 w-5 text-secondary" />
-                          <h2 className="section-title text-xl text-foreground">Suggestions for Today</h2>
-                        </div>
-                        <button className="text-sm font-semibold text-primary flex items-center gap-0.5 hover:gap-1.5 transition-all" data-testid="button-see-all">
+                {/* Pods You Might Like */}
+                {suggestedPods.length > 0 && (
+                  <section>
+                    <div className="mb-4 flex items-center justify-between">
+                      <h2 className="font-heading text-xl font-medium text-foreground">Pods You Might Like</h2>
+                      <Link href="/pods">
+                        <button className="text-sm font-medium text-muted-foreground flex items-center gap-0.5 hover:text-foreground transition-colors">
                           See all <ChevronRight className="h-4 w-4" />
                         </button>
+                      </Link>
+                    </div>
+                    <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
+                      <div className="flex w-max space-x-4 pb-4 px-6">
+                        {suggestedPods.slice(0, 8).map((pod) => (
+                          <PodCard key={pod.id} pod={pod as any} horizontal />
+                        ))}
                       </div>
-                      <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
-                        <div className="flex w-max space-x-4 pb-4 px-6">
-                          {formattedExperiences.slice(0, 4).map((exp, i) => (
-                            <ExperienceCard key={exp.id} experience={exp} horizontal index={i} />
-                          ))}
-                        </div>
-                      </div>
-                    </section>
-                  )}
-
-                  {/* Popular with Families - horizontal scroll */}
-                  {activeFilter === "All" && (
-                    <section>
-                      <div className="mb-5 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Flame className="h-5 w-5 text-secondary" />
-                          <h2 className="section-title text-xl text-foreground">Popular with Families</h2>
-                        </div>
-                        <button className="text-sm font-semibold text-primary flex items-center gap-0.5 hover:gap-1.5 transition-all" data-testid="button-see-all-popular">
-                          See all <ChevronRight className="h-4 w-4" />
-                        </button>
-                      </div>
-                      <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
-                        <div className="flex w-max space-x-4 pb-4 px-6">
-                          {formattedExperiences.slice(2, 8).map((exp, i) => (
-                            <ExperienceCard key={`popular-${exp.id}`} experience={exp} horizontal index={i} />
-                          ))}
-                        </div>
-                      </div>
-                    </section>
-                  )}
-
-                  {/* People You Might Know */}
-                  {activeFilter === "All" && suggestedFamilies.length > 0 && (
-                    <section>
-                      <div className="mb-5 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Heart className="h-5 w-5 text-secondary" />
-                          <h2 className="section-title text-xl text-foreground">People You Might Know</h2>
-                        </div>
-                        <Link href="/explore">
-                          <button className="text-sm font-semibold text-primary flex items-center gap-0.5 hover:gap-1.5 transition-all" data-testid="button-see-all-people">
-                            See all <ChevronRight className="h-4 w-4" />
-                          </button>
-                        </Link>
-                      </div>
-                      <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
-                        <div className="flex w-max space-x-4 pb-4 px-6">
-                          {suggestedFamilies.slice(0, 8).map((family, i) => (
-                            <Link key={family.id} href={`/family/${family.id}`}>
-                              <div 
-                                className="w-36 flex-shrink-0 bg-card rounded-3xl p-5 card-shadow hover:card-shadow-hover transition-all cursor-pointer text-center hover:-translate-y-1"
-                                data-testid={`card-family-${family.id}`}
-                              >
-                                <Avatar className="h-18 w-18 mx-auto mb-3 ring-3 ring-border/30">
-                                  <AvatarImage src={family.avatar || undefined} className="object-cover" />
-                                  <AvatarFallback className="bg-primary text-white text-xl font-semibold">
-                                    {(family.name || "?")[0]}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <p className="font-semibold text-foreground text-sm truncate">{family.name}</p>
-                                {family.location && (
-                                  <p className="text-xs text-muted-foreground truncate mt-1">{family.location}</p>
-                                )}
-                                {family.kids && (
-                                  <p className="text-xs text-muted-foreground/70 mt-1.5 truncate">{family.kids}</p>
-                                )}
-                              </div>
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    </section>
-                  )}
-
-                  {/* Pods You Might Like */}
-                  {activeFilter === "All" && suggestedPods.length > 0 && (
-                    <section>
-                      <div className="mb-5 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Users className="h-5 w-5 text-primary" />
-                          <h2 className="section-title text-xl text-foreground">Pods You Might Like</h2>
-                        </div>
-                        <Link href="/pods">
-                          <button className="text-sm font-semibold text-primary flex items-center gap-0.5 hover:gap-1.5 transition-all" data-testid="button-see-all-pods">
-                            See all <ChevronRight className="h-4 w-4" />
-                          </button>
-                        </Link>
-                      </div>
-                      <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
-                        <div className="flex w-max space-x-4 pb-4 px-6">
-                          {suggestedPods.slice(0, 8).map((pod, i) => (
-                            <Link key={pod.id} href={`/pod/${pod.id}`}>
-                              <div 
-                                className="w-52 flex-shrink-0 bg-card rounded-3xl p-5 card-shadow hover:card-shadow-hover transition-all cursor-pointer hover:-translate-y-1"
-                                data-testid={`card-pod-${pod.id}`}
-                              >
-                                <div className="h-14 w-14 rounded-2xl bg-primary flex items-center justify-center mb-4 shadow-sm">
-                                  <Users className="h-7 w-7 text-white" />
-                                </div>
-                                <p className="font-semibold text-foreground truncate">{pod.name}</p>
-                                {pod.description && (
-                                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1.5 leading-relaxed">{pod.description}</p>
-                                )}
-                                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
-                                  <span className={cn(
-                                    "text-xs font-semibold px-2.5 py-1 rounded-full",
-                                    pod.isPublic ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                                  )}>
-                                    {pod.isPublic ? "Public" : "Private"}
-                                  </span>
-                                </div>
-                              </div>
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    </section>
-                  )}
-
-                  {/* Filtered Results - only show when filter is not "All" */}
-                  {activeFilter !== "All" && (
-                    <section>
-                      <h2 className="mb-5 section-title text-xl text-foreground">
-                        {`${activeFilter} Experiences`}
-                      </h2>
-                      {activeFilter === "Nearby" && locationError && (
-                        <div className="mb-4 rounded-2xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800 flex items-center gap-2">
-                          <MapPin className="h-5 w-5 flex-shrink-0" />
-                          Location access denied. Enable location to see nearby experiences.
-                        </div>
-                      )}
-                      {activeFilter === "Nearby" && !userLocation && !locationError && (
-                        <div className="mb-4 rounded-2xl bg-primary/5 border border-primary/20 p-4 text-sm text-primary flex items-center gap-2">
-                          <MapPin className="h-5 w-5 flex-shrink-0" />
-                          Getting your location...
-                        </div>
-                      )}
-                      {filteredExperiences.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                          No experiences match this filter
-                        </div>
-                      ) : (
-                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                          {filteredExperiences.map((exp, i) => (
-                            <ExperienceCard key={`filtered-${exp.id}`} experience={exp} index={i} />
-                          ))}
-                        </div>
-                      )}
-                    </section>
-                  )}
-                </>
-              )}
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="following" className="mt-6">
-            {followingLoading ? (
-              <div className="text-center py-12 text-muted-foreground">Loading...</div>
-            ) : formattedFollowingExperiences.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-muted/50 flex items-center justify-center">
-                  <Users className="h-10 w-10 text-muted-foreground/40" />
-                </div>
-                <h3 className="font-heading text-xl font-medium text-foreground mb-2">No posts yet</h3>
-                <p className="text-muted-foreground mb-6">
-                  Follow families to see their experiences here
-                </p>
-                <Link href="/explore">
-                  <button className="rounded-full bg-primary px-7 py-3 font-semibold text-white shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5">
-                    Find Families
-                  </button>
-                </Link>
-              </div>
+                    </div>
+                  </section>
+                )}
+              </>
             ) : (
-              <div className="space-y-6 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
-                {formattedFollowingExperiences.map((exp: any, i) => (
-                  <div key={exp.id}>
-                    {/* Creator info */}
-                    <Link href={`/family/${exp.creator?.id}`}>
-                      <div className="flex items-center gap-3 mb-4 cursor-pointer group">
-                        {exp.creator?.profileImageUrl || exp.creator?.avatar ? (
-                          <img
-                            src={exp.creator.profileImageUrl || exp.creator.avatar}
-                            alt={exp.creator.name || "User"}
-                            className="h-11 w-11 rounded-full object-cover ring-2 ring-border/30 group-hover:ring-primary/30 transition-all"
-                          />
-                        ) : (
-                          <div className="h-11 w-11 rounded-full bg-primary flex items-center justify-center text-white font-semibold">
-                            {(exp.creator?.name || "?").charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-semibold text-foreground group-hover:text-primary transition-colors">{exp.creator?.name || "Unknown"}</p>
-                          <p className="text-xs text-muted-foreground">shared an experience</p>
-                        </div>
-                      </div>
-                    </Link>
-                    <ExperienceCard experience={exp} index={i} />
+              /* Filtered Results */
+              <section>
+                <h2 className="mb-4 font-heading text-xl font-medium text-foreground">
+                  {`${activeFilter} Experiences`}
+                </h2>
+                {activeFilter === "Nearby" && locationError && (
+                  <div className="mb-4 rounded-2xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800 flex items-center gap-2">
+                    <MapPin className="h-5 w-5 flex-shrink-0" />
+                    Location access denied. Enable location to see nearby experiences.
                   </div>
-                ))}
-              </div>
+                )}
+                {activeFilter === "Nearby" && !userLocation && !locationError && (
+                  <div className="mb-4 rounded-2xl bg-muted border border-border p-4 text-sm text-muted-foreground flex items-center gap-2">
+                    <MapPin className="h-5 w-5 flex-shrink-0" />
+                    Getting your location...
+                  </div>
+                )}
+                {filteredExperiences.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    No experiences match this filter
+                  </div>
+                ) : (
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {filteredExperiences.map((exp) => (
+                      <ExperienceCard key={`filtered-${exp.id}`} experience={exp} />
+                    ))}
+                  </div>
+                )}
+              </section>
             )}
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
       </div>
     </div>
   );
