@@ -49,6 +49,10 @@ const TravelStyle = lazy(() => import("@/pages/trip-wizard/TravelStyle"));
 const AIGeneration = lazy(() => import("@/pages/trip-wizard/AIGeneration"));
 const ItineraryEditor = lazy(() => import("@/pages/trip-wizard/ItineraryEditor"));
 const LockAndShare = lazy(() => import("@/pages/trip-wizard/LockAndShare"));
+const TripModeToday = lazy(() => import("@/pages/trip-mode/TripModeToday"));
+const TripModeMap = lazy(() => import("@/pages/trip-mode/TripModeMap"));
+const TripModeMemories = lazy(() => import("@/pages/trip-mode/TripModeMemories"));
+const TripModePod = lazy(() => import("@/pages/trip-mode/TripModePod"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
 const AdminTrips = lazy(() => import("@/pages/admin/AdminTrips"));
@@ -101,6 +105,22 @@ function AuthenticatedRouter() {
   const isConversationPage = location.startsWith("/conversation/");
   const isAdminPage = location.startsWith("/admin");
   const isWizardPage = location.startsWith("/trips/new") || location.endsWith("/plan") || location.endsWith("/finalize");
+  const isTripModePage = /^\/trip\/\d+\/live/.test(location);
+
+  // Trip Mode pages — dark theme, own layout, no global nav
+  if (isTripModePage) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Switch>
+          <Route path="/trip/:id/live" component={TripModeToday} />
+          <Route path="/trip/:id/live/map" component={TripModeMap} />
+          <Route path="/trip/:id/live/memories" component={TripModeMemories} />
+          <Route path="/trip/:id/live/pod" component={TripModePod} />
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
+    );
+  }
 
   // Trip wizard pages — full-screen, no nav
   if (isWizardPage) {

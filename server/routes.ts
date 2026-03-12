@@ -3157,6 +3157,112 @@ Return ONLY valid JSON.`;
     }
   });
 
+  // ===== Trip Lifecycle =====
+
+  app.post("/api/trips/:id/activate", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      await assertTripAccess(user.id, tripId, "write");
+
+      const trip = await storage.getTripById(tripId);
+      if (!trip) return res.status(404).json({ error: "Trip not found" });
+      if (trip.activatedAt) return res.json(trip); // already active
+
+      const updated = await storage.updateTrip(tripId, {
+        activatedAt: new Date(),
+        status: "active",
+      } as any);
+      res.json(updated);
+    } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/trips/:id/complete", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      await assertTripAccess(user.id, tripId, "write");
+
+      const updated = await storage.updateTrip(tripId, {
+        completedAt: new Date(),
+        status: "completed",
+      } as any);
+      res.json(updated);
+    } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/trips/:id/live", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      await assertTripAccess(user.id, tripId, "read");
+
+      const trip = await storage.getTripById(tripId);
+      if (!trip) return res.status(404).json({ error: "Trip not found" });
+
+      const items = await storage.getTripItems(tripId);
+      const checkins = await storage.getTripCheckins(tripId);
+      const checkinItemIds = new Set(checkins.map((c: any) => c.tripItemId));
+
+      // Calculate current day number based on trip start date
+      const startDate = new Date(trip.startDate);
+      const today = new Date();
+      const diffMs = today.getTime() - startDate.getTime();
+      const currentDay = Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1);
+
+      // Group items by day
+      const dayItems = items
+        .filter((item: any) => item.dayNumber === currentDay)
+        .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
+        .map((item: any) => ({
+          ...item,
+          isCheckedIn: checkinItemIds.has(item.id),
+        }));
+
+      // Total days
+      const endDate = new Date(trip.endDate);
+      const totalDays = Math.max(1, Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+
+      // Progress
+      const totalItems = items.length;
+      const checkedInCount = checkins.length;
+
+      res.json({
+        trip,
+        currentDay,
+        totalDays,
+        todayItems: dayItems,
+        allItems: items.map((item: any) => ({
+          ...item,
+          isCheckedIn: checkinItemIds.has(item.id),
+        })),
+        progress: {
+          totalItems,
+          checkedInCount,
+          percentage: totalItems > 0 ? Math.round((checkedInCount / totalItems) * 100) : 0,
+        },
+      });
+    } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ===== Trip Photos =====
 
   app.post("/api/trips/:tripId/photos", requireAuth(), async (req, res) => {

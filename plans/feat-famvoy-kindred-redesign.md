@@ -353,13 +353,13 @@ Use the trip planner PRD model. New tables (already partially in schema from pre
 
 ### Acceptance Criteria
 
-- [ ] Dark-themed Trip Mode layout scoped to `/trip/:id/live/*` routes
-- [ ] Today tab shows current stop, timeline, progress bar
-- [ ] Check-in updates stop status and records timestamp
-- [ ] Memory log bottom sheet works with keyboard open
-- [ ] Map shows stop pins color-coded by status
-- [ ] Global BottomNav hidden during Trip Mode
-- [ ] Touch targets >= 44px for outdoor use
+- [x] Dark-themed Trip Mode layout scoped to `/trip/:id/live/*` routes
+- [x] Today tab shows current stop, timeline, progress bar
+- [x] Check-in updates stop status and records timestamp
+- [x] Memory log bottom sheet works with keyboard open
+- [x] Map shows stop pins color-coded by status
+- [x] Global BottomNav hidden during Trip Mode
+- [x] Touch targets >= 44px for outdoor use
 
 ---
 

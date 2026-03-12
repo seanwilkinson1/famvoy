@@ -899,6 +899,28 @@ export const api = {
       });
       if (!res.ok) throw new Error("Failed to delete destination");
     },
+
+    activate: async (tripId: number): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/activate`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to activate trip");
+      return res.json();
+    },
+
+    complete: async (tripId: number): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/complete`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to complete trip");
+      return res.json();
+    },
+
+    getLiveState: async (tripId: number): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/live`);
+      if (!res.ok) throw new Error("Failed to fetch live state");
+      return res.json();
+    },
   },
 
   booking: {
