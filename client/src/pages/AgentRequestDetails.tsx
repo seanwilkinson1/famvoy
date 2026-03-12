@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { apiRequest } from "@/lib/queryClient";
 
 interface ConciergeRequestItem {
@@ -47,7 +47,6 @@ export default function AgentRequestDetails() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [bookingForm, setBookingForm] = useState({
     confirmationCode: "",
@@ -99,10 +98,10 @@ export default function AgentRequestDetails() {
       queryClient.invalidateQueries({ queryKey: [`/api/concierge/requests/${id}/items`] });
       setEditingItemId(null);
       setBookingForm({ confirmationCode: "", bookingReference: "", providerName: "", actualPriceCents: "", agentNotes: "" });
-      toast({ title: "Item updated successfully" });
+      toast.success("Item updated successfully");
     },
     onError: (error: any) => {
-      toast({ title: "Failed to update item", description: error.message, variant: "destructive" });
+      toast.error("Failed to update item", { description: error.message });
     },
   });
 
@@ -111,11 +110,11 @@ export default function AgentRequestDetails() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/concierge/requests/${id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/agent/requests/assigned"] });
-      toast({ title: "Request marked as complete!" });
+      toast.success("Request marked as complete!");
       navigate("/agent");
     },
     onError: (error: any) => {
-      toast({ title: "Cannot complete request", description: error.message, variant: "destructive" });
+      toast.error("Cannot complete request", { description: error.message });
     },
   });
 
@@ -160,7 +159,7 @@ export default function AgentRequestDetails() {
       case 'booked':
         return <Badge variant="secondary" className="bg-green-100 text-green-800">Booked</Badge>;
       case 'skipped':
-        return <Badge variant="secondary" className="bg-gray-100 text-gray-800">Skipped</Badge>;
+        return <Badge variant="secondary" className="bg-muted text-gray-800">Skipped</Badge>;
       case 'failed':
         return <Badge variant="secondary" className="bg-red-100 text-red-800">Failed</Badge>;
       default:
@@ -190,7 +189,7 @@ export default function AgentRequestDetails() {
 
   return (
     <div className="flex-1 overflow-y-auto pb-24 md:max-w-5xl md:mx-auto md:px-8">
-      <div className="bg-gradient-to-b from-warm-teal/20 to-background px-4 py-6">
+      <div className="bg-gradient-to-b from-primary/20 to-background px-4 py-6">
         <div className="flex items-center gap-3 mb-4">
           <Link href="/agent">
             <button className="p-2 hover:bg-white/50 rounded-full transition-colors" data-testid="button-back">

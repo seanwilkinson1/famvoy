@@ -59,7 +59,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-700/50">
           {!collapsed && (
-            <span className="text-xl font-bold text-teal-400 tracking-tight">FamVoy Admin</span>
+            <span className="text-xl font-bold text-primary tracking-tight">FamVoy Admin</span>
           )}
           <Button
             variant="ghost"
@@ -85,7 +85,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                       className={cn(
                         "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 font-medium",
                         isActive
-                          ? "bg-teal-500 text-white shadow-lg"
+                          ? "bg-primary text-white shadow-lg"
                           : "text-slate-300 hover:bg-slate-800 hover:text-white"
                       )}
                       data-testid={`nav-${item.label.toLowerCase()}`}
@@ -140,7 +140,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <Button variant="ghost" className="flex items-center gap-2 hover:bg-slate-100" data-testid="button-admin-menu">
                   <Avatar className="h-8 w-8 border-2 border-slate-200">
                     <AvatarImage src={user?.profileImageUrl || user?.avatar || undefined} />
-                    <AvatarFallback className="bg-teal-100 text-teal-700 font-medium">
+                    <AvatarFallback className="bg-primary/10 text-primary font-medium">
                       {user?.firstName?.[0] || user?.name?.[0] || "A"}
                     </AvatarFallback>
                   </Avatar>

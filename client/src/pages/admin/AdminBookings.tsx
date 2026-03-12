@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 import {
@@ -132,7 +132,6 @@ interface ManualBooking {
 
 export default function AdminBookings() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("concierge");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -196,10 +195,10 @@ export default function AdminBookings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/manual-bookings"] });
       setBookingDialog(false);
-      toast({ title: "Booking updated successfully" });
+      toast.success("Booking updated successfully");
     },
     onError: (error: any) => {
-      toast({ title: "Failed to update booking", description: error.message, variant: "destructive" });
+      toast.error("Failed to update booking", { description: error.message });
     },
   });
 
@@ -253,10 +252,10 @@ export default function AdminBookings() {
             <h1 className="text-2xl font-bold text-slate-900" data-testid="text-bookings-title">Booking Management</h1>
             <p className="text-slate-500 mt-1">Manage concierge bookings and manual reservations</p>
           </div>
-          <div className="flex items-center gap-2 bg-teal-50 text-teal-700 px-4 py-2 rounded-lg">
+          <div className="flex items-center gap-2 bg-primary/5 text-primary px-4 py-2 rounded-lg">
             <Sparkles className="h-5 w-5" />
             <span className="font-semibold">{conciergeData?.total || 0}</span>
-            <span className="text-teal-600">Concierge Bookings</span>
+            <span className="text-primary">Concierge Bookings</span>
           </div>
         </div>
 
@@ -292,7 +291,7 @@ export default function AdminBookings() {
               <CardContent className="p-0">
                 {loadingConcierge ? (
                   <div className="flex items-center justify-center h-64">
-                    <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
                 ) : conciergeError ? (
                   <div className="flex flex-col items-center justify-center h-64 text-slate-500">
@@ -308,8 +307,8 @@ export default function AdminBookings() {
                           <div className="p-4 hover:bg-slate-50" data-testid={`row-concierge-${booking.id}`}>
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center">
-                                  <MapPin className="h-6 w-6 text-teal-600" />
+                                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <MapPin className="h-6 w-6 text-primary" />
                                 </div>
                                 <div>
                                   <p className="font-semibold text-slate-900">{booking.trip?.name || "Unknown Trip"}</p>
@@ -415,12 +414,12 @@ export default function AdminBookings() {
                                                 <p className="text-slate-600 italic">"{restaurant.specialRequests}"</p>
                                               )}
                                               {restaurant.bookingUrl && (
-                                                <a href={restaurant.bookingUrl} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:underline flex items-center gap-1">
+                                                <a href={restaurant.bookingUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
                                                   <ExternalLink className="h-3 w-3" /> Book Now
                                                 </a>
                                               )}
                                               {restaurant.openTableUrl && !restaurant.bookingUrl && (
-                                                <a href={restaurant.openTableUrl} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:underline flex items-center gap-1">
+                                                <a href={restaurant.openTableUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
                                                   <ExternalLink className="h-3 w-3" /> OpenTable
                                                 </a>
                                               )}
@@ -463,7 +462,7 @@ export default function AdminBookings() {
                                                 <p className="text-slate-500">Platform: {excursion.bookingPlatform}</p>
                                               )}
                                               {excursion.bookingUrl && (
-                                                <a href={excursion.bookingUrl} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:underline flex items-center gap-1">
+                                                <a href={excursion.bookingUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
                                                   <ExternalLink className="h-3 w-3" /> Book Now
                                                 </a>
                                               )}
@@ -612,7 +611,7 @@ export default function AdminBookings() {
               <CardContent className="p-0">
                 {loadingManual ? (
                   <div className="flex items-center justify-center h-64">
-                    <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
                 ) : manualError ? (
                   <div className="flex flex-col items-center justify-center h-64 text-slate-500">
@@ -655,7 +654,7 @@ export default function AdminBookings() {
                             <TableCell>{getStatusBadge(booking.status)}</TableCell>
                             <TableCell>
                               {booking.status === "pending" && (
-                                <Button size="sm" onClick={() => handleCompleteBooking(booking)} className="bg-teal-600 hover:bg-teal-700" data-testid={`button-complete-${booking.id}`}>
+                                <Button size="sm" onClick={() => handleCompleteBooking(booking)} className="bg-primary hover:bg-primary/90" data-testid={`button-complete-${booking.id}`}>
                                   <Phone className="h-4 w-4 mr-2" />
                                   Complete
                                 </Button>
@@ -733,7 +732,7 @@ export default function AdminBookings() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setBookingDialog(false)}>Cancel</Button>
-            <Button onClick={handleSaveBooking} disabled={updateBookingMutation.isPending} className="bg-teal-600 hover:bg-teal-700">
+            <Button onClick={handleSaveBooking} disabled={updateBookingMutation.isPending} className="bg-primary hover:bg-primary/90">
               {updateBookingMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Mark Complete
             </Button>

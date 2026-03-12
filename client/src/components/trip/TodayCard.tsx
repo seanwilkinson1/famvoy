@@ -67,7 +67,7 @@ export function TodayCard({ tripId, startDate, items }: TodayCardProps) {
     <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-2xl border border-primary/20 p-5 mb-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-display font-bold text-charcoal">
+          <h3 className="text-lg font-display font-bold text-foreground">
             Day {dayNumber}
           </h3>
           <p className="text-sm text-muted-foreground">
@@ -174,7 +174,7 @@ function TodayItem({ item, tripId, isCheckedIn, dayNumber }: TodayItemProps) {
       layout
       className={cn(
         "flex items-center gap-3 p-3 rounded-xl transition-colors",
-        isCheckedIn ? "bg-green-50 border border-green-200" : "bg-white border border-gray-100",
+        isCheckedIn ? "bg-green-50 border border-green-200" : "bg-white border border-border",
       )}
     >
       <span className="text-lg">{ITEM_TYPE_ICONS[item.itemType] || "📌"}</span>
@@ -212,7 +212,7 @@ function TodayItem({ item, tripId, isCheckedIn, dayNumber }: TodayItemProps) {
           />
           <button
             onClick={() => document.getElementById(`photo-checkin-${item.id}`)?.click()}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             title="Check in with photo"
           >
             <Camera className="h-4 w-4" />

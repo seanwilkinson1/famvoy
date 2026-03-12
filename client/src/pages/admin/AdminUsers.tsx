@@ -37,7 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { apiRequest } from "@/lib/queryClient";
 import {
   Search,
@@ -69,7 +69,6 @@ interface User {
 
 export default function AdminUsers() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -110,10 +109,10 @@ export default function AdminUsers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       setEditDialog(false);
-      toast({ title: "User updated successfully" });
+      toast.success("User updated successfully");
     },
     onError: (error: any) => {
-      toast({ title: "Failed to update user", description: error.message, variant: "destructive" });
+      toast.error("Failed to update user", { description: error.message });
     },
   });
 
@@ -193,7 +192,7 @@ export default function AdminUsers() {
           <CardContent className="p-0">
             {isLoading ? (
               <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : error ? (
               <div className="flex flex-col items-center justify-center h-64 text-slate-500">
@@ -221,7 +220,7 @@ export default function AdminUsers() {
                           <div className="flex items-center gap-3">
                             <Avatar className="h-10 w-10 border border-slate-200">
                               <AvatarImage src={user.profileImageUrl || user.avatar || undefined} />
-                              <AvatarFallback className="bg-teal-100 text-teal-700 font-medium">
+                              <AvatarFallback className="bg-primary/10 text-primary font-medium">
                                 {getUserDisplayName(user)[0]?.toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
@@ -324,7 +323,7 @@ export default function AdminUsers() {
             <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg">
               <Avatar className="h-14 w-14 border-2 border-white shadow">
                 <AvatarImage src={selectedUser?.profileImageUrl || selectedUser?.avatar || undefined} />
-                <AvatarFallback className="bg-teal-100 text-teal-700 text-lg font-medium">
+                <AvatarFallback className="bg-primary/10 text-primary text-lg font-medium">
                   {selectedUser ? getUserDisplayName(selectedUser)[0]?.toUpperCase() : "U"}
                 </AvatarFallback>
               </Avatar>
@@ -391,7 +390,7 @@ export default function AdminUsers() {
             <Button variant="outline" onClick={() => setEditDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={updateUserMutation.isPending} className="bg-teal-600 hover:bg-teal-700">
+            <Button onClick={handleSave} disabled={updateUserMutation.isPending} className="bg-primary hover:bg-primary/90">
               {updateUserMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Save Changes
             </Button>

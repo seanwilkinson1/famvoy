@@ -1,8 +1,10 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { PodCard } from "@/components/shared/PodCard";
+import { TripCard } from "@/components/shared/TripCard";
 import { ImageUpload } from "@/components/shared/ImageUpload";
 import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
-import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Trophy, CheckCircle, Star, Heart, Globe, Quote, Plane, Users, Share2, UserPlus, ChevronLeft } from "lucide-react";
+import { VerificationBadge } from "@/components/shared/VerificationBadge";
+import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Heart, Globe, Quote, Plane, Users, Share2, UserPlus, ChevronLeft, Star } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -13,6 +15,7 @@ import { useLocation } from "wouter";
 import type { FamilyMember } from "@shared/schema";
 import { FAMILY_VALUES, LANGUAGES, FAMILY_ROLES, AGE_GROUPS } from "@/lib/constants";
 import { Plus, Trash2 } from "lucide-react";
+import { ImageCarousel } from "@/components/ui/image-carousel";
 
 const BADGE_ICONS: Record<string, string> = {
   "Park Explorer": "🌲",
@@ -27,14 +30,31 @@ const BADGE_ICONS: Record<string, string> = {
   "Community Builder": "🤝",
 };
 
-const INTEREST_OPTIONS = [
-  "Hiking", "Beach", "Parks", "Museums", "Playgrounds", "Sports", 
-  "Art", "Music", "Cooking", "Reading", "Travel", "Camping", 
-  "Biking", "Swimming", "Dance", "Food", "Nature", "Science"
-];
+const INTEREST_EMOJIS: Record<string, string> = {
+  "Hiking": "🥾",
+  "Beach": "🏖️",
+  "Parks": "🌳",
+  "Museums": "🏛️",
+  "Playgrounds": "🛝",
+  "Sports": "⚽",
+  "Art": "🎨",
+  "Music": "🎵",
+  "Cooking": "🍳",
+  "Reading": "📚",
+  "Travel": "✈️",
+  "Camping": "🏕️",
+  "Biking": "🚲",
+  "Swimming": "🏊",
+  "Dance": "💃",
+  "Food": "🍕",
+  "Nature": "🌿",
+  "Science": "🔬",
+};
+
+const INTEREST_OPTIONS = Object.keys(INTEREST_EMOJIS);
 
 function ProfileInner() {
-  const [activeTab, setActiveTab] = useState<"experiences" | "about" | "saved" | "trips">("experiences");
+  const [activeTab, setActiveTab] = useState<"experiences" | "about" | "saved" | "trips">("about");
   const [isEditing, setIsEditing] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [newMember, setNewMember] = useState({
@@ -108,7 +128,7 @@ function ProfileInner() {
   }, [currentUser, isEditing]);
 
   const { getToken } = useClerk().session || {};
-  
+
   const updateProfileMutation = useMutation({
     mutationFn: async () => {
       const token = getToken ? await getToken() : null;
@@ -228,15 +248,19 @@ function ProfileInner() {
     enabled: !!currentUser,
   });
 
-  const adultMembers = familyMembers.filter(m => m.isAdult);
-  const kidMembers = familyMembers.filter(m => !m.isAdult);
-
   const formattedUserExperiences = userExperiences.map(exp => formatExperience(exp as any));
   const formattedSavedExperiences = savedExperiences.map(exp => formatExperience(exp as any));
 
-  const userLocation = currentUser?.locationLat && currentUser?.locationLng
-    ? { lat: currentUser.locationLat, lng: currentUser.locationLng }
-    : null;
+  // Profile completeness check
+  const completenessItems = [
+    { label: "Photo", done: !!(currentUser?.avatar) },
+    { label: "Bio", done: !!(currentUser?.bio) },
+    { label: "Location", done: !!(currentUser?.location) },
+    { label: "Family member", done: familyMembers.length > 0 },
+    { label: "Interests", done: (currentUser?.interests?.length || 0) >= 3 },
+  ];
+  const completenessScore = completenessItems.filter(i => i.done).length;
+  const isProfileComplete = completenessScore === completenessItems.length;
 
   const handleShareProfile = () => {
     if (navigator.share) {
@@ -250,22 +274,23 @@ function ProfileInner() {
     }
   };
 
+  // Edit mode
   if (isEditing) {
     return (
       <div className="min-h-screen bg-background pt-14 md:pt-8 pb-32 md:pb-8 px-6 md:max-w-4xl md:mx-auto">
         <div className="mb-6 flex justify-between">
           <button
             onClick={() => setIsEditing(false)}
-            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
             data-testid="button-cancel-edit"
           >
             <ChevronLeft className="h-4 w-4" />
             Cancel
           </button>
-          <button 
+          <button
             onClick={() => updateProfileMutation.mutate()}
             disabled={updateProfileMutation.isPending}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-full font-bold text-sm"
+            className="flex items-center gap-2 px-5 py-2 bg-foreground text-background rounded-full font-medium text-sm"
             data-testid="button-save-profile"
           >
             <Check className="h-4 w-4" />
@@ -280,23 +305,23 @@ function ProfileInner() {
               onImageChange={(url) => setEditForm({ ...editForm, avatar: url })}
               size="lg"
             />
-            <p className="text-xs text-gray-500 mt-2">Tap to change photo</p>
+            <p className="text-xs text-muted-foreground mt-2">Tap to change photo</p>
           </div>
-          
+
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Family Name</label>
+            <label className="block text-sm font-medium text-foreground mb-2">Family Name</label>
             <input
               type="text"
               value={editForm.name}
               onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-border bg-background p-4 text-base focus:border-foreground focus:outline-none"
               placeholder="Your family name"
               data-testid="input-edit-name"
             />
           </div>
-          
+
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Location</label>
+            <label className="block text-sm font-medium text-foreground mb-2">Location</label>
             <GooglePlacesAutocomplete
               value={editForm.location}
               onChange={(value) => setEditForm({ ...editForm, location: value })}
@@ -306,66 +331,65 @@ function ProfileInner() {
               isSelected={false}
             />
           </div>
-          
+
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Kids</label>
+            <label className="block text-sm font-medium text-foreground mb-2">Kids</label>
             <input
               type="text"
               value={editForm.kids}
               onChange={(e) => setEditForm({ ...editForm, kids: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-border bg-background p-4 text-base focus:border-foreground focus:outline-none"
               placeholder="e.g., 2 Kids (ages 3 & 7)"
               data-testid="input-edit-kids"
             />
           </div>
-          
+
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Bio</label>
+            <label className="block text-sm font-medium text-foreground mb-2">Bio</label>
             <textarea
               value={editForm.bio}
               onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none resize-none"
+              className="w-full rounded-xl border border-border bg-background p-4 text-base focus:border-foreground focus:outline-none resize-none"
               rows={3}
               placeholder="Tell other families about you..."
               data-testid="input-edit-bio"
             />
           </div>
-          
+
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Interests</label>
+            <label className="block text-sm font-medium text-foreground mb-2">Interests</label>
             <div className="flex flex-wrap gap-2">
               {INTEREST_OPTIONS.map((interest) => (
                 <button
                   key={interest}
                   onClick={() => toggleInterest(interest)}
-                  style={{
-                    backgroundColor: editForm.interests.includes(interest) ? '#14b8a6' : '#f3f4f6',
-                    color: editForm.interests.includes(interest) ? 'white' : '#6b7280',
-                  }}
-                  className="rounded-full px-4 py-2 text-sm font-bold transition-all"
+                  className={cn(
+                    "rounded-full px-4 py-2 text-sm font-medium transition-all border",
+                    editForm.interests.includes(interest)
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-background text-muted-foreground border-border hover:bg-muted"
+                  )}
                   data-testid={`button-interest-${interest.toLowerCase()}`}
                 >
-                  {interest}
+                  {INTEREST_EMOJIS[interest]} {interest}
                 </button>
               ))}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              <Heart className="inline-block h-4 w-4 mr-1 text-rose-500" />
-              Family Values
-            </label>
+            <label className="block text-sm font-medium text-foreground mb-2">Family Values</label>
             <div className="flex flex-wrap gap-2">
               {FAMILY_VALUES.map((value) => (
                 <button
                   key={value}
                   onClick={() => toggleFamilyValue(value)}
-                  style={{
-                    backgroundColor: editForm.familyValues.includes(value) ? '#f43f5e' : '#f3f4f6',
-                    color: editForm.familyValues.includes(value) ? 'white' : '#6b7280',
-                  }}
-                  className="rounded-full px-4 py-2 text-sm font-bold transition-all"
+                  className={cn(
+                    "rounded-full px-4 py-2 text-sm font-medium transition-all border",
+                    editForm.familyValues.includes(value)
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-background text-muted-foreground border-border hover:bg-muted"
+                  )}
                   data-testid={`button-value-${value.toLowerCase().replace(/\s+/g, '-')}`}
                 >
                   {value}
@@ -375,20 +399,18 @@ function ProfileInner() {
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              <Globe className="inline-block h-4 w-4 mr-1 text-blue-500" />
-              Languages We Speak
-            </label>
+            <label className="block text-sm font-medium text-foreground mb-2">Languages We Speak</label>
             <div className="flex flex-wrap gap-2">
               {LANGUAGES.map((language) => (
                 <button
                   key={language}
                   onClick={() => toggleLanguage(language)}
-                  style={{
-                    backgroundColor: editForm.languages.includes(language) ? '#3b82f6' : '#f3f4f6',
-                    color: editForm.languages.includes(language) ? 'white' : '#6b7280',
-                  }}
-                  className="rounded-full px-4 py-2 text-sm font-bold transition-all"
+                  className={cn(
+                    "rounded-full px-4 py-2 text-sm font-medium transition-all border",
+                    editForm.languages.includes(language)
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-background text-muted-foreground border-border hover:bg-muted"
+                  )}
                   data-testid={`button-language-${language.toLowerCase().replace(/\s+/g, '-')}`}
                 >
                   {language}
@@ -398,43 +420,35 @@ function ProfileInner() {
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              🐾 Pets
-            </label>
+            <label className="block text-sm font-medium text-foreground mb-2">Pets</label>
             <input
               type="text"
               value={editForm.pets}
               onChange={(e) => setEditForm({ ...editForm, pets: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-border bg-background p-4 text-base focus:border-foreground focus:outline-none"
               placeholder="e.g., Dog named Max, 2 cats"
               data-testid="input-edit-pets"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              <Quote className="inline-block h-4 w-4 mr-1 text-purple-500" />
-              Family Motto
-            </label>
+            <label className="block text-sm font-medium text-foreground mb-2">Family Motto</label>
             <input
               type="text"
               value={editForm.familyMotto}
               onChange={(e) => setEditForm({ ...editForm, familyMotto: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-border bg-background p-4 text-base focus:border-foreground focus:outline-none"
               placeholder="e.g., Adventure awaits!"
               data-testid="input-edit-motto"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              <Star className="inline-block h-4 w-4 mr-1 text-amber-500" />
-              Favorite Traditions
-            </label>
+            <label className="block text-sm font-medium text-foreground mb-2">Favorite Traditions</label>
             <textarea
               value={editForm.favoriteTraditions}
               onChange={(e) => setEditForm({ ...editForm, favoriteTraditions: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none resize-none"
+              className="w-full rounded-xl border border-border bg-background p-4 text-base focus:border-foreground focus:outline-none resize-none"
               rows={2}
               placeholder="e.g., Sunday pancakes, Friday movie nights"
               data-testid="input-edit-traditions"
@@ -442,29 +456,23 @@ function ProfileInner() {
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              <Plane className="inline-block h-4 w-4 mr-1 text-teal-500" />
-              Dream Vacation
-            </label>
+            <label className="block text-sm font-medium text-foreground mb-2">Dream Vacation</label>
             <input
               type="text"
               value={editForm.dreamVacation}
               onChange={(e) => setEditForm({ ...editForm, dreamVacation: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-border bg-background p-4 text-base focus:border-foreground focus:outline-none"
               placeholder="e.g., Disney World, Japan"
               data-testid="input-edit-dream-vacation"
             />
           </div>
 
-          <div className="border-t border-gray-200 pt-6">
+          <div className="border-t border-border pt-6">
             <div className="flex items-center justify-between mb-4">
-              <label className="block text-sm font-bold text-gray-700">
-                <Users className="inline-block h-4 w-4 mr-1 text-primary" />
-                Family Members
-              </label>
+              <label className="block text-sm font-medium text-foreground">Family Members</label>
               <button
                 onClick={() => setShowAddMemberModal(true)}
-                className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-sm font-bold rounded-full"
+                className="flex items-center gap-1 px-3 py-1.5 bg-foreground text-background text-sm font-medium rounded-full"
                 data-testid="button-add-member"
               >
                 <Plus className="h-4 w-4" />
@@ -473,12 +481,12 @@ function ProfileInner() {
             </div>
 
             {familyMembers.length === 0 ? (
-              <div className="text-center py-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-                <UserPlus className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">No family members added yet</p>
+              <div className="text-center py-8 bg-muted rounded-2xl border border-dashed border-border">
+                <UserPlus className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No family members added yet</p>
                 <button
                   onClick={() => setShowAddMemberModal(true)}
-                  className="mt-2 text-sm text-primary font-bold"
+                  className="mt-2 text-sm text-foreground font-medium"
                 >
                   Add your first family member
                 </button>
@@ -486,27 +494,27 @@ function ProfileInner() {
             ) : (
               <div className="space-y-3">
                 {familyMembers.map((member) => (
-                  <div key={member.id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200">
-                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
+                  <div key={member.id} className="flex items-center gap-3 p-3 bg-card rounded-2xl">
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
                       {member.photo ? (
                         <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-lg bg-gradient-to-br from-primary/20 to-primary/40">
+                        <div className="w-full h-full flex items-center justify-center text-lg bg-muted text-muted-foreground">
                           {member.name.charAt(0)}
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-gray-900 truncate">{member.name}</p>
-                      <p className="text-xs text-primary">{member.role}</p>
+                      <p className="font-semibold text-sm text-foreground truncate">{member.name}</p>
+                      <p className="text-xs text-muted-foreground">{member.role}</p>
                       {member.ageGroup && (
-                        <p className="text-xs text-gray-400">{member.ageGroup}</p>
+                        <p className="text-[11px] text-muted-foreground/70">{member.ageGroup}</p>
                       )}
                     </div>
                     <button
                       onClick={() => deleteMemberMutation.mutate(member.id)}
                       disabled={deleteMemberMutation.isPending}
-                      className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                      className="p-2 text-muted-foreground hover:text-red-500 transition-colors"
                       data-testid={`button-delete-member-${member.id}`}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -531,13 +539,18 @@ function ProfileInner() {
     );
   }
 
+  // Profile photos for carousel
+  const profileImages = [
+    currentUser?.avatar || currentUser?.profileImageUrl || "",
+  ].filter(Boolean);
+
   return (
     <div className="min-h-screen bg-background pb-32 md:pb-8 md:max-w-5xl md:mx-auto md:px-8">
-      {/* Top bar with Edit/Settings */}
+      {/* Top bar */}
       <div className="flex justify-between items-center px-6 pt-16 md:pt-8 pb-2">
         <button
           onClick={() => setIsEditing(true)}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           data-testid="button-edit-profile"
         >
           <Edit2 className="h-4 w-4" />
@@ -545,7 +558,7 @@ function ProfileInner() {
         </button>
         <button
           onClick={() => setLocation("/settings")}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           data-testid="button-settings"
         >
           <SettingsIcon className="h-4 w-4" />
@@ -553,151 +566,140 @@ function ProfileInner() {
         </button>
       </div>
 
-      {/* Light Profile Hero */}
-      <div className="px-6 py-6">
-        <div className="flex items-start gap-5">
-          {/* Avatar */}
-          <img
-            src={currentUser?.avatar || currentUser?.profileImageUrl || "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400"}
-            alt="Profile"
-            className="h-24 w-24 rounded-full object-cover ring-4 ring-white shadow-lg shrink-0"
-            data-testid="img-avatar"
-          />
+      {/* Profile Hero - Kindred style */}
+      <div className="px-6 py-4">
+        {/* Photo carousel */}
+        <ImageCarousel
+          images={profileImages}
+          alt={currentUser?.name || "Profile"}
+          aspectRatio="aspect-square"
+          className="rounded-2xl max-w-[280px] mx-auto"
+        />
 
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            <h1 className="font-heading text-2xl font-bold text-gray-900" data-testid="text-username">
+        {/* Name + verification */}
+        <div className="mt-5 text-center">
+          <div className="flex items-center justify-center gap-2">
+            <h1 className="font-heading text-2xl font-medium text-foreground" data-testid="text-username">
               {currentUser?.name || "Loading..."}
             </h1>
-            <p className="text-gray-500 text-sm">
-              @{(currentUser?.name || "family").toLowerCase().replace(/\s+/g, '')}
+            {(currentUser as any)?.isVerified && <VerificationBadge size="md" />}
+          </div>
+
+          {/* Location */}
+          {currentUser?.location && (
+            <p className="text-sm text-muted-foreground mt-1 flex items-center justify-center gap-1">
+              <MapPin className="h-3.5 w-3.5" />
+              {currentUser.location}
             </p>
+          )}
 
-            {/* Followers/Following */}
-            <div className="flex items-center gap-4 mt-2">
-              <button
-                className="text-sm"
-                onClick={() => {}}
-                data-testid="button-following"
-              >
-                <span className="text-gray-900 font-bold">{followingCount}</span>
-                <span className="text-gray-500 ml-1">following</span>
-              </button>
-              <button
-                className="text-sm"
-                onClick={() => {}}
-                data-testid="button-followers"
-              >
-                <span className="text-gray-900 font-bold">{followersCount}</span>
-                <span className="text-gray-500 ml-1">followers</span>
-              </button>
-            </div>
+          {/* Last active */}
+          <p className="text-xs text-muted-foreground/60 mt-1">
+            Active today
+          </p>
+        </div>
 
-            {/* Location chip */}
-            {currentUser?.location && (
-              <div className="flex items-center gap-1.5 mt-2 text-sm text-gray-500">
-                <MapPin className="h-3.5 w-3.5 text-primary" />
-                <span>{currentUser.location}</span>
-              </div>
-            )}
-
-            {/* Bio */}
-            {currentUser?.bio && (
-              <p className="text-gray-600 text-sm mt-2 max-w-md">{currentUser.bio}</p>
-            )}
+        {/* Stats row */}
+        <div className="mt-5 flex items-center justify-center gap-6">
+          <button className="text-center" data-testid="button-following">
+            <p className="text-lg font-semibold text-foreground">{followingCount}</p>
+            <p className="text-xs text-muted-foreground">following</p>
+          </button>
+          <div className="w-px h-8 bg-border" />
+          <button className="text-center" data-testid="button-followers">
+            <p className="text-lg font-semibold text-foreground">{followersCount}</p>
+            <p className="text-xs text-muted-foreground">followers</p>
+          </button>
+          <div className="w-px h-8 bg-border" />
+          <div className="text-center">
+            <p className="text-lg font-semibold text-foreground">
+              {travelStats?.totalTrips || userTrips.length}
+            </p>
+            <p className="text-xs text-muted-foreground">trips</p>
           </div>
         </div>
 
-        {/* Travel Stats Card */}
-        <div className="mt-6 bg-white border border-gray-100 shadow-sm rounded-2xl p-4">
-          {!travelStats || travelStats.totalTrips === 0 ? (
-            <div className="flex items-center justify-around">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{userTrips.length}</p>
-                <p className="text-gray-500 text-xs">Trips</p>
-              </div>
-              <div className="w-px h-8 bg-gray-200" />
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{userCheckins.length}</p>
-                <p className="text-gray-500 text-xs">Experiences</p>
-              </div>
-              <div className="w-px h-8 bg-gray-200" />
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{userBadges.length}</p>
-                <p className="text-gray-500 text-xs">Badges</p>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <div className="flex items-center justify-around">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-900">{travelStats.totalTrips}</p>
-                  <p className="text-gray-500 text-xs">Trips</p>
-                </div>
-                <div className="w-px h-8 bg-gray-200" />
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-900">{travelStats.totalDays}</p>
-                  <p className="text-gray-500 text-xs">Days</p>
-                </div>
-                <div className="w-px h-8 bg-gray-200" />
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-900">{travelStats.destinationsVisited}</p>
-                  <p className="text-gray-500 text-xs">Destinations</p>
-                </div>
-                <div className="w-px h-8 bg-gray-200" />
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-900">{travelStats.photosCapured}</p>
-                  <p className="text-gray-500 text-xs">Photos</p>
-                </div>
-              </div>
-              {travelStats.favoriteTrip && travelStats.favoriteTrip.rating && (
-                <div className="mt-3 pt-3 border-t border-gray-200 text-center">
-                  <p className="text-gray-500 text-xs">Favorite Trip</p>
-                  <p className="text-gray-900 text-sm font-medium">{travelStats.favoriteTrip.name}</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        {/* Bio */}
+        {currentUser?.bio && (
+          <p className="text-sm text-foreground mt-4 text-center max-w-md mx-auto leading-relaxed">
+            {currentUser.bio}
+          </p>
+        )}
 
-        {/* Action Buttons */}
-        <div className="mt-4 flex gap-3">
+        {/* Action buttons */}
+        <div className="mt-5 flex gap-3 max-w-sm mx-auto">
           <button
             onClick={handleShareProfile}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-xl text-gray-700 font-medium text-sm hover:bg-gray-50 transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-border rounded-full text-foreground font-medium text-sm hover:bg-muted transition-colors"
             data-testid="button-share-profile"
           >
             <Share2 className="h-4 w-4" />
             Share
           </button>
           <button
-            onClick={() => {}}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-xl text-gray-700 font-medium text-sm hover:bg-gray-50 transition-colors"
-            data-testid="button-invite-friends"
+            onClick={() => setIsEditing(true)}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-foreground text-background rounded-full font-medium text-sm"
+            data-testid="button-edit-profile-cta"
           >
-            <UserPlus className="h-4 w-4" />
-            Invite
+            <Edit2 className="h-4 w-4" />
+            Edit Profile
           </button>
         </div>
       </div>
 
+      {/* Profile completeness nudge */}
+      {!isProfileComplete && (
+        <div className="mx-6 mt-4 rounded-2xl bg-card border border-border p-5">
+          <p className="text-sm text-foreground font-medium mb-1">
+            Complete your profile
+          </p>
+          <p className="text-xs text-muted-foreground mb-3">
+            Would this get families excited to travel with you?
+          </p>
+          <div className="flex gap-2 mb-3">
+            {completenessItems.map((item) => (
+              <div
+                key={item.label}
+                className={cn(
+                  "h-1.5 flex-1 rounded-full",
+                  item.done ? "bg-emerald-500" : "bg-border"
+                )}
+              />
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {completenessItems.filter(i => !i.done).map((item) => (
+              <span key={item.label} className="text-[11px] px-2.5 py-1 rounded-full border border-border text-muted-foreground">
+                + {item.label}
+              </span>
+            ))}
+          </div>
+          <button
+            onClick={() => setIsEditing(true)}
+            className="mt-3 w-full py-2.5 bg-foreground text-background rounded-full font-medium text-sm"
+          >
+            Complete Profile
+          </button>
+        </div>
+      )}
+
       {/* Tabs */}
-      <div className="mt-6 bg-white sticky top-14 z-20 border-b border-gray-200">
-        <div className="flex">
+      <div className="mt-6 sticky top-14 z-20 bg-background border-b border-border">
+        <div className="flex px-6">
           {[
-            { id: "experiences", label: "Experiences" },
             { id: "about", label: "About" },
-            { id: "saved", label: "Saved" },
+            { id: "experiences", label: "Experiences" },
             { id: "trips", label: "Trips" },
+            { id: "saved", label: "Saved" },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={cn(
-                "flex-1 py-4 text-sm font-bold transition-all border-b-2",
+                "flex-1 py-3.5 text-sm font-medium transition-all border-b-2",
                 activeTab === tab.id
-                  ? "text-primary border-primary"
-                  : "text-gray-500 border-transparent hover:text-gray-700"
+                  ? "text-foreground border-foreground"
+                  : "text-muted-foreground border-transparent hover:text-foreground"
               )}
               data-testid={`button-tab-${tab.id}`}
             >
@@ -708,16 +710,149 @@ function ProfileInner() {
       </div>
 
       {/* Tab Content */}
-      <div className="px-6 py-6 animate-in fade-in duration-300">
+      <div className="px-6 py-6">
+        {activeTab === "about" && (
+          <div className="space-y-8">
+            {/* Household section */}
+            {familyMembers.length > 0 && (
+              <section>
+                <h3 className="font-heading text-lg font-medium text-foreground mb-4">Household</h3>
+                <div className="flex flex-wrap gap-4">
+                  {familyMembers.map((member) => (
+                    <div key={member.id} className="flex flex-col items-center w-20" data-testid={`family-member-${member.id}`}>
+                      <div className="w-16 h-16 rounded-full overflow-hidden bg-muted">
+                        {member.photo ? (
+                          <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-lg text-muted-foreground">
+                            {member.name.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <p className="mt-1.5 text-sm font-medium text-foreground text-center truncate w-full">{member.name}</p>
+                      <p className="text-[11px] text-muted-foreground">{member.role}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Interest tags with emojis */}
+            {currentUser?.interests && currentUser.interests.length > 0 && (
+              <section>
+                <h3 className="font-heading text-lg font-medium text-foreground mb-3">Interests</h3>
+                <div className="flex flex-wrap gap-2">
+                  {currentUser.interests.map((interest) => (
+                    <span
+                      key={interest}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-sm text-foreground"
+                    >
+                      {INTEREST_EMOJIS[interest] || "🌟"} {interest}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Family Values */}
+            {currentUser?.familyValues && currentUser.familyValues.length > 0 && (
+              <section>
+                <h3 className="font-heading text-lg font-medium text-foreground mb-3">Values</h3>
+                <div className="flex flex-wrap gap-2">
+                  {currentUser.familyValues.map((value) => (
+                    <span key={value} className="px-3 py-1.5 rounded-full border border-border text-sm text-foreground">
+                      {value}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Languages */}
+            {currentUser?.languages && currentUser.languages.length > 0 && (
+              <section>
+                <h3 className="font-heading text-lg font-medium text-foreground mb-3 flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  Languages
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {currentUser.languages.map((lang) => (
+                    <span key={lang} className="px-3 py-1.5 rounded-full border border-border text-sm text-foreground">
+                      {lang}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Pets */}
+            {currentUser?.pets && (
+              <section>
+                <h3 className="font-heading text-lg font-medium text-foreground mb-2">🐾 Pets</h3>
+                <p className="text-sm text-muted-foreground">{currentUser.pets}</p>
+              </section>
+            )}
+
+            {/* Family Motto */}
+            {currentUser?.familyMotto && (
+              <section>
+                <h3 className="font-heading text-lg font-medium text-foreground mb-2">Family Motto</h3>
+                <p className="text-sm text-muted-foreground italic">"{currentUser.familyMotto}"</p>
+              </section>
+            )}
+
+            {/* Dream Vacation */}
+            {currentUser?.dreamVacation && (
+              <section>
+                <h3 className="font-heading text-lg font-medium text-foreground mb-2 flex items-center gap-2">
+                  <Plane className="h-4 w-4 text-muted-foreground" />
+                  Dream Vacation
+                </h3>
+                <p className="text-sm text-muted-foreground">{currentUser.dreamVacation}</p>
+              </section>
+            )}
+
+            {/* Badges */}
+            {userBadges.length > 0 && (
+              <section>
+                <h3 className="font-heading text-lg font-medium text-foreground mb-3">Badges</h3>
+                <div className="flex flex-wrap gap-2">
+                  {userBadges.map((badge: any) => (
+                    <span
+                      key={badge.id}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-sm text-foreground"
+                      data-testid={`badge-${badge.id}`}
+                    >
+                      {BADGE_ICONS[badge.badge?.name || ''] || '🏅'} {badge.badge?.name || 'Badge'}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Pods */}
+            {pods.length > 0 && (
+              <section>
+                <h3 className="font-heading text-lg font-medium text-foreground mb-3">Pods</h3>
+                <div className="space-y-3">
+                  {pods.map((pod) => (
+                    <PodCard key={pod.id} pod={pod} />
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+
         {activeTab === "experiences" && (
           <div>
             {formattedUserExperiences.length === 0 ? (
               <div className="py-12 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <MapPin className="h-8 w-8 text-gray-300" />
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MapPin className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <p className="text-gray-500 font-medium">No experiences shared yet</p>
-                <p className="text-gray-400 text-sm mt-1">Share your first family adventure!</p>
+                <p className="text-foreground font-medium">No experiences shared yet</p>
+                <p className="text-sm text-muted-foreground mt-1">Share your first family adventure!</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -729,220 +864,21 @@ function ProfileInner() {
           </div>
         )}
 
-        {activeTab === "about" && (
-          <div className="space-y-6">
-            {/* Bio */}
-            {currentUser?.bio && (
-              <div>
-                <p className="text-gray-700">{currentUser.bio}</p>
-              </div>
-            )}
-
-            {/* Kids info */}
-            {currentUser?.kids && (
-              <div className="flex items-center gap-2 text-gray-600">
-                <Users className="h-4 w-4 text-primary" />
-                <span>{currentUser.kids}</span>
-              </div>
-            )}
-
-            {/* Location */}
-            {currentUser?.location && (
-              <div className="flex items-center gap-2 text-gray-600">
-                <MapPin className="h-4 w-4 text-primary" />
-                <span>{currentUser.location}</span>
-              </div>
-            )}
-
-            {/* Family Members */}
-            {familyMembers.length > 0 && (
-              <div>
-                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Users className="h-5 w-5 text-primary" />
-                  Family Members
-                </h3>
-                
-                {adultMembers.length > 0 && (
-                  <div className="mb-4">
-                    <span className="inline-block px-3 py-1 text-xs font-bold bg-primary/10 text-primary rounded-full mb-3">
-                      Adults
-                    </span>
-                    <div className="flex flex-wrap gap-4">
-                      {adultMembers.map((member) => (
-                        <div key={member.id} className="flex flex-col items-center" data-testid={`family-member-${member.id}`}>
-                          <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-gray-200 bg-gray-100">
-                            {member.photo ? (
-                              <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-xl bg-gradient-to-br from-primary/20 to-primary/40">
-                                {member.name.charAt(0)}
-                              </div>
-                            )}
-                          </div>
-                          <p className="mt-1 text-sm font-bold text-gray-900">{member.name}</p>
-                          <p className="text-xs text-primary font-medium">{member.role}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {kidMembers.length > 0 && (
-                  <div>
-                    <span className="inline-block px-3 py-1 text-xs font-bold bg-secondary/20 text-secondary-foreground rounded-full mb-3">
-                      Kids
-                    </span>
-                    <div className="flex flex-wrap gap-4">
-                      {kidMembers.map((member) => (
-                        <div key={member.id} className="flex flex-col items-center" data-testid={`family-member-${member.id}`}>
-                          <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-gray-200 bg-gray-100">
-                            {member.photo ? (
-                              <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-xl bg-gradient-to-br from-secondary/20 to-secondary/40">
-                                {member.name.charAt(0)}
-                              </div>
-                            )}
-                          </div>
-                          <p className="mt-1 text-sm font-bold text-gray-900">{member.name}</p>
-                          <p className="text-xs text-secondary font-medium">{member.role}</p>
-                          {member.ageGroup && (
-                            <p className="text-xs text-gray-400">{member.ageGroup}</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Interests */}
-            {currentUser?.interests && currentUser.interests.length > 0 && (
-              <div>
-                <h3 className="font-bold text-gray-900 mb-3">Interests</h3>
-                <div className="flex flex-wrap gap-2">
-                  {currentUser.interests.map((interest) => (
-                    <span
-                      key={interest}
-                      className="px-3 py-1.5 bg-primary/10 text-primary text-sm rounded-full font-medium"
-                    >
-                      {interest}
-                    </span>
-                  ))}
+        {activeTab === "trips" && (
+          <div>
+            {userTrips.length === 0 ? (
+              <div className="py-12 text-center">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Plane className="h-8 w-8 text-muted-foreground" />
                 </div>
+                <p className="text-foreground font-medium">No trips planned yet</p>
+                <p className="text-sm text-muted-foreground mt-1">Join a pod and start planning!</p>
               </div>
-            )}
-
-            {/* Family Values */}
-            {currentUser?.familyValues && currentUser.familyValues.length > 0 && (
-              <div>
-                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <Heart className="h-4 w-4 text-rose-500" />
-                  Family Values
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {currentUser.familyValues.map((value) => (
-                    <span key={value} className="px-3 py-1.5 bg-rose-50 text-rose-700 text-sm rounded-full font-medium">
-                      {value}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Languages */}
-            {currentUser?.languages && currentUser.languages.length > 0 && (
-              <div>
-                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-blue-500" />
-                  Languages
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {currentUser.languages.map((lang) => (
-                    <span key={lang} className="px-3 py-1.5 bg-blue-50 text-blue-700 text-sm rounded-full font-medium">
-                      {lang}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Pets */}
-            {currentUser?.pets && (
-              <div>
-                <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                  <span>🐾</span>
-                  Pets
-                </h3>
-                <p className="text-gray-600">{currentUser.pets}</p>
-              </div>
-            )}
-
-            {/* Family Motto */}
-            {currentUser?.familyMotto && (
-              <div>
-                <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                  <Quote className="h-4 w-4 text-purple-500" />
-                  Family Motto
-                </h3>
-                <p className="text-gray-600 italic">"{currentUser.familyMotto}"</p>
-              </div>
-            )}
-
-            {/* Favorite Traditions */}
-            {currentUser?.favoriteTraditions && (
-              <div>
-                <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                  <Star className="h-4 w-4 text-amber-500" />
-                  Favorite Traditions
-                </h3>
-                <p className="text-gray-600">{currentUser.favoriteTraditions}</p>
-              </div>
-            )}
-
-            {/* Dream Vacation */}
-            {currentUser?.dreamVacation && (
-              <div>
-                <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                  <Plane className="h-4 w-4 text-teal-500" />
-                  Dream Vacation
-                </h3>
-                <p className="text-gray-600">{currentUser.dreamVacation}</p>
-              </div>
-            )}
-
-            {/* Badges */}
-            {userBadges.length > 0 && (
-              <div>
-                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <Award className="h-4 w-4 text-amber-500" />
-                  Badges
-                </h3>
-                <div className="flex flex-wrap gap-3">
-                  {userBadges.map((badge: any) => (
-                    <div
-                      key={badge.id}
-                      className="flex items-center gap-2 px-3 py-2 bg-amber-50 rounded-xl"
-                      data-testid={`badge-${badge.id}`}
-                    >
-                      <span className="text-xl">{BADGE_ICONS[badge.badge?.name || ''] || '🏅'}</span>
-                      <span className="text-sm font-medium text-amber-800">{badge.badge?.name || 'Badge'}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Pods */}
-            {pods.length > 0 && (
-              <div>
-                <h3 className="font-bold text-gray-900 mb-3">Pods</h3>
-                <div className="space-y-3">
-                  {pods.map((pod) => (
-                    <PodCard key={pod.id} pod={pod} />
-                  ))}
-                </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {userTrips.map((trip: any) => (
+                  <TripCard key={trip.id} trip={trip} />
+                ))}
               </div>
             )}
           </div>
@@ -952,74 +888,16 @@ function ProfileInner() {
           <div>
             {formattedSavedExperiences.length === 0 ? (
               <div className="py-12 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Heart className="h-8 w-8 text-gray-300" />
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Heart className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <p className="text-gray-500 font-medium">No saved experiences yet</p>
-                <p className="text-gray-400 text-sm mt-1">Save experiences you want to try!</p>
+                <p className="text-foreground font-medium">No saved experiences yet</p>
+                <p className="text-sm text-muted-foreground mt-1">Save experiences you want to try!</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[...formattedSavedExperiences].reverse().map((exp) => (
                   <ExperienceCard key={exp.id} experience={exp} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === "trips" && (
-          <div className="space-y-4">
-            {userTrips.length === 0 ? (
-              <div className="py-12 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Plane className="h-8 w-8 text-gray-300" />
-                </div>
-                <p className="text-gray-500 font-medium">No trips planned yet</p>
-                <p className="text-gray-400 text-sm mt-1">Join a pod and start planning your first trip!</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {userTrips.map((trip: any) => (
-                  <div 
-                    key={trip.id}
-                    className="rounded-xl bg-white p-4 shadow-sm border border-gray-100 cursor-pointer"
-                    onClick={() => setLocation(`/trip/${trip.id}`)}
-                    data-testid={`trip-card-${trip.id}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                        <Plane className="h-6 w-6 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <h4 className="font-bold text-gray-900 line-clamp-1">{trip.name}</h4>
-                          <span className={cn(
-                            "text-xs px-2 py-0.5 rounded-full font-medium shrink-0",
-                            trip.status === "confirmed" 
-                              ? "bg-green-100 text-green-700" 
-                              : trip.status === "confirming"
-                              ? "bg-orange-100 text-orange-700"
-                              : "bg-gray-100 text-gray-600"
-                          )}>
-                            {trip.status === "confirmed" ? "Confirmed" : trip.status === "confirming" ? "In Progress" : "Draft"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm text-gray-500">
-                          <MapPin className="h-3 w-3" />
-                          <span>{trip.destination}</span>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {new Date(trip.startDate).toLocaleDateString()} - {new Date(trip.endDate).toLocaleDateString()}
-                        </p>
-                        {trip.pod && (
-                          <p className="text-xs text-primary mt-1 font-medium">
-                            {trip.pod.name}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
                 ))}
               </div>
             )}
@@ -1040,12 +918,12 @@ function ProfileInner() {
   );
 }
 
-function AddMemberModal({ 
-  showModal, 
-  setShowModal, 
-  newMember, 
-  setNewMember, 
-  addMemberMutation 
+function AddMemberModal({
+  showModal,
+  setShowModal,
+  newMember,
+  setNewMember,
+  addMemberMutation
 }: {
   showModal: boolean;
   setShowModal: (show: boolean) => void;
@@ -1055,15 +933,15 @@ function AddMemberModal({
 }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-[100] flex items-end sm:items-center justify-center">
-      <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[85vh] overflow-y-auto animate-slide-up mb-20 sm:mb-0 mx-4">
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-          <h2 className="font-heading text-xl font-bold">Add Family Member</h2>
+      <div className="bg-background rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[85vh] overflow-y-auto animate-slide-up mb-20 sm:mb-0 mx-4">
+        <div className="sticky top-0 bg-background border-b border-border px-6 py-4 flex items-center justify-between">
+          <h2 className="font-heading text-xl font-medium">Add Family Member</h2>
           <button
             onClick={() => {
               setShowModal(false);
               setNewMember({ name: "", role: "", ageGroup: "", isAdult: true, photo: "" });
             }}
-            className="p-2 rounded-full bg-gray-100"
+            className="p-2 rounded-full bg-muted"
           >
             <X className="h-5 w-5" />
           </button>
@@ -1079,48 +957,50 @@ function AddMemberModal({
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Name</label>
+            <label className="block text-sm font-medium text-foreground mb-2">Name</label>
             <input
               type="text"
               value={newMember.name}
               onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 bg-white p-4 text-base font-medium focus:border-primary focus:outline-none"
+              className="w-full rounded-xl border border-border bg-background p-4 text-base focus:border-foreground focus:outline-none"
               placeholder="e.g., Emma"
               data-testid="input-member-name"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Role (Adults)</label>
+            <label className="block text-sm font-medium text-foreground mb-2">Role (Adults)</label>
             <div className="flex flex-wrap gap-2 mb-3">
               {FAMILY_ROLES.adults.map((role) => (
                 <button
                   key={role}
                   type="button"
                   onClick={() => setNewMember({ ...newMember, role, isAdult: true })}
-                  style={{
-                    backgroundColor: newMember.role === role ? '#14b8a6' : '#f3f4f6',
-                    color: newMember.role === role ? 'white' : '#6b7280',
-                  }}
-                  className="rounded-full px-4 py-2 text-sm font-bold transition-all"
+                  className={cn(
+                    "rounded-full px-4 py-2 text-sm font-medium transition-all border",
+                    newMember.role === role
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-background text-muted-foreground border-border"
+                  )}
                   data-testid={`button-role-${role.toLowerCase().replace(/\s+/g, '-')}`}
                 >
                   {role}
                 </button>
               ))}
             </div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Role (Kids)</label>
+            <label className="block text-sm font-medium text-foreground mb-2">Role (Kids)</label>
             <div className="flex flex-wrap gap-2">
               {FAMILY_ROLES.kids.map((role) => (
                 <button
                   key={role}
                   type="button"
                   onClick={() => setNewMember({ ...newMember, role, isAdult: false })}
-                  style={{
-                    backgroundColor: newMember.role === role ? '#14b8a6' : '#f3f4f6',
-                    color: newMember.role === role ? 'white' : '#6b7280',
-                  }}
-                  className="rounded-full px-4 py-2 text-sm font-bold transition-all"
+                  className={cn(
+                    "rounded-full px-4 py-2 text-sm font-medium transition-all border",
+                    newMember.role === role
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-background text-muted-foreground border-border"
+                  )}
                   data-testid={`button-role-${role.toLowerCase().replace(/\s+/g, '-')}`}
                 >
                   {role}
@@ -1130,18 +1010,19 @@ function AddMemberModal({
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Age Group</label>
+            <label className="block text-sm font-medium text-foreground mb-2">Age Group</label>
             <div className="flex flex-wrap gap-2">
               {AGE_GROUPS.map((age) => (
                 <button
                   key={age}
                   type="button"
                   onClick={() => setNewMember({ ...newMember, ageGroup: age })}
-                  style={{
-                    backgroundColor: newMember.ageGroup === age ? '#14b8a6' : '#f3f4f6',
-                    color: newMember.ageGroup === age ? 'white' : '#6b7280',
-                  }}
-                  className="rounded-full px-4 py-2 text-sm font-bold transition-all"
+                  className={cn(
+                    "rounded-full px-4 py-2 text-sm font-medium transition-all border",
+                    newMember.ageGroup === age
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-background text-muted-foreground border-border"
+                  )}
                   data-testid={`button-age-${age.toLowerCase().replace(/\s+/g, '-')}`}
                 >
                   {age}
@@ -1153,7 +1034,7 @@ function AddMemberModal({
           <button
             onClick={() => addMemberMutation.mutate()}
             disabled={!newMember.name || !newMember.role || addMemberMutation.isPending}
-            className="w-full py-4 bg-primary text-white font-bold rounded-xl disabled:opacity-50"
+            className="w-full py-3.5 bg-foreground text-background font-medium rounded-full disabled:opacity-50"
             data-testid="button-submit-member"
           >
             {addMemberMutation.isPending ? "Adding..." : "Add Family Member"}

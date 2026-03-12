@@ -2,11 +2,11 @@ import { Switch, Route, useLocation } from "wouter";
 import { useEffect, useCallback, lazy, Suspense } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/sonner";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopHeader } from "@/components/layout/TopHeader";
-import { FloatingActionButton } from "@/components/layout/FloatingActionButton";
+
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { PullToRefresh } from "@/components/shared/PullToRefresh";
 import { SignedIn, SignedOut, useAuth } from "@clerk/clerk-react";
@@ -44,6 +44,15 @@ const BookletChapters = lazy(() => import("@/pages/booklet/BookletChapters"));
 const BookletMap = lazy(() => import("@/pages/booklet/BookletMap"));
 const BookletPublish = lazy(() => import("@/pages/booklet/BookletPublish"));
 const Dreams = lazy(() => import("@/pages/Dreams"));
+const TripSetup = lazy(() => import("@/pages/trip-wizard/TripSetup"));
+const TravelStyle = lazy(() => import("@/pages/trip-wizard/TravelStyle"));
+const AIGeneration = lazy(() => import("@/pages/trip-wizard/AIGeneration"));
+const ItineraryEditor = lazy(() => import("@/pages/trip-wizard/ItineraryEditor"));
+const LockAndShare = lazy(() => import("@/pages/trip-wizard/LockAndShare"));
+const TripModeToday = lazy(() => import("@/pages/trip-mode/TripModeToday"));
+const TripModeMap = lazy(() => import("@/pages/trip-mode/TripModeMap"));
+const TripModeMemories = lazy(() => import("@/pages/trip-mode/TripModeMemories"));
+const TripModePod = lazy(() => import("@/pages/trip-mode/TripModePod"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
 const AdminTrips = lazy(() => import("@/pages/admin/AdminTrips"));
@@ -54,8 +63,8 @@ const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
 
 function PageLoader() {
   return (
-    <div className="min-h-screen bg-soft-beige flex items-center justify-center">
-      <div className="w-12 h-12 rounded-full border-4 border-warm-teal border-t-transparent animate-spin" />
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
     </div>
   );
 }
@@ -78,8 +87,8 @@ function AuthenticatedRouter() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-soft-beige flex items-center justify-center">
-        <div className="w-12 h-12 rounded-full border-4 border-warm-teal border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -95,6 +104,39 @@ function AuthenticatedRouter() {
   const isExplorePage = location === "/explore";
   const isConversationPage = location.startsWith("/conversation/");
   const isAdminPage = location.startsWith("/admin");
+  const isWizardPage = location.startsWith("/trips/new") || location.endsWith("/plan") || location.endsWith("/finalize");
+  const isTripModePage = /^\/trip\/\d+\/live/.test(location);
+
+  // Trip Mode pages — dark theme, own layout, no global nav
+  if (isTripModePage) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Switch>
+          <Route path="/trip/:id/live" component={TripModeToday} />
+          <Route path="/trip/:id/live/map" component={TripModeMap} />
+          <Route path="/trip/:id/live/memories" component={TripModeMemories} />
+          <Route path="/trip/:id/live/pod" component={TripModePod} />
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
+    );
+  }
+
+  // Trip wizard pages — full-screen, no nav
+  if (isWizardPage) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Switch>
+          <Route path="/trips/new" component={TripSetup} />
+          <Route path="/trips/new/style" component={TravelStyle} />
+          <Route path="/trips/new/generate" component={AIGeneration} />
+          <Route path="/trip/:id/plan" component={ItineraryEditor} />
+          <Route path="/trip/:id/finalize" component={LockAndShare} />
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
+    );
+  }
 
   // Admin pages have their own layout
   if (isAdminPage) {
@@ -115,7 +157,7 @@ function AuthenticatedRouter() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-background">
       <Sidebar />
       <div className="flex-1 flex flex-col w-full bg-background shadow-2xl md:shadow-none overflow-hidden relative">
         {showHeader && <TopHeader />}
@@ -158,7 +200,6 @@ function AuthenticatedRouter() {
             </PullToRefresh>
           )}
         </Suspense>
-        {location === "/" && <FloatingActionButton />}
         {!isConversationPage && <BottomNav />}
       </div>
     </div>

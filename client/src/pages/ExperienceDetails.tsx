@@ -244,8 +244,8 @@ function ExperienceDetailsInner() {
               className="h-10 w-10 rounded-full object-cover ring-2 ring-white shadow-sm"
             />
             <div>
-              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Shared by</p>
-              <p className="text-sm font-bold text-gray-900" data-testid="text-creator-name">
+              <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Shared by</p>
+              <p className="text-sm font-bold text-foreground" data-testid="text-creator-name">
                 {experience.creator?.name || "A Family"}
               </p>
             </div>
@@ -256,7 +256,7 @@ function ExperienceDetailsInner() {
         </div>
 
         {/* Quick Stats */}
-        <div className="mb-4 grid grid-cols-4 gap-2 rounded-2xl bg-gray-50 p-4">
+        <div className="mb-4 grid grid-cols-4 gap-2 rounded-2xl bg-muted p-4">
           {[
             { icon: Clock, label: "Duration", val: experience.duration },
             { icon: DollarSign, label: "Cost", val: experience.cost },
@@ -265,8 +265,8 @@ function ExperienceDetailsInner() {
           ].map((stat, i) => (
             <div key={i} className="flex flex-col items-center text-center">
               <stat.icon className="mb-1 h-5 w-5 text-primary" />
-              <span className="text-[10px] font-medium text-gray-400 uppercase">{stat.label}</span>
-              <span className="text-xs font-bold text-gray-900">{stat.val}</span>
+              <span className="text-[10px] font-medium text-muted-foreground uppercase">{stat.label}</span>
+              <span className="text-xs font-bold text-foreground">{stat.val}</span>
             </div>
           ))}
         </div>
@@ -284,16 +284,16 @@ function ExperienceDetailsInner() {
                 />
               ))}
               {checkinCount > 3 && (
-                <div className="h-8 w-8 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
+                <div className="h-8 w-8 rounded-full border-2 border-white bg-border flex items-center justify-center text-xs font-bold text-muted-foreground">
                   +{checkinCount - 3}
                 </div>
               )}
             </div>
             <div>
-              <p className="text-sm font-bold text-gray-900">
+              <p className="text-sm font-bold text-foreground">
                 {checkinCount === 0 ? "Be the first!" : `${checkinCount} ${checkinCount === 1 ? 'family' : 'families'} did this`}
               </p>
-              <p className="text-xs text-gray-500">Share your experience</p>
+              <p className="text-xs text-muted-foreground">Share your experience</p>
             </div>
           </div>
           {user && (
@@ -315,7 +315,7 @@ function ExperienceDetailsInner() {
         </div>
 
         {/* Map Preview */}
-        <div className="mb-8 overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
+        <div className="mb-8 overflow-hidden rounded-2xl border border-border shadow-sm">
           <div className="relative h-40 w-full">
             <ExperienceMap 
               lat={experience.locationLat} 
@@ -326,7 +326,7 @@ function ExperienceDetailsInner() {
           <div className="bg-white p-3 flex justify-between items-center">
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-gray-900">{experience.locationName}</span>
+              <span className="text-sm font-medium text-foreground">{experience.locationName}</span>
             </div>
             <a 
               href={`https://www.google.com/maps/dir/?api=1&destination=${experience.locationLat},${experience.locationLng}`}
@@ -343,15 +343,15 @@ function ExperienceDetailsInner() {
 
         {/* What We Loved */}
         <section className="mb-8">
-          <h2 className="mb-3 font-heading text-xl font-bold text-gray-900">What We Loved</h2>
-          <p className="text-base leading-relaxed text-gray-600">
+          <h2 className="mb-3 font-heading text-xl font-bold text-foreground">What We Loved</h2>
+          <p className="text-base leading-relaxed text-muted-foreground">
             {experience.description || "This was honestly such a hidden gem! The kids loved the interactive exhibits, and we spent way more time here than expected. Highly recommend bringing a packed lunch as the cafe was a bit crowded."}
           </p>
         </section>
 
         {/* Good to Know */}
         <section className="mb-8">
-          <h2 className="mb-3 font-heading text-xl font-bold text-gray-900">Good to Know</h2>
+          <h2 className="mb-3 font-heading text-xl font-bold text-foreground">Good to Know</h2>
           <ul className="space-y-2">
             {(experience.tips || [
               "Stroller friendly paths throughout",
@@ -359,7 +359,7 @@ function ExperienceDetailsInner() {
               "Best time to visit is early morning",
               "Parking is free on weekends"
             ]).map((tip, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+              <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                 <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-secondary-foreground/50 flex-shrink-0" />
                 {tip}
               </li>
@@ -370,10 +370,10 @@ function ExperienceDetailsInner() {
         {/* Families Who Did This */}
         {checkins.length > 0 && (
           <section className="mb-8">
-            <h2 className="mb-4 font-heading text-xl font-bold text-gray-900">Families Who Did This</h2>
+            <h2 className="mb-4 font-heading text-xl font-bold text-foreground">Families Who Did This</h2>
             <div className="space-y-4">
               {checkins.slice(0, 5).map((checkin: any) => (
-                <div key={checkin.id} className="rounded-2xl bg-gray-50 p-4">
+                <div key={checkin.id} className="rounded-2xl bg-muted p-4">
                   <div className="flex items-start gap-3">
                     <img
                       src={checkin.user?.avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400'}
@@ -384,7 +384,7 @@ function ExperienceDetailsInner() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <p 
-                          className="font-bold text-sm text-gray-900 cursor-pointer hover:text-primary"
+                          className="font-bold text-sm text-foreground cursor-pointer hover:text-primary"
                           onClick={() => checkin.user && setLocation(`/family/${checkin.user.id}`)}
                         >
                           {checkin.user?.name || 'A Family'}
@@ -398,7 +398,7 @@ function ExperienceDetailsInner() {
                         )}
                       </div>
                       {checkin.review && (
-                        <p className="text-sm text-gray-600 line-clamp-2">{checkin.review}</p>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{checkin.review}</p>
                       )}
                       {checkin.photoUrl && (
                         <img
@@ -408,7 +408,7 @@ function ExperienceDetailsInner() {
                           onClick={() => window.open(checkin.photoUrl, '_blank')}
                         />
                       )}
-                      <p className="text-xs text-gray-400 mt-2">
+                      <p className="text-xs text-muted-foreground mt-2">
                         {new Date(checkin.createdAt).toLocaleDateString()}
                       </p>
                     </div>
@@ -422,7 +422,7 @@ function ExperienceDetailsInner() {
         {/* Similar Experiences */}
         {formattedSimilar.length > 0 && (
           <section>
-            <h2 className="mb-4 font-heading text-xl font-bold text-gray-900">Similar Experiences</h2>
+            <h2 className="mb-4 font-heading text-xl font-bold text-foreground">Similar Experiences</h2>
             <ScrollArea className="-mx-6 w-[calc(100%+48px)] px-6 pb-4">
                <div className="flex gap-4 w-max">
                  {formattedSimilar.map(exp => (
@@ -439,11 +439,11 @@ function ExperienceDetailsInner() {
       {showAddToPodModal && (
         <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-md max-h-[80vh] overflow-hidden shadow-xl">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+            <div className="flex items-center justify-between p-4 border-b border-border">
               <h3 className="font-heading text-lg font-bold">Add to Pod</h3>
               <button 
                 onClick={() => setShowAddToPodModal(false)}
-                className="rounded-full bg-gray-100 p-2"
+                className="rounded-full bg-muted p-2"
                 data-testid="button-close-add-pod-modal"
               >
                 <X className="h-5 w-5" />
@@ -452,7 +452,7 @@ function ExperienceDetailsInner() {
             <div className="overflow-y-auto p-4 space-y-3 max-h-[60vh]">
               {userPods.filter(p => !p.isDirect).length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-400 mb-4">You're not a member of any group pods yet</p>
+                  <p className="text-muted-foreground mb-4">You're not a member of any group pods yet</p>
                   <button 
                     onClick={() => {
                       setShowAddToPodModal(false);
@@ -467,7 +467,7 @@ function ExperienceDetailsInner() {
                 <div 
                   key={pod.id}
                   onClick={() => addToPodMutation.mutate({ podId: pod.id, experienceId: experience.id })}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="flex items-center gap-3 p-3 rounded-xl bg-muted cursor-pointer hover:bg-muted transition-colors"
                   data-testid={`pod-item-${pod.id}`}
                 >
                   <img 
@@ -476,8 +476,8 @@ function ExperienceDetailsInner() {
                     className="h-12 w-12 rounded-full object-cover"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm text-gray-900 line-clamp-1">{pod.name}</p>
-                    <p className="text-xs text-gray-500 line-clamp-1">{pod.description}</p>
+                    <p className="font-bold text-sm text-foreground line-clamp-1">{pod.name}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-1">{pod.description}</p>
                   </div>
                   <Plus className="h-5 w-5 text-primary" />
                 </div>
@@ -491,7 +491,7 @@ function ExperienceDetailsInner() {
       {showCheckinModal && (
         <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-md max-h-[85vh] overflow-hidden shadow-xl">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+            <div className="flex items-center justify-between p-4 border-b border-border">
               <h3 className="font-heading text-lg font-bold">I Did This!</h3>
               <button 
                 onClick={() => {
@@ -500,20 +500,20 @@ function ExperienceDetailsInner() {
                   setCheckinReview("");
                   setCheckinRating(0);
                 }}
-                className="rounded-full bg-gray-100 p-2"
+                className="rounded-full bg-muted p-2"
                 data-testid="button-close-checkin-modal"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="overflow-y-auto p-4 space-y-4 max-h-[65vh]">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 Share your experience with other families! Add a photo and review.
               </p>
 
               {/* Photo Upload */}
               <div>
-                <label className="text-sm font-bold text-gray-700 mb-2 block">Add a Photo (optional)</label>
+                <label className="text-sm font-bold text-foreground mb-2 block">Add a Photo (optional)</label>
                 <input
                   ref={checkinPhotoRef}
                   type="file"
@@ -539,7 +539,7 @@ function ExperienceDetailsInner() {
                   <button
                     onClick={() => checkinPhotoRef.current?.click()}
                     disabled={isUploadingPhoto}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 p-6 text-gray-500 hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-6 text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
                     data-testid="button-upload-checkin-photo"
                   >
                     {isUploadingPhoto ? (
@@ -559,7 +559,7 @@ function ExperienceDetailsInner() {
 
               {/* Rating */}
               <div>
-                <label className="text-sm font-bold text-gray-700 mb-2 block">Rate your experience</label>
+                <label className="text-sm font-bold text-foreground mb-2 block">Rate your experience</label>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
@@ -573,7 +573,7 @@ function ExperienceDetailsInner() {
                           "h-8 w-8 transition-colors",
                           star <= checkinRating 
                             ? "fill-amber-400 text-amber-400" 
-                            : "text-gray-300 hover:text-amber-300"
+                            : "text-border hover:text-amber-300"
                         )} 
                       />
                     </button>
@@ -583,13 +583,13 @@ function ExperienceDetailsInner() {
 
               {/* Review */}
               <div>
-                <label className="text-sm font-bold text-gray-700 mb-2 block">Quick Review (optional)</label>
+                <label className="text-sm font-bold text-foreground mb-2 block">Quick Review (optional)</label>
                 <textarea
                   value={checkinReview}
                   onChange={(e) => setCheckinReview(e.target.value)}
                   placeholder="What did your family think? Any tips for others?"
                   rows={3}
-                  className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:border-primary focus:outline-none resize-none"
+                  className="w-full rounded-xl border border-border p-3 text-sm focus:border-primary focus:outline-none resize-none"
                   data-testid="input-checkin-review"
                 />
               </div>
@@ -615,14 +615,14 @@ function ExperienceDetailsInner() {
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-6">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full">
-            <h3 className="font-heading text-lg font-bold text-gray-900 mb-2">Delete Experience?</h3>
-            <p className="text-sm text-gray-500 mb-6">
+            <h3 className="font-heading text-lg font-bold text-foreground mb-2">Delete Experience?</h3>
+            <p className="text-sm text-muted-foreground mb-6">
               Are you sure you want to delete "{experience.title}"? This will remove all comments and check-ins. This action cannot be undone.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 py-3 rounded-xl border border-gray-200 font-medium text-gray-700"
+                className="flex-1 py-3 rounded-xl border border-border font-medium text-foreground"
                 data-testid="button-cancel-delete"
               >
                 Cancel

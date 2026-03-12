@@ -245,7 +245,7 @@ export const ExploreMap = memo(function ExploreMap({
 
   if (!isLoaded) {
     return (
-      <div className={`relative h-full w-full bg-gray-100 flex items-center justify-center ${className}`}>
+      <div className={`relative h-full w-full bg-muted flex items-center justify-center ${className}`}>
         <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
       </div>
     );
@@ -283,7 +283,7 @@ export const ExploreMap = memo(function ExploreMap({
             icon={{
               path: google.maps.SymbolPath.CIRCLE,
               scale: 10,
-              fillColor: "#4ECDC4",
+              fillColor: "#1A1A1A",
               fillOpacity: 1,
               strokeColor: "#ffffff",
               strokeWeight: 2,
@@ -308,14 +308,14 @@ export const ExploreMap = memo(function ExploreMap({
                 alt={selectedExperience.title}
                 className="w-full h-20 object-cover rounded-lg mb-2"
               />
-              <h3 className="font-semibold text-sm text-gray-900">
+              <h3 className="font-semibold text-sm text-foreground">
                 {selectedExperience.title}
               </h3>
-              <p className="text-xs text-gray-500">{selectedExperience.locationName}</p>
+              <p className="text-xs text-muted-foreground">{selectedExperience.locationName}</p>
               <div className="flex gap-2 mt-1 text-xs">
                 <span className="text-primary font-medium">{selectedExperience.cost}</span>
-                <span className="text-gray-400">•</span>
-                <span className="text-gray-500">{selectedExperience.duration}</span>
+                <span className="text-muted-foreground">•</span>
+                <span className="text-muted-foreground">{selectedExperience.duration}</span>
               </div>
             </div>
           </InfoWindow>
@@ -335,7 +335,7 @@ export const ExploreMap = memo(function ExploreMap({
                   data-testid={`cluster-marker-${index}`}
                 >
                   {cluster.people.length === 1 ? (
-                    <div className="w-12 h-12 rounded-full border-3 border-white shadow-lg overflow-hidden bg-gray-200">
+                    <div className="w-12 h-12 rounded-full border-3 border-white shadow-lg overflow-hidden bg-border">
                       {cluster.people[0].avatar || cluster.people[0].profileImageUrl ? (
                         <img 
                           src={cluster.people[0].avatar || cluster.people[0].profileImageUrl || ''} 
@@ -378,7 +378,7 @@ export const ExploreMap = memo(function ExploreMap({
                     onClick={() => setSelectedPerson(person)}
                     data-testid={`person-marker-${person.id}`}
                   >
-                    <div className="w-12 h-12 rounded-full border-3 border-white shadow-lg overflow-hidden bg-gray-200">
+                    <div className="w-12 h-12 rounded-full border-3 border-white shadow-lg overflow-hidden bg-border">
                       {person.avatar || person.profileImageUrl ? (
                         <img 
                           src={person.avatar || person.profileImageUrl || ''} 
@@ -412,7 +412,7 @@ export const ExploreMap = memo(function ExploreMap({
               onClick={() => setLocation(`/family/${selectedPerson.id}`)}
             >
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-border flex-shrink-0">
                   {selectedPerson.avatar || selectedPerson.profileImageUrl ? (
                     <img 
                       src={selectedPerson.avatar || selectedPerson.profileImageUrl || ''} 
@@ -426,14 +426,14 @@ export const ExploreMap = memo(function ExploreMap({
                   )}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm text-gray-900">
+                  <h3 className="font-semibold text-sm text-foreground">
                     {selectedPerson.name || 'Family'}
                   </h3>
-                  <p className="text-xs text-gray-500">{selectedPerson.location || 'Unknown location'}</p>
+                  <p className="text-xs text-muted-foreground">{selectedPerson.location || 'Unknown location'}</p>
                 </div>
               </div>
               {selectedPerson.distance !== undefined && (
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-muted-foreground">
                   {selectedPerson.distance < 1 
                     ? `${(selectedPerson.distance * 5280).toFixed(0)} ft away`
                     : `${selectedPerson.distance.toFixed(1)} mi away`

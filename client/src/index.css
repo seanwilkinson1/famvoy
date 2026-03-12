@@ -33,86 +33,92 @@ html, body {
   --color-chart-3: hsl(var(--chart-3));
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --color-kindred-green: hsl(var(--kindred-green));
+  --color-kindred-blue: hsl(var(--kindred-blue));
+  --color-kindred-cream: hsl(var(--kindred-cream));
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-pill: 9999px;
 
   --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
   --font-heading: "Fraunces", Georgia, serif;
 }
 
 :root {
-  /* Warm Wanderlust Theme - Editorial travel magazine meets modern family */
-  --background: 40 33% 96%; /* Warm cream #FAF8F5 */
-  --foreground: 220 20% 18%; /* Rich charcoal */
+  /* Kindred Design Language — near-monochrome with green/blue accents */
+  --background: 30 18% 95%; /* Off-white #F5F3F0 */
+  --foreground: 220 15% 13%; /* Near-black #1A1A1A */
 
-  --card: 40 30% 99%; /* Warm white */
-  --card-foreground: 220 20% 18%;
+  --card: 0 0% 100%; /* White */
+  --card-foreground: 220 15% 13%;
 
-  --popover: 40 30% 99%;
-  --popover-foreground: 220 20% 18%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 15% 13%;
 
-  /* Primary: Rich Teal - deeper and more saturated */
-  --primary: 168 55% 38%; /* #2D9A87 */
+  /* Primary: Near-black — filled pill CTAs */
+  --primary: 220 15% 13%; /* #1A1A1A */
   --primary-foreground: 0 0% 100%;
 
-  /* Secondary: Warm Coral - richer and more vibrant */
-  --secondary: 12 76% 61%; /* #E07553 */
-  --secondary-foreground: 0 0% 100%;
+  /* Secondary: Light gray — outlined elements */
+  --secondary: 0 0% 82%; /* #D0D0D0 */
+  --secondary-foreground: 220 15% 13%;
 
-  --muted: 40 20% 92%;
-  --muted-foreground: 220 10% 50%;
+  --muted: 30 10% 92%;
+  --muted-foreground: 0 0% 61%; /* Medium gray #9B9B9B */
 
-  --accent: 168 40% 94%; /* Soft teal wash */
-  --accent-foreground: 168 55% 30%;
+  --accent: 145 45% 36%; /* Kindred green #2D8B4E */
+  --accent-foreground: 0 0% 100%;
 
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 40 20% 88%;
-  --input: 40 20% 88%;
-  --ring: 168 55% 38%;
+  --border: 0 0% 91%; /* Light gray #E8E8E8 */
+  --input: 0 0% 91%;
+  --ring: 220 15% 13%;
 
-  --radius: 1.25rem; /* Slightly larger for premium feel */
+  --radius: 0.75rem;
 
-  /* Custom brand colors */
-  --warm-coral: 12 76% 61%;
-  --warm-teal: 168 55% 38%;
-  --warm-cream: 40 33% 96%;
-  --warm-sand: 35 40% 90%;
-  --deep-navy: 220 50% 20%;
-  --forest: 160 40% 25%;
+  /* Kindred brand tokens */
+  --kindred-green: 145 45% 36%; /* #2D8B4E — trust, verification, availability */
+  --kindred-blue: 211 100% 50%; /* #007AFF — notifications, system links */
+  --kindred-cream: 30 18% 95%; /* #F5F3F0 — section backgrounds */
 }
 
 .dark {
-  --background: 220 30% 8%;
-  --foreground: 40 20% 95%;
+  --background: 220 20% 7%;
+  --foreground: 0 0% 95%;
 
-  --card: 220 25% 12%;
-  --card-foreground: 40 20% 95%;
+  --card: 220 20% 11%;
+  --card-foreground: 0 0% 95%;
 
-  --popover: 220 25% 12%;
-  --popover-foreground: 40 20% 95%;
+  --popover: 220 20% 11%;
+  --popover-foreground: 0 0% 95%;
 
-  --primary: 168 50% 50%;
-  --primary-foreground: 220 30% 8%;
+  --primary: 0 0% 95%;
+  --primary-foreground: 220 20% 7%;
 
-  --secondary: 12 65% 55%;
-  --secondary-foreground: 220 30% 8%;
+  --secondary: 0 0% 30%;
+  --secondary-foreground: 0 0% 95%;
 
-  --muted: 220 20% 18%;
-  --muted-foreground: 220 10% 60%;
+  --muted: 220 15% 16%;
+  --muted-foreground: 0 0% 55%;
 
-  --accent: 220 20% 18%;
-  --accent-foreground: 40 20% 95%;
+  --accent: 145 45% 42%;
+  --accent-foreground: 0 0% 100%;
 
-  --destructive: 0 62.8% 45%;
+  --destructive: 0 62% 45%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 220 20% 20%;
-  --input: 220 20% 20%;
-  --ring: 168 50% 50%;
+  --border: 220 15% 18%;
+  --input: 220 15% 18%;
+  --ring: 0 0% 95%;
+
+  --kindred-green: 145 45% 42%;
+  --kindred-blue: 211 100% 55%;
+  --kindred-cream: 220 20% 11%;
 }
 
 @layer base {
@@ -128,40 +134,13 @@ html, body {
 }
 
 @layer utilities {
-  /* Grain texture overlay for warmth */
-  .grain-overlay::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    opacity: 0.03;
-    z-index: 9999;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  }
-
-  /* Premium card shadows with color */
+  /* Kindred card shadows — neutral */
   .card-shadow {
-    box-shadow: 
-      0 1px 2px rgba(45, 154, 135, 0.04),
-      0 4px 12px rgba(45, 154, 135, 0.06),
-      0 12px 32px rgba(45, 154, 135, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
 
   .card-shadow-hover {
-    box-shadow: 
-      0 2px 4px rgba(45, 154, 135, 0.06),
-      0 8px 20px rgba(45, 154, 135, 0.1),
-      0 20px 48px rgba(45, 154, 135, 0.12);
-  }
-
-  .card-shadow-coral {
-    box-shadow: 
-      0 1px 2px rgba(224, 117, 83, 0.04),
-      0 4px 12px rgba(224, 117, 83, 0.06),
-      0 12px 32px rgba(224, 117, 83, 0.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   }
 
   /* Smooth transitions for all interactive elements */
@@ -214,17 +193,9 @@ html, body {
     letter-spacing: -0.02em;
   }
 
-  /* Warm gradient backgrounds */
-  .bg-warm-gradient {
-    background: linear-gradient(135deg, hsl(40 33% 96%) 0%, hsl(35 40% 92%) 100%);
-  }
-
-  .bg-teal-gradient {
-    background: linear-gradient(135deg, hsl(168 55% 38%) 0%, hsl(175 50% 45%) 100%);
-  }
-
-  .bg-coral-gradient {
-    background: linear-gradient(135deg, hsl(12 76% 61%) 0%, hsl(20 70% 55%) 100%);
+  /* Kindred holographic gradient — credit card, premium elements */
+  .bg-holographic {
+    background: linear-gradient(135deg, hsl(330 40% 90%) 0%, hsl(210 40% 88%) 40%, hsl(30 30% 92%) 100%);
   }
 }
 

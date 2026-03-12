@@ -103,7 +103,7 @@ export default function FamilyProfile() {
   if (!family) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-        <p className="text-gray-500 mb-4">Family not found</p>
+        <p className="text-muted-foreground mb-4">Family not found</p>
         <button 
           onClick={() => setLocation("/explore")}
           className="text-primary font-bold"
@@ -133,7 +133,7 @@ export default function FamilyProfile() {
           className="absolute top-4 left-4 rounded-full bg-white/80 backdrop-blur-sm p-2 shadow-sm"
           data-testid="button-back"
         >
-          <ArrowLeft className="h-5 w-5 text-gray-700" />
+          <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
 
         {/* Profile Image */}
@@ -149,11 +149,11 @@ export default function FamilyProfile() {
 
       {/* Profile Info */}
       <div className="mt-20 px-6 text-center">
-        <h1 className="font-heading text-2xl font-bold text-gray-900" data-testid="text-family-name">
+        <h1 className="font-heading text-2xl font-bold text-foreground" data-testid="text-family-name">
           {family.name}
         </h1>
         
-        <div className="mt-2 flex items-center justify-center gap-4 text-sm text-gray-500">
+        <div className="mt-2 flex items-center justify-center gap-4 text-sm text-muted-foreground">
           {family.location && (
             <div className="flex items-center gap-1">
               <MapPin className="h-4 w-4" />
@@ -169,7 +169,7 @@ export default function FamilyProfile() {
         </div>
 
         {family.bio && (
-          <p className="mt-4 text-gray-600" data-testid="text-family-bio">
+          <p className="mt-4 text-muted-foreground" data-testid="text-family-bio">
             {family.bio}
           </p>
         )}
@@ -196,7 +196,7 @@ export default function FamilyProfile() {
               disabled={followMutation.isPending}
               className={`flex items-center gap-2 rounded-full px-5 py-2.5 font-bold transition-colors ${
                 isFollowing 
-                  ? "bg-gray-100 text-gray-700 hover:bg-gray-200" 
+                  ? "bg-muted text-foreground hover:bg-border" 
                   : "bg-primary text-white hover:bg-primary/90"
               }`}
               data-testid="button-follow"
@@ -248,7 +248,7 @@ export default function FamilyProfile() {
           
           <TabsContent value="posts" className="mt-4">
             {formattedExperiences.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-muted-foreground">
                 No experiences shared yet
               </div>
             ) : (
@@ -262,28 +262,28 @@ export default function FamilyProfile() {
           
           <TabsContent value="done" className="mt-4">
             {checkins.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                <CheckCircle2 className="mx-auto h-10 w-10 text-gray-300 mb-2" />
+              <div className="text-center py-8 text-muted-foreground">
+                <CheckCircle2 className="mx-auto h-10 w-10 text-border mb-2" />
                 No check-ins yet
               </div>
             ) : (
               <div className="space-y-4">
                 {checkins.map((checkin: any) => (
                   <Link key={checkin.id} href={`/experience/${checkin.experience?.id}`}>
-                    <div className="rounded-xl bg-white p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
+                    <div className="rounded-xl bg-white p-4 shadow-sm border border-border cursor-pointer hover:shadow-md transition-shadow">
                       <div className="flex items-center gap-3">
                         <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
                           <CheckCircle2 className="h-6 w-6 text-green-600" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-900 truncate">{checkin.experience?.title}</p>
-                          <p className="text-sm text-gray-500">
+                          <p className="font-semibold text-foreground truncate">{checkin.experience?.title}</p>
+                          <p className="text-sm text-muted-foreground">
                             {checkin.createdAt ? format(new Date(checkin.createdAt), 'MMM d, yyyy') : 'Recently'}
                           </p>
                         </div>
                       </div>
                       {checkin.note && (
-                        <p className="mt-2 text-sm text-gray-600">{checkin.note}</p>
+                        <p className="mt-2 text-sm text-muted-foreground">{checkin.note}</p>
                       )}
                     </div>
                   </Link>
@@ -294,22 +294,22 @@ export default function FamilyProfile() {
           
           <TabsContent value="trips" className="mt-4">
             {confirmedTrips.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                <Plane className="mx-auto h-10 w-10 text-gray-300 mb-2" />
+              <div className="text-center py-8 text-muted-foreground">
+                <Plane className="mx-auto h-10 w-10 text-border mb-2" />
                 No confirmed trips yet
               </div>
             ) : (
               <div className="space-y-4">
                 {confirmedTrips.map((trip: any) => (
                   <Link key={trip.id} href={`/trip/${trip.id}`}>
-                    <div className="rounded-xl bg-white p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
+                    <div className="rounded-xl bg-white p-4 shadow-sm border border-border cursor-pointer hover:shadow-md transition-shadow">
                       <div className="flex items-center gap-3">
                         <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
                           <Plane className="h-6 w-6 text-blue-600" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-900 truncate">{trip.name}</p>
-                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <p className="font-semibold text-foreground truncate">{trip.name}</p>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             {trip.startDate && (
                               <span>{format(new Date(trip.startDate), 'MMM d')} - {trip.endDate ? format(new Date(trip.endDate), 'MMM d, yyyy') : '?'}</span>
                             )}
@@ -320,7 +320,7 @@ export default function FamilyProfile() {
                         </div>
                       </div>
                       {trip.destination && (
-                        <div className="mt-2 flex items-center gap-1 text-sm text-gray-600">
+                        <div className="mt-2 flex items-center gap-1 text-sm text-muted-foreground">
                           <MapPin className="h-4 w-4" />
                           {trip.destination}
                         </div>
@@ -335,19 +335,19 @@ export default function FamilyProfile() {
       </div>
 
       {/* Stats */}
-      <div className="mt-8 mx-6 rounded-2xl bg-gray-50 p-6">
+      <div className="mt-8 mx-6 rounded-2xl bg-muted p-6">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
           <div>
-            <div className="text-2xl font-bold text-gray-900">{formattedExperiences.length}</div>
-            <div className="text-sm text-gray-500">Experiences</div>
+            <div className="text-2xl font-bold text-foreground">{formattedExperiences.length}</div>
+            <div className="text-sm text-muted-foreground">Experiences</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-900">{followCounts?.followers || 0}</div>
-            <div className="text-sm text-gray-500">Followers</div>
+            <div className="text-2xl font-bold text-foreground">{followCounts?.followers || 0}</div>
+            <div className="text-sm text-muted-foreground">Followers</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-900">{followCounts?.following || 0}</div>
-            <div className="text-sm text-gray-500">Following</div>
+            <div className="text-2xl font-bold text-foreground">{followCounts?.following || 0}</div>
+            <div className="text-sm text-muted-foreground">Following</div>
           </div>
         </div>
       </div>

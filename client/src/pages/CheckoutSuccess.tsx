@@ -45,21 +45,21 @@ export default function CheckoutSuccess() {
             </div>
           </div>
 
-          <h1 className="font-heading text-2xl font-bold text-charcoal mb-2">
+          <h1 className="font-heading text-2xl font-bold text-foreground mb-2">
             Booking Confirmed!
           </h1>
-          <p className="text-gray-500 mb-6">
+          <p className="text-muted-foreground mb-6">
             Your booking has been successfully processed. You'll receive a confirmation email shortly.
           </p>
 
           {order && (
-            <div className="bg-white rounded-xl border border-gray-100 p-4 mb-6 text-left">
+            <div className="bg-white rounded-xl border border-border p-4 mb-6 text-left">
               <div className="flex items-center gap-2 mb-3">
-                <FileText className="h-5 w-5 text-gray-400" />
-                <span className="font-bold text-charcoal">Order #{order.id}</span>
+                <FileText className="h-5 w-5 text-muted-foreground" />
+                <span className="font-bold text-foreground">Order #{order.id}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-500">Total Paid</span>
+                <span className="text-muted-foreground">Total Paid</span>
                 <span className="font-heading text-xl font-bold text-primary">
                   {formatPrice(order.totalInCents)}
                 </span>

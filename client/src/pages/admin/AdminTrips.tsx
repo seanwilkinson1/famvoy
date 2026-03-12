@@ -149,7 +149,7 @@ export default function AdminTrips() {
           <CardContent className="p-0">
             {isLoading ? (
               <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : error ? (
               <div className="flex flex-col items-center justify-center h-64 text-slate-500">

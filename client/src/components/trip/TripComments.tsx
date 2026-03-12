@@ -43,7 +43,7 @@ export function TripComments({ tripId, currentUserId }: TripCommentsProps) {
 
   return (
     <div className="space-y-3">
-      <h4 className="font-display font-bold text-charcoal text-sm flex items-center gap-1.5">
+      <h4 className="font-display font-bold text-foreground text-sm flex items-center gap-1.5">
         <MessageCircle className="h-4 w-4" />
         Comments ({comments.length})
       </h4>
@@ -68,14 +68,14 @@ export function TripComments({ tripId, currentUserId }: TripCommentsProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-xs font-medium text-charcoal">
+                  <span className="text-xs font-medium text-foreground">
                     {comment.user?.firstName || "User"}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
                     {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
                   </span>
                 </div>
-                <p className="text-sm text-charcoal">{comment.content}</p>
+                <p className="text-sm text-foreground">{comment.content}</p>
               </div>
               {comment.userId === currentUserId && (
                 <button

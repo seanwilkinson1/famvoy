@@ -47,9 +47,9 @@ function ClerkApp() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-soft-beige flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
-          <p className="text-charcoal/60">{error}</p>
+          <p className="text-muted-foreground">{error}</p>
         </div>
       </div>
     );
@@ -57,8 +57,8 @@ function ClerkApp() {
 
   if (!publishableKey) {
     return (
-      <div className="min-h-screen bg-soft-beige flex items-center justify-center">
-        <div className="w-12 h-12 rounded-full border-4 border-warm-teal border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }

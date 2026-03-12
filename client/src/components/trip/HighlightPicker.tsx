@@ -85,7 +85,7 @@ export function HighlightPicker({ tripId, tripItemId, highlights }: HighlightPic
                 key={type.value}
                 onClick={() => addMutation.mutate(type.value)}
                 disabled={addMutation.isPending}
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors"
               >
                 <span>{type.emoji}</span>
                 <span>{type.label}</span>

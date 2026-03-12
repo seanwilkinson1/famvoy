@@ -125,56 +125,56 @@ export function DateRangePicker({
         <div 
           className={cn(
             "flex-1 p-3 rounded-xl border cursor-pointer transition-colors",
-            selecting === "start" ? "border-primary bg-primary/5" : "border-gray-200"
+            selecting === "start" ? "border-primary bg-primary/5" : "border-border"
           )}
           onClick={() => setSelecting("start")}
         >
-          <div className="text-xs text-gray-500 mb-1">Start Date</div>
+          <div className="text-xs text-muted-foreground mb-1">Start Date</div>
           <div className="flex items-center gap-2">
-            <CalendarIcon className="h-4 w-4 text-gray-400" />
-            <span className={cn("text-sm font-medium", !startDate && "text-gray-400")}>
+            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+            <span className={cn("text-sm font-medium", !startDate && "text-muted-foreground")}>
               {startDate ? format(new Date(startDate + "T00:00:00"), "MMM d, yyyy") : "Select date"}
             </span>
           </div>
         </div>
-        <div className="text-gray-300">→</div>
+        <div className="text-border">→</div>
         <div 
           className={cn(
             "flex-1 p-3 rounded-xl border cursor-pointer transition-colors",
-            selecting === "end" ? "border-primary bg-primary/5" : "border-gray-200"
+            selecting === "end" ? "border-primary bg-primary/5" : "border-border"
           )}
           onClick={() => setSelecting("end")}
         >
-          <div className="text-xs text-gray-500 mb-1">End Date</div>
+          <div className="text-xs text-muted-foreground mb-1">End Date</div>
           <div className="flex items-center gap-2">
-            <CalendarIcon className="h-4 w-4 text-gray-400" />
-            <span className={cn("text-sm font-medium", !endDate && "text-gray-400")}>
+            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+            <span className={cn("text-sm font-medium", !endDate && "text-muted-foreground")}>
               {endDate ? format(new Date(endDate + "T00:00:00"), "MMM d, yyyy") : "Select date"}
             </span>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 p-4">
+      <div className="bg-white rounded-2xl border border-border p-4">
         <div className="flex items-center justify-between mb-4">
           <button
             type="button"
             onClick={prevMonth}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-2 hover:bg-muted rounded-full transition-colors"
             data-testid="calendar-prev-month"
           >
-            <ChevronLeft className="h-5 w-5 text-gray-600" />
+            <ChevronLeft className="h-5 w-5 text-muted-foreground" />
           </button>
-          <h3 className="font-semibold text-charcoal">
+          <h3 className="font-semibold text-foreground">
             {format(currentMonth, "MMMM yyyy")}
           </h3>
           <button
             type="button"
             onClick={nextMonth}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-2 hover:bg-muted rounded-full transition-colors"
             data-testid="calendar-next-month"
           >
-            <ChevronRight className="h-5 w-5 text-gray-600" />
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
           </button>
         </div>
 
@@ -182,7 +182,7 @@ export function DateRangePicker({
           {weekDays.map((day, i) => (
             <div
               key={i}
-              className="h-10 flex items-center justify-center text-xs font-medium text-gray-400"
+              className="h-10 flex items-center justify-center text-xs font-medium text-muted-foreground"
             >
               {day}
             </div>
@@ -205,14 +205,14 @@ export function DateRangePicker({
                 key={day}
                 className={cn(
                   "h-10 relative flex items-center justify-center",
-                  inRange && !isStartDay && !isEndDay && "bg-gray-100"
+                  inRange && !isStartDay && !isEndDay && "bg-muted"
                 )}
               >
                 {isStartDay && inRange && parsedEndDate && !isSameDay(parsedStartDate!, parsedEndDate) && (
-                  <div className="absolute inset-y-0 right-0 w-1/2 bg-gray-100" />
+                  <div className="absolute inset-y-0 right-0 w-1/2 bg-muted" />
                 )}
                 {isEndDay && inRange && parsedStartDate && !isSameDay(parsedStartDate, parsedEndDate!) && (
-                  <div className="absolute inset-y-0 left-0 w-1/2 bg-gray-100" />
+                  <div className="absolute inset-y-0 left-0 w-1/2 bg-muted" />
                 )}
                 <button
                   type="button"
@@ -221,7 +221,7 @@ export function DateRangePicker({
                     "w-9 h-9 flex items-center justify-center text-sm font-medium relative z-10 transition-colors",
                     isStartDay && "bg-charcoal text-white rounded-full",
                     isEndDay && "bg-charcoal text-white rounded-full",
-                    !isStartDay && !isEndDay && "hover:bg-gray-200 rounded-full",
+                    !isStartDay && !isEndDay && "hover:bg-border rounded-full",
                     isTodayDay && !isStartDay && !isEndDay && "ring-1 ring-gray-300 rounded-full"
                   )}
                   data-testid={`calendar-day-${day}`}
@@ -235,7 +235,7 @@ export function DateRangePicker({
       </div>
 
       {startDate && endDate && (
-        <p className="text-xs text-center text-gray-500">
+        <p className="text-xs text-center text-muted-foreground">
           {Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} days selected
         </p>
       )}

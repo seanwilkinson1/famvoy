@@ -72,7 +72,7 @@ export default function BookletCover() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#FAF7F2]">
-        <Loader2 className="h-8 w-8 animate-spin text-stone-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -80,7 +80,7 @@ export default function BookletCover() {
   if (!data) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#FAF7F2]">
-        <p className="text-stone-500">Booklet not found</p>
+        <p className="text-muted-foreground">Booklet not found</p>
       </div>
     );
   }
@@ -91,12 +91,12 @@ export default function BookletCover() {
   return (
     <div className="min-h-screen bg-[#FAF7F2]">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#FAF7F2]/80 backdrop-blur-sm border-b border-stone-200/50">
+      <div className="sticky top-0 z-10 bg-[#FAF7F2]/80 backdrop-blur-sm border-b border-border/50">
         <div className="flex items-center gap-3 px-4 py-3 max-w-lg mx-auto">
           <button onClick={() => navigate(`/trip/${tripId}`)} className="p-1">
-            <ArrowLeft className="w-5 h-5 text-stone-600" />
+            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
           </button>
-          <span className="text-sm font-medium text-stone-600">Trip Booklet</span>
+          <span className="text-sm font-medium text-muted-foreground">Trip Booklet</span>
         </div>
       </div>
 
@@ -110,11 +110,11 @@ export default function BookletCover() {
           {booklet.coverEmoji && (
             <span className="text-5xl mb-3 block">{booklet.coverEmoji}</span>
           )}
-          <h1 className="text-3xl font-serif font-bold text-stone-900">
+          <h1 className="text-3xl font-heading font-medium text-foreground">
             {booklet.title}
           </h1>
           {booklet.subtitle && (
-            <p className="text-stone-500 mt-1">{booklet.subtitle}</p>
+            <p className="text-muted-foreground mt-1">{booklet.subtitle}</p>
           )}
         </div>
 
@@ -139,7 +139,7 @@ export default function BookletCover() {
 
         {/* Chapter List */}
         <div className="mt-8">
-          <h2 className="text-xs font-medium text-stone-500 uppercase tracking-wider mb-3">
+          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
             Chapters
           </h2>
           <div className="space-y-2">
@@ -150,20 +150,20 @@ export default function BookletCover() {
                   key={chapter.id}
                   href={`/trips/${tripId}/booklet/chapters?day=${chapter.dayNumber}`}
                 >
-                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-stone-100 hover:border-stone-200 transition-colors cursor-pointer">
+                  <div className="flex items-center gap-3 p-3 bg-card rounded-2xl border border-border hover:border-border transition-colors cursor-pointer">
                     <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-serif font-bold text-sm"
+                      className="w-10 h-10 rounded-2xl flex items-center justify-center text-white font-serif font-bold text-sm"
                       style={{ backgroundColor: chapter.accentColor }}
                     >
                       {chapter.dayNumber}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-stone-800 text-sm truncate">{chapter.title}</p>
-                      <p className="text-xs text-stone-500">
+                      <p className="font-medium text-foreground text-sm truncate">{chapter.title}</p>
+                      <p className="text-xs text-muted-foreground">
                         {dayMemories.length} {dayMemories.length === 1 ? "memory" : "memories"}
                       </p>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-stone-300 flex-shrink-0" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
                   </div>
                 </Link>
               );
@@ -174,12 +174,12 @@ export default function BookletCover() {
         {/* Quick Actions */}
         <div className="mt-8 flex gap-3">
           <Link href={`/trips/${tripId}/booklet/map`} className="flex-1">
-            <div className="p-3 bg-white rounded-lg border border-stone-100 text-center hover:border-stone-200 transition-colors cursor-pointer">
-              <span className="text-sm font-medium text-stone-700">View Map</span>
+            <div className="p-3 bg-card rounded-2xl border border-border text-center hover:border-border transition-colors cursor-pointer">
+              <span className="text-sm font-medium text-foreground">View Map</span>
             </div>
           </Link>
           <Link href={`/trips/${tripId}/booklet/publish`} className="flex-1">
-            <div className="p-3 bg-stone-800 rounded-lg text-center hover:bg-stone-700 transition-colors cursor-pointer">
+            <div className="p-3 bg-foreground rounded-2xl text-center hover:bg-foreground/90 transition-colors cursor-pointer">
               <span className="text-sm font-medium text-white">
                 {booklet.publishedAt ? "Published" : "Publish"}
               </span>

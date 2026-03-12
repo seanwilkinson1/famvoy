@@ -254,7 +254,7 @@ export default function ConciergeBookingWizard() {
   if (!trip) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-background p-6">
-        <p className="text-gray-500">Trip not found</p>
+        <p className="text-muted-foreground">Trip not found</p>
         <Button onClick={() => setLocation("/trips")} className="mt-4">
           Go back
         </Button>
@@ -855,17 +855,17 @@ export default function ConciergeBookingWizard() {
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden md:max-w-4xl md:mx-auto md:px-8">
-      <div className="fixed top-0 left-0 right-0 border-b border-gray-100 bg-white px-6 pt-14 md:pt-6 pb-4 shadow-sm z-20">
+      <div className="fixed top-0 left-0 right-0 border-b border-border bg-white px-6 pt-14 md:pt-6 pb-4 shadow-sm z-20">
         <div className="flex items-center gap-3 mb-4">
           <button 
             onClick={() => setLocation(`/trip/${tripId}`)} 
-            className="rounded-full bg-gray-100 p-2 active:scale-90"
+            className="rounded-full bg-muted p-2 active:scale-90"
             data-testid="button-back"
           >
-            <ChevronLeft className="h-6 w-6 text-gray-700" />
+            <ChevronLeft className="h-6 w-6 text-foreground" />
           </button>
           <div>
-            <h1 className="font-heading text-xl font-bold text-charcoal">Concierge Booking</h1>
+            <h1 className="font-heading text-xl font-bold text-foreground">Concierge Booking</h1>
             <p className="text-sm text-muted-foreground">{trip.name}</p>
           </div>
         </div>

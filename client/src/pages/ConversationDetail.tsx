@@ -45,7 +45,7 @@ export default function ConversationDetail() {
 
   if (!match || !conversation) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-muted flex items-center justify-center">
         <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
       </div>
     );
@@ -60,16 +60,16 @@ export default function ConversationDetail() {
     : otherMembers[0]?.user?.avatar;
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50 overflow-hidden md:max-w-4xl md:mx-auto md:px-8">
+    <div className="flex flex-1 flex-col bg-muted overflow-hidden md:max-w-4xl md:mx-auto md:px-8">
       {/* Header */}
-      <div className="border-b border-gray-100 bg-white px-4 py-4 shadow-sm z-10 flex-shrink-0">
+      <div className="border-b border-border bg-white px-4 py-4 shadow-sm z-10 flex-shrink-0">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setLocation("/chat")} 
-            className="rounded-full bg-gray-100 p-2 active:scale-90 transition-transform"
+            className="rounded-full bg-muted p-2 active:scale-90 transition-transform"
             data-testid="button-back"
           >
-            <ChevronLeft className="h-6 w-6 text-gray-700" />
+            <ChevronLeft className="h-6 w-6 text-foreground" />
           </button>
           
           <div className="flex items-center gap-3 flex-1">
@@ -89,9 +89,9 @@ export default function ConversationDetail() {
               </div>
             )}
             <div>
-              <h1 className="font-heading text-lg font-bold text-gray-900">{displayName}</h1>
+              <h1 className="font-heading text-lg font-bold text-foreground">{displayName}</h1>
               {conversation.isGroup && (
-                <p className="text-xs text-gray-500">{conversation.members?.length || 0} members</p>
+                <p className="text-xs text-muted-foreground">{conversation.members?.length || 0} members</p>
               )}
             </div>
           </div>
@@ -101,7 +101,7 @@ export default function ConversationDetail() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+          <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
             <p className="text-sm">No messages yet. Say hi!</p>
           </div>
         ) : messages.map((msg: any) => {
@@ -131,7 +131,7 @@ export default function ConversationDetail() {
                   />
                 )}
                 <p className={cn("text-sm", isMe ? "text-white" : "text-gray-800")}>{msg.content}</p>
-                <span className={cn("mt-1 block text-[10px]", isMe ? "text-primary-foreground/70" : "text-gray-400")}>
+                <span className={cn("mt-1 block text-[10px]", isMe ? "text-primary-foreground/70" : "text-muted-foreground")}>
                   {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
@@ -142,12 +142,12 @@ export default function ConversationDetail() {
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-gray-200 bg-white p-4 flex-shrink-0">
-        <div className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2">
+      <div className="border-t border-border bg-white p-4 flex-shrink-0">
+        <div className="flex items-center gap-2 rounded-full bg-muted px-4 py-2">
           <input 
             type="text" 
             placeholder="Message..." 
-            className="flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-gray-400"
+            className="flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && messageInput.trim() && sendMessageMutation.mutate()}

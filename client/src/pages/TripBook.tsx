@@ -84,7 +84,7 @@ export default function TripBook() {
   const totalDestinations = destinations.length;
 
   return (
-    <div className="min-h-screen bg-warm-cream md:max-w-5xl md:mx-auto md:px-8">
+    <div className="min-h-screen bg-background md:max-w-5xl md:mx-auto md:px-8">
       {/* Header */}
       <div className="bg-gradient-to-br from-primary to-primary/80 text-white">
         <div className="max-w-2xl mx-auto px-4 pt-4 pb-8">
@@ -124,15 +124,15 @@ export default function TripBook() {
       <div className="max-w-2xl mx-auto px-4 -mt-4">
         <div className="bg-white rounded-xl shadow-sm border p-4 grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
           <div>
-            <p className="text-2xl font-bold text-charcoal">{dayCount}</p>
+            <p className="text-2xl font-bold text-foreground">{dayCount}</p>
             <p className="text-xs text-muted-foreground">Days</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-charcoal">{totalDestinations}</p>
+            <p className="text-2xl font-bold text-foreground">{totalDestinations}</p>
             <p className="text-xs text-muted-foreground">Destinations</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-charcoal">{totalPhotos}</p>
+            <p className="text-2xl font-bold text-foreground">{totalPhotos}</p>
             <p className="text-xs text-muted-foreground">Photos</p>
           </div>
         </div>
@@ -166,7 +166,7 @@ export default function TripBook() {
               <div className="bg-gradient-to-r from-primary/5 to-transparent px-5 py-3 border-b">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-display font-bold text-charcoal">Day {day}</p>
+                    <p className="font-display font-bold text-foreground">Day {day}</p>
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
                       {format(dayDate, "EEEE, MMMM d")}
@@ -212,7 +212,7 @@ export default function TripBook() {
                         )}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-charcoal">{item.title}</p>
+                        <p className="text-sm font-medium text-foreground">{item.title}</p>
                         <p className="text-xs text-muted-foreground">{item.time}</p>
                         {checkin?.caption && (
                           <p className="text-xs text-muted-foreground mt-1 italic">
@@ -236,7 +236,7 @@ export default function TripBook() {
         {/* Highlights Summary */}
         {highlights.length > 0 && (
           <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5">
-            <h3 className="font-display font-bold text-charcoal mb-3">Trip Highlights</h3>
+            <h3 className="font-display font-bold text-foreground mb-3">Trip Highlights</h3>
             <div className="space-y-2">
               {highlights.map((h: any) => {
                 const item = items.find((i: any) => i.id === h.tripItemId);
@@ -261,7 +261,7 @@ export default function TripBook() {
         {/* Empty state */}
         {items.length === 0 && photos.length === 0 && (
           <div className="text-center py-12">
-            <Camera className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+            <Camera className="h-12 w-12 text-border mx-auto mb-3" />
             <p className="text-muted-foreground">
               No photos or check-ins yet. Add some memories to your trip!
             </p>

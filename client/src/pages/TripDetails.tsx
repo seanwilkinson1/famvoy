@@ -30,7 +30,7 @@ const ITEM_TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string;
   ACTIVITY: { icon: Ticket, color: "text-primary", bg: "bg-primary/10" },
   MEAL: { icon: Utensils, color: "text-orange-500", bg: "bg-orange-50" },
   STAY: { icon: BedDouble, color: "text-blue-500", bg: "bg-blue-50" },
-  TRANSPORT: { icon: Car, color: "text-gray-500", bg: "bg-gray-100" },
+  TRANSPORT: { icon: Car, color: "text-muted-foreground", bg: "bg-muted" },
 };
 
 interface LockedBookingOption {
@@ -122,7 +122,7 @@ function DraggableItemWrapper({ id, disabled, children }: DraggableItemWrapperPr
           className="absolute -left-1 top-3 cursor-grab active:cursor-grabbing touch-none opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white rounded-full p-1 shadow-sm"
           data-testid={`drag-handle-${id}`}
         >
-          <GripVertical className="h-4 w-4 text-gray-400" />
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
         </button>
         {children}
       </div>
@@ -407,7 +407,7 @@ export default function TripDetails() {
   if (!trip) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-background p-6">
-        <p className="text-gray-500">Trip not found</p>
+        <p className="text-muted-foreground">Trip not found</p>
         <button
           onClick={() => setLocation("/pods")}
           className="mt-4 text-primary font-bold"
@@ -497,14 +497,14 @@ export default function TripDetails() {
 
   return (
     <div className="flex h-screen flex-col bg-background md:pb-0 md:max-w-6xl md:mx-auto md:px-8">
-      <div className="border-b border-gray-100 bg-white px-6 pt-14 md:pt-6 pb-4 shadow-sm z-10 md:max-w-5xl md:mx-auto md:w-full">
+      <div className="border-b border-border bg-white px-6 pt-14 md:pt-6 pb-4 shadow-sm z-10 md:max-w-5xl md:mx-auto md:w-full">
         <div className="flex items-center justify-between mb-3">
           <button 
             onClick={() => setLocation(trip.podId ? `/pod/${trip.podId}` : "/trips")} 
-            className="rounded-full bg-gray-100 p-2 active:scale-90"
+            className="rounded-full bg-muted p-2 active:scale-90"
             data-testid="button-back"
           >
-            <ChevronLeft className="h-6 w-6 text-gray-700" />
+            <ChevronLeft className="h-6 w-6 text-foreground" />
           </button>
           <button
             onClick={() => setShowPreferencesModal(true)}
@@ -532,49 +532,49 @@ export default function TripDetails() {
         </div>
 
         <div className="flex items-center justify-between">
-          <h1 className="font-heading text-2xl font-bold text-charcoal">{trip.name}</h1>
+          <h1 className="font-heading text-2xl font-bold text-foreground">{trip.name}</h1>
           <div className="flex items-center gap-2">
             <button
               onClick={openEditTripModal}
-              className="rounded-full bg-gray-100 p-2 hover:bg-gray-200 transition-colors"
+              className="rounded-full bg-muted p-2 hover:bg-border transition-colors"
               data-testid="button-edit-trip"
             >
-              <Edit2 className="h-4 w-4 text-gray-600" />
+              <Edit2 className="h-4 w-4 text-muted-foreground" />
             </button>
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="rounded-full bg-gray-100 p-2 hover:bg-red-100 transition-colors"
+              className="rounded-full bg-muted p-2 hover:bg-red-100 transition-colors"
               data-testid="button-delete-trip"
             >
-              <Trash2 className="h-4 w-4 text-gray-600 hover:text-red-600" />
+              <Trash2 className="h-4 w-4 text-muted-foreground hover:text-red-600" />
             </button>
           </div>
         </div>
-        <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
+        <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
           <MapPin className="h-4 w-4" />
           <span>{trip.destination}</span>
-          <span className="text-gray-300">•</span>
+          <span className="text-border">•</span>
           <Calendar className="h-4 w-4" />
           <span>
             {format(startDate, "MMM d")} - {format(endDate, "MMM d, yyyy")}
           </span>
         </div>
         {trip.lifecyclePhase === "traveling" && (
-          <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-teal-50 border border-teal-200 rounded-xl">
+          <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-kindred-green/5 border border-kindred-green/20 rounded-xl">
             <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-teal-500" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-kindred-green opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-kindred-green/50" />
             </span>
-            <span className="text-sm font-medium text-teal-700">
+            <span className="text-sm font-medium text-kindred-green">
               Day {Math.max(1, Math.ceil((new Date().getTime() - new Date(trip.startDate + "T00:00:00").getTime()) / 86_400_000))} of your trip
             </span>
           </div>
         )}
         {trip.lifecyclePhase === "completed" && (
           <div className="mt-3 flex items-center gap-2">
-            <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-xl">
-              <CheckCircle2 className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-600">Trip completed</span>
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-xl">
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-muted-foreground">Trip completed</span>
             </div>
             <button
               onClick={() => setLocation(`/trip/${tripId}/book`)}
@@ -624,7 +624,7 @@ export default function TripDetails() {
               </div>
               <button
                 onClick={() => setLocation(`/trip/${tripId}/confirm`)}
-                className="shrink-0 bg-white text-primary px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-gray-50 transition-colors"
+                className="shrink-0 bg-white text-primary px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-muted transition-colors"
                 data-testid="button-start-confirming"
               >
                 <Check className="h-4 w-4" />
@@ -643,7 +643,7 @@ export default function TripDetails() {
               </div>
               <button
                 onClick={() => setLocation(`/trip/${tripId}/confirm`)}
-                className="shrink-0 bg-white text-orange-600 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-gray-50 transition-colors"
+                className="shrink-0 bg-white text-orange-600 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-muted transition-colors"
                 data-testid="button-continue-confirming"
               >
                 Continue
@@ -686,7 +686,7 @@ export default function TripDetails() {
                       <Check className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-charcoal">Trip Confirmed</h3>
+                      <h3 className="font-semibold text-foreground">Trip Confirmed</h3>
                       <p className="text-sm text-muted-foreground">Ready to book with concierge</p>
                     </div>
                   </div>
@@ -748,7 +748,7 @@ export default function TripDetails() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Users className="h-5 w-5 text-primary" />
-                    <h4 className="font-semibold text-charcoal">Concierge Booking</h4>
+                    <h4 className="font-semibold text-foreground">Concierge Booking</h4>
                   </div>
                   <span className={cn(
                     "text-xs font-medium px-2 py-1 rounded-full",
@@ -781,7 +781,7 @@ export default function TripDetails() {
                   <MapPin className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h4 className="font-semibold text-charcoal">{trip.destination}</h4>
+                  <h4 className="font-semibold text-foreground">{trip.destination}</h4>
                   <p className="text-sm text-muted-foreground">
                     {trip.items.length} activities across {numDays} days
                   </p>
@@ -792,10 +792,10 @@ export default function TripDetails() {
         )}
 
         {trip.items.length === 0 && !isGenerating && (
-          <div className="flex flex-col items-center justify-center h-64 text-gray-400 p-6">
+          <div className="flex flex-col items-center justify-center h-64 text-muted-foreground p-6">
             <Sparkles className="h-12 w-12 mb-3 opacity-30" />
             <p className="text-center mb-1 font-medium">No itinerary yet</p>
-            <p className="text-sm text-center text-gray-400 mb-4">
+            <p className="text-sm text-center text-muted-foreground mb-4">
               {trip.podId 
                 ? `Let AI create a personalized ${numDays}-day plan based on your pod's interests`
                 : `Let AI create a personalized ${numDays}-day plan based on your family's interests`
@@ -818,7 +818,7 @@ export default function TripDetails() {
               <Sparkles className="h-16 w-16 text-primary animate-pulse" />
               <div className="absolute inset-0 h-16 w-16 rounded-full bg-primary/20 animate-ping" />
             </div>
-            <p className="mt-4 font-heading font-bold text-charcoal">Creating your itinerary...</p>
+            <p className="mt-4 font-heading font-bold text-foreground">Creating your itinerary...</p>
             <p className="text-sm text-muted-foreground mt-1">This may take a moment</p>
           </div>
         )}
@@ -841,10 +841,10 @@ export default function TripDetails() {
                           {dayNumber}
                         </span>
                         <div>
-                          <h3 className="font-heading font-bold text-charcoal">
+                          <h3 className="font-heading font-bold text-foreground">
                             {dayTitle || `Day ${dayNumber}`}
                           </h3>
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-muted-foreground">
                             {format(dayDate, "EEEE, MMM d")}
                           </p>
                         </div>
@@ -857,10 +857,10 @@ export default function TripDetails() {
                             setAddItemDayNumber(dayNumber);
                             setShowAddItemModal(true);
                           }}
-                          className="rounded-full bg-gray-100 p-2 hover:bg-gray-200"
+                          className="rounded-full bg-muted p-2 hover:bg-border"
                           data-testid={`button-add-item-day-${dayNumber}`}
                         >
-                          <Plus className="h-4 w-4 text-gray-600" />
+                          <Plus className="h-4 w-4 text-muted-foreground" />
                         </button>
                         <button
                           onClick={() => regenerateDayMutation.mutate(dayNumber)}
@@ -884,7 +884,7 @@ export default function TripDetails() {
                     onDragEnd={(event) => handleDragEnd(event, dayNumber, dayItems)}
                   >
                     <SortableContext items={dayItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
-                  <div className="ml-4 pl-4 border-l-2 border-gray-200 space-y-3">
+                  <div className="ml-4 pl-4 border-l-2 border-border space-y-3">
                     {dayItems.map((item) => {
                       const config = ITEM_TYPE_CONFIG[item.itemType] || ITEM_TYPE_CONFIG.ACTIVITY;
                       const Icon = config.icon;
@@ -896,7 +896,7 @@ export default function TripDetails() {
                         <div
                           className={cn(
                             "relative bg-white rounded-xl border shadow-sm overflow-hidden",
-                            hasLockedOption ? "border-green-200" : "border-gray-100"
+                            hasLockedOption ? "border-green-200" : "border-border"
                           )}
                           data-testid={`item-${item.id}`}
                         >
@@ -922,8 +922,8 @@ export default function TripDetails() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-0.5">
-                                  <Clock className="h-3 w-3 text-gray-400" />
-                                  <span className="text-xs text-gray-500">{item.time}</span>
+                                  <Clock className="h-3 w-3 text-muted-foreground" />
+                                  <span className="text-xs text-muted-foreground">{item.time}</span>
                                   <span className={cn(
                                     "text-xs px-2 py-0.5 rounded-full font-medium",
                                     config.bg, config.color
@@ -936,11 +936,11 @@ export default function TripDetails() {
                                     </span>
                                   )}
                                 </div>
-                                <h4 className="font-bold text-charcoal">
+                                <h4 className="font-bold text-foreground">
                                   {hasLockedOption ? hasLockedOption.title : item.title}
                                 </h4>
                                 {(hasLockedOption?.description || item.description) && (
-                                  <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                                     {hasLockedOption?.description || item.description}
                                   </p>
                                 )}
@@ -954,13 +954,13 @@ export default function TripDetails() {
                                       </span>
                                     )}
                                     {hasLockedOption.rating && (
-                                      <span className="flex items-center gap-1 text-gray-600">
+                                      <span className="flex items-center gap-1 text-muted-foreground">
                                         <Star className="h-3.5 w-3.5 text-yellow-500" />
                                         {hasLockedOption.rating}
                                       </span>
                                     )}
                                     {hasLockedOption.provider && (
-                                      <span className="text-gray-400 text-xs">{hasLockedOption.provider}</span>
+                                      <span className="text-muted-foreground text-xs">{hasLockedOption.provider}</span>
                                     )}
                                   </div>
                                 )}
@@ -989,10 +989,10 @@ export default function TripDetails() {
                                   </button>
                                   <button
                                     onClick={() => openEditModal(item)}
-                                    className="rounded-full p-1.5 hover:bg-gray-100"
+                                    className="rounded-full p-1.5 hover:bg-muted"
                                     data-testid={`button-edit-item-${item.id}`}
                                   >
-                                    <Edit2 className="h-3.5 w-3.5 text-gray-400" />
+                                    <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
                                   </button>
                                   <button
                                     onClick={() => deleteItemMutation.mutate(item.id)}
@@ -1011,7 +1011,7 @@ export default function TripDetails() {
                     })}
 
                     {dayItems.length === 0 && (
-                      <div className="py-4 text-center text-sm text-gray-400">
+                      <div className="py-4 text-center text-sm text-muted-foreground">
                         No activities for this day
                       </div>
                     )}
@@ -1039,7 +1039,7 @@ export default function TripDetails() {
       {(showAddItemModal || editingItem) && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6">
           <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+            <div className="flex items-center justify-between p-4 border-b border-border">
               <h3 className="font-heading text-lg font-bold">
                 {editingItem ? "Edit Activity" : "Add Activity"}
               </h3>
@@ -1050,7 +1050,7 @@ export default function TripDetails() {
                   setEditingItem(null);
                   resetItemForm();
                 }}
-                className="rounded-full bg-gray-100 p-2"
+                className="rounded-full bg-muted p-2"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1059,7 +1059,7 @@ export default function TripDetails() {
               {!editingItem && podExperiences.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-bold text-gray-700">From Pod Experiences</label>
+                    <label className="text-sm font-bold text-foreground">From Pod Experiences</label>
                     <button
                       onClick={() => setShowExperiencePicker(!showExperiencePicker)}
                       className="text-xs text-primary font-medium"
@@ -1069,12 +1069,12 @@ export default function TripDetails() {
                     </button>
                   </div>
                   {showExperiencePicker && (
-                    <div className="space-y-2 mb-4 max-h-40 overflow-y-auto rounded-xl bg-gray-50 p-2">
+                    <div className="space-y-2 mb-4 max-h-40 overflow-y-auto rounded-xl bg-muted p-2">
                       {podExperiences.map((exp: any) => (
                         <button
                           key={exp.id}
                           onClick={() => handleAddFromExperience(exp)}
-                          className="w-full flex items-center gap-3 p-2 rounded-lg bg-white border border-gray-100 hover:border-primary transition-colors text-left"
+                          className="w-full flex items-center gap-3 p-2 rounded-lg bg-white border border-border hover:border-primary transition-colors text-left"
                           data-testid={`button-add-experience-${exp.id}`}
                         >
                           <img 
@@ -1084,7 +1084,7 @@ export default function TripDetails() {
                           />
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm truncate">{exp.title}</p>
-                            <p className="text-xs text-gray-500 truncate">{exp.locationName}</p>
+                            <p className="text-xs text-muted-foreground truncate">{exp.locationName}</p>
                           </div>
                           <Plus className="h-4 w-4 text-primary shrink-0" />
                         </button>
@@ -1094,40 +1094,40 @@ export default function TripDetails() {
                 </div>
               )}
               <div>
-                <label className="text-sm font-bold text-gray-700 mb-1 block">Time</label>
+                <label className="text-sm font-bold text-foreground mb-1 block">Time</label>
                 <input
                   type="text"
                   placeholder="e.g., 09:00 AM"
-                  className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:border-primary focus:outline-none"
+                  className="w-full rounded-xl border border-border p-3 text-sm focus:border-primary focus:outline-none"
                   value={itemForm.time}
                   onChange={(e) => setItemForm(f => ({ ...f, time: e.target.value }))}
                   data-testid="input-item-time"
                 />
               </div>
               <div>
-                <label className="text-sm font-bold text-gray-700 mb-1 block">Title</label>
+                <label className="text-sm font-bold text-foreground mb-1 block">Title</label>
                 <input
                   type="text"
                   placeholder="e.g., Visit the Zoo"
-                  className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:border-primary focus:outline-none"
+                  className="w-full rounded-xl border border-border p-3 text-sm focus:border-primary focus:outline-none"
                   value={itemForm.title}
                   onChange={(e) => setItemForm(f => ({ ...f, title: e.target.value }))}
                   data-testid="input-item-title"
                 />
               </div>
               <div>
-                <label className="text-sm font-bold text-gray-700 mb-1 block">Description (optional)</label>
+                <label className="text-sm font-bold text-foreground mb-1 block">Description (optional)</label>
                 <textarea
                   placeholder="What's planned?"
                   rows={2}
-                  className="w-full rounded-xl border border-gray-200 p-3 text-sm focus:border-primary focus:outline-none resize-none"
+                  className="w-full rounded-xl border border-border p-3 text-sm focus:border-primary focus:outline-none resize-none"
                   value={itemForm.description}
                   onChange={(e) => setItemForm(f => ({ ...f, description: e.target.value }))}
                   data-testid="input-item-description"
                 />
               </div>
               <div>
-                <label className="text-sm font-bold text-gray-700 mb-2 block">Type</label>
+                <label className="text-sm font-bold text-foreground mb-2 block">Type</label>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                   {Object.entries(ITEM_TYPE_CONFIG).map(([type, config]) => {
                     const Icon = config.icon;
@@ -1140,14 +1140,14 @@ export default function TripDetails() {
                           "flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all",
                           isSelected 
                             ? "border-primary bg-primary/5" 
-                            : "border-gray-100 hover:border-gray-200"
+                            : "border-border hover:border-border"
                         )}
                         data-testid={`button-type-${type.toLowerCase()}`}
                       >
-                        <Icon className={cn("h-5 w-5", isSelected ? config.color : "text-gray-400")} />
+                        <Icon className={cn("h-5 w-5", isSelected ? config.color : "text-muted-foreground")} />
                         <span className={cn(
                           "text-xs font-medium",
-                          isSelected ? "text-charcoal" : "text-gray-500"
+                          isSelected ? "text-foreground" : "text-muted-foreground"
                         )}>
                           {type}
                         </span>
@@ -1185,14 +1185,14 @@ export default function TripDetails() {
       {showPreferencesModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 pb-24">
           <div className="bg-white rounded-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100 shrink-0">
+            <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
               <div>
                 <h3 className="font-heading text-lg font-bold">Trip Preferences</h3>
-                <p className="text-sm text-gray-500">Help AI create a better itinerary</p>
+                <p className="text-sm text-muted-foreground">Help AI create a better itinerary</p>
               </div>
               <button 
                 onClick={() => setShowPreferencesModal(false)}
-                className="rounded-full bg-gray-100 p-2"
+                className="rounded-full bg-muted p-2"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1200,11 +1200,11 @@ export default function TripDetails() {
             <div className="p-4 space-y-5 overflow-y-auto flex-1">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-bold text-gray-700">
+                  <label className="text-sm font-bold text-foreground">
                     Destinations
                   </label>
                   {destinations.length === 0 && (
-                    <span className="text-xs text-gray-500">Add stops for your trip</span>
+                    <span className="text-xs text-muted-foreground">Add stops for your trip</span>
                   )}
                 </div>
                 
@@ -1213,56 +1213,56 @@ export default function TripDetails() {
                     {destinations.map((dest, idx) => (
                       <div 
                         key={dest.id} 
-                        className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl"
+                        className="flex items-center gap-2 p-3 bg-muted rounded-xl"
                         data-testid={`destination-${dest.id}`}
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-gray-400">{idx + 1}</span>
+                            <span className="text-xs font-bold text-muted-foreground">{idx + 1}</span>
                             <span className="font-medium text-sm truncate">{dest.destination}</span>
                           </div>
-                          <div className="flex items-center gap-1 mt-0.5 text-xs text-gray-500">
+                          <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
                             <Calendar className="h-3 w-3" />
                             <span>{format(new Date(dest.startDate), "MMM d")} - {format(new Date(dest.endDate), "MMM d")}</span>
                           </div>
                         </div>
                         <button
                           onClick={() => deleteDestinationMutation.mutate(dest.id)}
-                          className="p-1.5 rounded-full hover:bg-gray-200 transition-colors"
+                          className="p-1.5 rounded-full hover:bg-border transition-colors"
                           data-testid={`delete-destination-${dest.id}`}
                         >
-                          <X className="h-4 w-4 text-gray-400" />
+                          <X className="h-4 w-4 text-muted-foreground" />
                         </button>
                       </div>
                     ))}
                   </div>
                 )}
 
-                <div className="space-y-2 p-3 border border-dashed border-gray-200 rounded-xl bg-white">
+                <div className="space-y-2 p-3 border border-dashed border-border rounded-xl bg-white">
                   <input
                     type="text"
                     placeholder="Add destination (e.g., Paris, France)"
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                     value={newDestination.destination}
                     onChange={(e) => setNewDestination(d => ({ ...d, destination: e.target.value }))}
                     data-testid="input-new-destination"
                   />
                   <div className="flex gap-2">
                     <div className="flex-1">
-                      <label className="text-xs text-gray-500 mb-1 block">Start</label>
+                      <label className="text-xs text-muted-foreground mb-1 block">Start</label>
                       <input
                         type="date"
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                        className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                         value={newDestination.startDate}
                         onChange={(e) => setNewDestination(d => ({ ...d, startDate: e.target.value }))}
                         data-testid="input-new-destination-start"
                       />
                     </div>
                     <div className="flex-1">
-                      <label className="text-xs text-gray-500 mb-1 block">End</label>
+                      <label className="text-xs text-muted-foreground mb-1 block">End</label>
                       <input
                         type="date"
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                        className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
                         value={newDestination.endDate}
                         onChange={(e) => setNewDestination(d => ({ ...d, endDate: e.target.value }))}
                         data-testid="input-new-destination-end"
@@ -1279,7 +1279,7 @@ export default function TripDetails() {
                       }
                     }}
                     disabled={!newDestination.destination || !newDestination.startDate || !newDestination.endDate || addDestinationMutation.isPending}
-                    className="w-full rounded-lg bg-gray-100 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50 flex items-center justify-center gap-1"
+                    className="w-full rounded-lg bg-muted py-2 text-sm font-medium text-foreground hover:bg-border disabled:opacity-50 flex items-center justify-center gap-1"
                     data-testid="button-add-destination"
                   >
                     <Plus className="h-4 w-4" />
@@ -1288,10 +1288,10 @@ export default function TripDetails() {
                 </div>
               </div>
 
-              <div className="h-px bg-gray-100" />
+              <div className="h-px bg-muted" />
 
               <div>
-                <label className="text-sm font-bold text-gray-700 mb-2 block">
+                <label className="text-sm font-bold text-foreground mb-2 block">
                   Trip Pace
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -1303,24 +1303,24 @@ export default function TripDetails() {
                         "p-3 rounded-xl border-2 text-center transition-all",
                         preferences.pace === option.value
                           ? "border-primary bg-primary/5"
-                          : "border-gray-100 hover:border-gray-200"
+                          : "border-border hover:border-border"
                       )}
                       data-testid={`button-pace-${option.value}`}
                     >
                       <span className={cn(
                         "text-sm font-bold block",
-                        preferences.pace === option.value ? "text-primary" : "text-charcoal"
+                        preferences.pace === option.value ? "text-primary" : "text-foreground"
                       )}>
                         {option.label}
                       </span>
-                      <span className="text-xs text-gray-500">{option.description}</span>
+                      <span className="text-xs text-muted-foreground">{option.description}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className="text-sm font-bold text-gray-700 mb-2 block">
+                <label className="text-sm font-bold text-foreground mb-2 block">
                   Age Groups
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -1339,7 +1339,7 @@ export default function TripDetails() {
                         "px-3 py-1.5 rounded-full text-sm transition-all",
                         preferences.kidsAgeGroups.includes(age)
                           ? "bg-primary text-white"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          : "bg-muted text-foreground hover:bg-border"
                       )}
                       data-testid={`button-age-${age.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`}
                     >
@@ -1350,7 +1350,7 @@ export default function TripDetails() {
               </div>
 
               <div>
-                <label className="text-sm font-bold text-gray-700 mb-2 block">
+                <label className="text-sm font-bold text-foreground mb-2 block">
                   Trip Interests
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -1369,7 +1369,7 @@ export default function TripDetails() {
                         "px-3 py-1.5 rounded-full text-sm transition-all",
                         preferences.tripInterests.includes(interest)
                           ? "bg-accent text-white"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          : "bg-muted text-foreground hover:bg-border"
                       )}
                       data-testid={`button-interest-${interest.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`}
                     >
@@ -1399,7 +1399,7 @@ export default function TripDetails() {
                   <input
                     type="text"
                     placeholder="Add custom interest..."
-                    className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                    className="flex-1 px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         const value = e.currentTarget.value.trim();
@@ -1436,10 +1436,10 @@ export default function TripDetails() {
               </div>
 
             </div>
-            <div className="shrink-0 bg-white p-4 pt-2 border-t border-gray-100 flex gap-3">
+            <div className="shrink-0 bg-white p-4 pt-2 border-t border-border flex gap-3">
               <button
                 onClick={() => generateMutation.mutate(undefined)}
-                className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50"
+                className="flex-1 rounded-xl border border-border py-3 text-sm font-bold text-foreground hover:bg-muted"
                 data-testid="button-skip-preferences"
               >
                 Skip
@@ -1461,66 +1461,66 @@ export default function TripDetails() {
       {showEditTripModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="p-4 border-b border-border flex items-center justify-between">
               <h3 className="font-heading font-bold text-lg">Edit Trip</h3>
               <button
                 onClick={() => setShowEditTripModal(false)}
-                className="rounded-full bg-gray-100 p-2"
+                className="rounded-full bg-muted p-2"
                 data-testid="button-close-edit-trip"
               >
-                <X className="h-5 w-5 text-gray-600" />
+                <X className="h-5 w-5 text-muted-foreground" />
               </button>
             </div>
             <div className="p-4 space-y-4">
               <div>
-                <label className="text-sm font-bold text-gray-700 mb-1 block">Trip Name</label>
+                <label className="text-sm font-bold text-foreground mb-1 block">Trip Name</label>
                 <input
                   type="text"
                   value={tripForm.name}
                   onChange={(e) => setTripForm(f => ({ ...f, name: e.target.value }))}
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                  className="w-full rounded-xl border border-border px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                   placeholder="Enter trip name"
                   data-testid="input-trip-name"
                 />
               </div>
               <div>
-                <label className="text-sm font-bold text-gray-700 mb-1 block">Destination</label>
+                <label className="text-sm font-bold text-foreground mb-1 block">Destination</label>
                 <input
                   type="text"
                   value={tripForm.destination}
                   onChange={(e) => setTripForm(f => ({ ...f, destination: e.target.value }))}
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                  className="w-full rounded-xl border border-border px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                   placeholder="Enter destination"
                   data-testid="input-trip-destination"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-bold text-gray-700 mb-1 block">Start Date</label>
+                  <label className="text-sm font-bold text-foreground mb-1 block">Start Date</label>
                   <input
                     type="date"
                     value={tripForm.startDate}
                     onChange={(e) => setTripForm(f => ({ ...f, startDate: e.target.value }))}
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                    className="w-full rounded-xl border border-border px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                     data-testid="input-trip-start-date"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-bold text-gray-700 mb-1 block">End Date</label>
+                  <label className="text-sm font-bold text-foreground mb-1 block">End Date</label>
                   <input
                     type="date"
                     value={tripForm.endDate}
                     onChange={(e) => setTripForm(f => ({ ...f, endDate: e.target.value }))}
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                    className="w-full rounded-xl border border-border px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                     data-testid="input-trip-end-date"
                   />
                 </div>
               </div>
             </div>
-            <div className="p-4 pt-2 border-t border-gray-100 flex gap-3">
+            <div className="p-4 pt-2 border-t border-border flex gap-3">
               <button
                 onClick={() => setShowEditTripModal(false)}
-                className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50"
+                className="flex-1 rounded-xl border border-border py-3 text-sm font-bold text-foreground hover:bg-muted"
                 data-testid="button-cancel-edit-trip"
               >
                 Cancel
@@ -1551,11 +1551,11 @@ export default function TripDetails() {
                 <Trash2 className="h-8 w-8 text-red-600" />
               </div>
               <h3 className="font-heading font-bold text-lg mb-2">Delete Trip?</h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 This will permanently delete "{trip.name}" and all its itinerary items. This action cannot be undone.
               </p>
             </div>
-            <div className="p-4 border-t border-gray-100 space-y-2">
+            <div className="p-4 border-t border-border space-y-2">
               <button
                 onClick={() => deleteTripMutation.mutate()}
                 disabled={deleteTripMutation.isPending}
@@ -1566,7 +1566,7 @@ export default function TripDetails() {
               </button>
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="w-full rounded-xl border border-gray-200 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50"
+                className="w-full rounded-xl border border-border py-3 text-sm font-bold text-foreground hover:bg-muted"
                 data-testid="button-cancel-delete"
               >
                 Cancel

@@ -35,7 +35,7 @@ export function ExperienceMap({ lat, lng, title, className = "" }: ExperienceMap
 
   if (!isLoaded) {
     return (
-      <div className={`h-full w-full bg-gray-100 flex items-center justify-center ${className}`}>
+      <div className={`h-full w-full bg-muted flex items-center justify-center ${className}`}>
         <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
@@ -53,7 +53,7 @@ export function ExperienceMap({ lat, lng, title, className = "" }: ExperienceMap
         icon={{
           path: google.maps.SymbolPath.CIRCLE,
           scale: 10,
-          fillColor: "#4ECDC4",
+          fillColor: "#1A1A1A",
           fillOpacity: 1,
           strokeColor: "#ffffff",
           strokeWeight: 2,
