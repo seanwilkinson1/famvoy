@@ -9,8 +9,6 @@ import { formatExperience } from "@/lib/types";
 import { useState, useEffect, useMemo } from "react";
 import { MapPin, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
-import { TravelingNowSection } from "@/components/feed/TravelingNowSection";
-import { RecentAdventuresSection } from "@/components/feed/RecentAdventuresSection";
 
 const filters = ["All", "Nearby", "Free", "1–2 hrs", "Indoor", "Outdoor", "Toddler-friendly"];
 
@@ -126,7 +124,23 @@ export default function Home() {
     staleTime: 60 * 60 * 1000,
   });
 
+  const { data: nearbyExperiences = [] } = useQuery({
+    queryKey: ["nearbyExperiences", currentUser?.locationLat, currentUser?.locationLng],
+    queryFn: () => api.families.getNearby(currentUser!.locationLat!, currentUser!.locationLng!, 50),
+    enabled: !!currentUser?.locationLat && !!currentUser?.locationLng,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const formattedExperiences = experiences.map(exp => formatExperience(exp as any));
+
+  const currentTrip = useMemo(() => {
+    const today = new Date();
+    return (userTrips as any[]).find((t: any) => {
+      const start = new Date(t.startDate + "T00:00:00");
+      const end = new Date(t.endDate + "T23:59:59");
+      return today >= start && today <= end;
+    });
+  }, [userTrips]);
 
   const upcomingTrips = useMemo(() => {
     return (userTrips as any[])
@@ -205,68 +219,47 @@ export default function Home() {
           <div className="space-y-10 mt-2">
             {activeFilter === "All" ? (
               <>
-                {/* Traveling Now */}
-                <TravelingNowSection />
-
-                {/* Your Trips */}
-                {upcomingTrips.length > 0 && (
+                {/* 1. Your Current Trip — hero card */}
+                {currentTrip && (
                   <section>
-                    <div className="mb-4 flex items-center justify-between">
-                      <h2 className="font-heading text-xl font-medium text-foreground">Your Trips</h2>
-                      <Link href="/trips">
-                        <button className="text-sm font-medium text-muted-foreground flex items-center gap-0.5 hover:text-foreground transition-colors">
-                          See all <ChevronRight className="h-4 w-4" />
-                        </button>
-                      </Link>
-                    </div>
-                    <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
-                      <div className="flex w-max space-x-4 pb-4 px-6">
-                        {upcomingTrips.map((trip: any) => (
-                          <TripCard key={trip.id} trip={trip} horizontal />
-                        ))}
+                    <Link href={`/trip/${currentTrip.id}`}>
+                      <div className="relative rounded-2xl overflow-hidden bg-card cursor-pointer transition-all hover:-translate-y-0.5">
+                        {currentTrip.coverImage ? (
+                          <img
+                            src={currentTrip.coverImage}
+                            alt={currentTrip.destination}
+                            className="w-full h-48 object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-48 bg-muted" />
+                        )}
+                        {/* Live badge */}
+                        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500 text-white text-xs font-medium z-10">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+                          </span>
+                          You're traveling!
+                        </div>
+                        <div className="p-4 space-y-1">
+                          <h2 className="font-heading text-xl font-medium text-foreground">{currentTrip.name}</h2>
+                          <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <MapPin className="h-3.5 w-3.5" />
+                            {currentTrip.destination}
+                          </p>
+                          <p className="text-xs font-medium text-foreground pt-1">You're on this trip! →</p>
+                        </div>
                       </div>
-                    </div>
+                    </Link>
                   </section>
                 )}
 
-                {/* Recent Adventures */}
-                <RecentAdventuresSection />
-
-                {/* Anniversary Memories */}
-                {memories.length > 0 && (
-                  <section>
-                    <div className="mb-4">
-                      <h2 className="font-heading text-xl font-medium text-foreground">On This Day</h2>
-                    </div>
-                    {memories.map((trip: any) => {
-                      const yearsAgo = new Date().getFullYear() - new Date(trip.startDate + "T00:00:00").getFullYear();
-                      return (
-                        <Link key={trip.id} href={`/trip/${trip.id}/book`}>
-                          <div className="rounded-2xl bg-card border border-border p-5 cursor-pointer hover:bg-muted/50 transition-all">
-                            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-1">
-                              {yearsAgo} year{yearsAgo !== 1 ? "s" : ""} ago today
-                            </p>
-                            <h3 className="font-semibold text-[15px] text-foreground">
-                              {trip.name}
-                            </h3>
-                            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {trip.destination}
-                            </p>
-                            <p className="text-xs font-medium text-foreground mt-2">
-                              Relive this trip →
-                            </p>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </section>
-                )}
-
-                {/* Discover Experiences */}
+                {/* 2. Discover Near You / Discover Experiences */}
                 <section>
                   <div className="mb-4 flex items-center justify-between">
-                    <h2 className="font-heading text-xl font-medium text-foreground">Discover</h2>
+                    <h2 className="font-heading text-xl font-medium text-foreground">
+                      {currentUser?.locationLat && currentUser?.locationLng ? "Discover Near You" : "Discover Experiences"}
+                    </h2>
                     <Link href="/explore">
                       <button className="text-sm font-medium text-muted-foreground flex items-center gap-0.5 hover:text-foreground transition-colors">
                         See all <ChevronRight className="h-4 w-4" />
@@ -275,18 +268,23 @@ export default function Home() {
                   </div>
                   <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
                     <div className="flex w-max space-x-4 pb-4 px-6">
-                      {formattedExperiences.slice(0, 6).map((exp) => (
-                        <ExperienceCard key={exp.id} experience={exp} horizontal />
-                      ))}
+                      {currentUser?.locationLat && currentUser?.locationLng
+                        ? nearbyExperiences.slice(0, 6).map((exp: any) => (
+                            <ExperienceCard key={exp.id} experience={formatExperience(exp)} horizontal />
+                          ))
+                        : formattedExperiences.slice(0, 6).map((exp) => (
+                            <ExperienceCard key={exp.id} experience={exp} horizontal />
+                          ))
+                      }
                     </div>
                   </div>
                 </section>
 
-                {/* People You Might Know */}
+                {/* 3. People Like You */}
                 {suggestedFamilies.length > 0 && (
                   <section>
                     <div className="mb-4 flex items-center justify-between">
-                      <h2 className="font-heading text-xl font-medium text-foreground">People You Might Know</h2>
+                      <h2 className="font-heading text-xl font-medium text-foreground">People Like You</h2>
                       <Link href="/explore">
                         <button className="text-sm font-medium text-muted-foreground flex items-center gap-0.5 hover:text-foreground transition-colors">
                           See all <ChevronRight className="h-4 w-4" />
@@ -322,11 +320,11 @@ export default function Home() {
                   </section>
                 )}
 
-                {/* Pods You Might Like */}
+                {/* 4. Public Pods */}
                 {suggestedPods.length > 0 && (
                   <section>
                     <div className="mb-4 flex items-center justify-between">
-                      <h2 className="font-heading text-xl font-medium text-foreground">Pods You Might Like</h2>
+                      <h2 className="font-heading text-xl font-medium text-foreground">Public Pods</h2>
                       <Link href="/pods">
                         <button className="text-sm font-medium text-muted-foreground flex items-center gap-0.5 hover:text-foreground transition-colors">
                           See all <ChevronRight className="h-4 w-4" />
@@ -340,6 +338,58 @@ export default function Home() {
                         ))}
                       </div>
                     </div>
+                  </section>
+                )}
+
+                {/* 5. Your Trips */}
+                {upcomingTrips.length > 0 && (
+                  <section>
+                    <div className="mb-4 flex items-center justify-between">
+                      <h2 className="font-heading text-xl font-medium text-foreground">Your Trips</h2>
+                      <Link href="/trips">
+                        <button className="text-sm font-medium text-muted-foreground flex items-center gap-0.5 hover:text-foreground transition-colors">
+                          See all <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </Link>
+                    </div>
+                    <div className="overflow-x-auto overflow-y-visible -mx-6 no-scrollbar">
+                      <div className="flex w-max space-x-4 pb-4 px-6">
+                        {upcomingTrips.map((trip: any) => (
+                          <TripCard key={trip.id} trip={trip} horizontal />
+                        ))}
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                {/* 6. On This Day Memories */}
+                {memories.length > 0 && (
+                  <section>
+                    <div className="mb-4">
+                      <h2 className="font-heading text-xl font-medium text-foreground">On This Day</h2>
+                    </div>
+                    {memories.map((trip: any) => {
+                      const yearsAgo = new Date().getFullYear() - new Date(trip.startDate + "T00:00:00").getFullYear();
+                      return (
+                        <Link key={trip.id} href={`/trip/${trip.id}/book`}>
+                          <div className="rounded-2xl bg-card border border-border p-5 cursor-pointer hover:bg-muted/50 transition-all">
+                            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-1">
+                              {yearsAgo} year{yearsAgo !== 1 ? "s" : ""} ago today
+                            </p>
+                            <h3 className="font-semibold text-[15px] text-foreground">
+                              {trip.name}
+                            </h3>
+                            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {trip.destination}
+                            </p>
+                            <p className="text-xs font-medium text-foreground mt-2">
+                              Relive this trip →
+                            </p>
+                          </div>
+                        </Link>
+                      );
+                    })}
                   </section>
                 )}
               </>
