@@ -48,7 +48,7 @@ export function BottomNav() {
         className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/50 bg-card/95 backdrop-blur-xl md:hidden"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)' }}
       >
-        <div className="mx-auto flex max-w-md items-end justify-around px-2 pt-2 pb-2">
+        <div className="mx-auto flex max-w-md items-center justify-around px-2 pt-2 pb-1">
           {tabs.map((tab) => {
             const isCenter = tab.href === "create";
 
