@@ -3,9 +3,10 @@ import { PodCard } from "@/components/shared/PodCard";
 import { TripCard } from "@/components/shared/TripCard";
 import { ImageUpload } from "@/components/shared/ImageUpload";
 import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
+import { GoogleMapsProvider } from "@/components/shared/GoogleMapsProvider";
 import { VerificationBadge } from "@/components/shared/VerificationBadge";
 import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Heart, Globe, Quote, Plane, Users, Share2, UserPlus, ChevronLeft, Star, Instagram, Linkedin, Twitter, Briefcase, Search } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -14,7 +15,7 @@ import { useClerk } from "@clerk/clerk-react";
 import { useLocation } from "wouter";
 import type { FamilyMember } from "@shared/schema";
 import { FAMILY_VALUES, LANGUAGES, FAMILY_ROLES, AGE_GROUPS } from "@/lib/constants";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil } from "lucide-react";
 import { ImageCarousel } from "@/components/ui/image-carousel";
 import {
   Sheet,
@@ -36,28 +37,183 @@ const BADGE_ICONS: Record<string, string> = {
   "Community Builder": "🤝",
 };
 
-const INTEREST_EMOJIS: Record<string, string> = {
-  "Hiking": "🥾",
-  "Beach": "🏖️",
-  "Parks": "🌳",
-  "Museums": "🏛️",
-  "Playgrounds": "🛝",
-  "Sports": "⚽",
-  "Art": "🎨",
-  "Music": "🎵",
-  "Cooking": "🍳",
-  "Reading": "📚",
-  "Travel": "✈️",
-  "Camping": "🏕️",
-  "Biking": "🚲",
-  "Swimming": "🏊",
-  "Dance": "💃",
-  "Food": "🍕",
-  "Nature": "🌿",
-  "Science": "🔬",
-};
+const INTEREST_TAGS = [
+  { label: "Potterheads", emoji: "⚡" },
+  { label: "LOTR fans", emoji: "🧙" },
+  { label: "Swifties", emoji: "🎤" },
+  { label: "Disney obsessed", emoji: "🏰" },
+  { label: "Trekkies", emoji: "🖖" },
+  { label: "Marvel fans", emoji: "🦸" },
+  { label: "Gamers", emoji: "🎮" },
+  { label: "Bookworms", emoji: "📚" },
+  { label: "Movie buffs", emoji: "🎬" },
+  { label: "Podcast people", emoji: "🎙️" },
+  { label: "Music lovers", emoji: "🎵" },
+  { label: "Electronic music", emoji: "🎧" },
+  { label: "Jazz lovers", emoji: "🎷" },
+  { label: "True crime fans", emoji: "🔍" },
+  { label: "Foodies", emoji: "🍕" },
+  { label: "Home chefs", emoji: "👨‍🍳" },
+  { label: "Coffee snobs", emoji: "☕" },
+  { label: "Wine enthusiasts", emoji: "🍷" },
+  { label: "Craft beer crew", emoji: "🍺" },
+  { label: "Surfers", emoji: "🏄" },
+  { label: "Skiers", emoji: "⛷️" },
+  { label: "Snowboarders", emoji: "🏂" },
+  { label: "Hikers", emoji: "🥾" },
+  { label: "Campers", emoji: "🏕️" },
+  { label: "Rock climbers", emoji: "🧗" },
+  { label: "Pickleball fam", emoji: "🏓" },
+  { label: "Runners", emoji: "🏃" },
+  { label: "Cyclists", emoji: "🚴" },
+  { label: "Peloton", emoji: "🚲" },
+  { label: "Horseback riding", emoji: "🐴" },
+  { label: "Swimmers", emoji: "🏊" },
+  { label: "Martial arts", emoji: "🥋" },
+  { label: "Yoga family", emoji: "🧘" },
+  { label: "CrossFit", emoji: "🏋️" },
+  { label: "Sports fans", emoji: "📺" },
+  { label: "Soccer family", emoji: "⚽" },
+  { label: "Baseball family", emoji: "⚾" },
+  { label: "Basketball family", emoji: "🏀" },
+  { label: "Golf family", emoji: "⛳" },
+  { label: "Tennis family", emoji: "🎾" },
+  { label: "National Parks collectors", emoji: "🏞️" },
+  { label: "Passport stampers", emoji: "🛂" },
+  { label: "Beach family", emoji: "🏖️" },
+  { label: "Mountain family", emoji: "🏔️" },
+  { label: "Road trippers", emoji: "🚗" },
+  { label: "Van life curious", emoji: "🚐" },
+  { label: "Backpackers", emoji: "🎒" },
+  { label: "Luxury travelers", emoji: "✨" },
+  { label: "Budget travelers", emoji: "💰" },
+  { label: "Solo travel", emoji: "🧳" },
+  { label: "Faith-based travelers", emoji: "🙏" },
+  { label: "Military family", emoji: "🎖️" },
+  { label: "Expat family", emoji: "🌍" },
+  { label: "Homeschoolers", emoji: "🏠" },
+  { label: "Entrepreneurs", emoji: "🚀" },
+  { label: "Remote workers", emoji: "💻" },
+  { label: "Engineers", emoji: "⚙️" },
+  { label: "Scientists", emoji: "🔬" },
+  { label: "Artists", emoji: "🎨" },
+  { label: "Writers", emoji: "✍️" },
+  { label: "Photographers", emoji: "📷" },
+  { label: "Crafters", emoji: "🧵" },
+  { label: "Makers", emoji: "🔧" },
+  { label: "Woodworkers", emoji: "🪵" },
+  { label: "Home renovators", emoji: "🔨" },
+  { label: "Gardeners", emoji: "🌱" },
+  { label: "Plant parents", emoji: "🪴" },
+  { label: "Animal lovers", emoji: "🐾" },
+  { label: "Dog people", emoji: "🐕" },
+  { label: "Cat people", emoji: "🐈" },
+  { label: "Horse people", emoji: "🐎" },
+  { label: "Farm life", emoji: "🌾" },
+  { label: "Volunteers", emoji: "🤝" },
+  { label: "Environmentalists", emoji: "♻️" },
+  { label: "Minimalists", emoji: "🪷" },
+  { label: "Preppers", emoji: "🏗️" },
+  { label: "Crypto curious", emoji: "🪙" },
+  { label: "AI enthusiasts", emoji: "🤖" },
+  { label: "Tech geeks", emoji: "🖥️" },
+  { label: "Vintage collectors", emoji: "🕰️" },
+  { label: "Thrifters", emoji: "🛍️" },
+  { label: "Fashion forward", emoji: "👗" },
+  { label: "Dancers", emoji: "💃" },
+  { label: "Theater kids", emoji: "🎭" },
+  { label: "Choir family", emoji: "🎶" },
+  { label: "Magicians", emoji: "🪄" },
+  { label: "Comedians", emoji: "😂" },
+  { label: "Astronomers", emoji: "🔭" },
+  { label: "Birders", emoji: "🐦" },
+  { label: "Fishermen", emoji: "🎣" },
+  { label: "Hunters", emoji: "🦌" },
+  { label: "Paddle boarding", emoji: "🏄‍♀️" },
+  { label: "Kayakers", emoji: "🛶" },
+  { label: "Empty nesters", emoji: "🪺" },
+  { label: "Differently abled", emoji: "♿" },
+  { label: "Neurodivergent family", emoji: "🧠" },
+];
 
-const INTEREST_OPTIONS = Object.keys(INTEREST_EMOJIS);
+const INTEREST_EMOJI_MAP: Record<string, string> = Object.fromEntries(
+  INTEREST_TAGS.map(t => [t.label, t.emoji])
+);
+
+function ProfilePhotoGrid({
+  photos,
+  onUpload,
+  onEditCaption,
+}: {
+  photos: { url: string; caption: string }[];
+  onUpload: (file: File, slotIndex: number) => void;
+  onEditCaption: (index: number) => void;
+}) {
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const slots = 6;
+
+  const handleSlotClick = (index: number) => {
+    if (photos[index]) {
+      onEditCaption(index);
+    } else {
+      fileInputRefs.current[index]?.click();
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onUpload(file, index);
+      e.target.value = "";
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-3 grid-rows-3 gap-2 max-w-xs mx-auto aspect-square">
+      {Array.from({ length: slots }).map((_, i) => {
+        const photo = photos[i];
+        const isHero = i === 0;
+        return (
+          <button
+            key={i}
+            type="button"
+            onClick={() => handleSlotClick(i)}
+            className={cn(
+              "relative rounded-2xl overflow-hidden border-2 transition-colors",
+              isHero && "col-span-2 row-span-2",
+              photo ? "border-transparent" : "border-dashed border-border hover:border-foreground/30"
+            )}
+          >
+            {photo ? (
+              <>
+                <img src={photo.url} alt="" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center">
+                  <Pencil className="w-5 h-5 text-white opacity-0 hover:opacity-100 transition-opacity" />
+                </div>
+                {photo.caption && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-2 py-1">
+                    <p className="text-white text-xs truncate">{photo.caption}</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground">
+                <Plus className="w-6 h-6" />
+              </div>
+            )}
+            <input
+              ref={(el) => { fileInputRefs.current[i] = el; }}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleFileChange(e, i)}
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function ProfileInner() {
   const [activeTab, setActiveTab] = useState<"experiences" | "saved" | "trips">("experiences");
@@ -89,7 +245,17 @@ function ProfileInner() {
     familyMotto: "",
     favoriteTraditions: "",
     dreamVacation: "",
+    profession: "",
+    company: "",
+    instagramHandle: "",
+    linkedinUrl: "",
+    twitterHandle: "",
+    personalUrl: "",
   });
+  const [editPhotos, setEditPhotos] = useState<{ url: string; caption: string }[]>([]);
+  const [captionEditIndex, setCaptionEditIndex] = useState<number | null>(null);
+  const [captionDraft, setCaptionDraft] = useState("");
+  const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
   const [, setLocation] = useLocation();
 
   const queryClient = useQueryClient();
@@ -133,6 +299,12 @@ function ProfileInner() {
         familyMotto: currentUser.familyMotto || "",
         favoriteTraditions: currentUser.favoriteTraditions || "",
         dreamVacation: currentUser.dreamVacation || "",
+        profession: currentUser.profession || "",
+        company: currentUser.company || "",
+        instagramHandle: currentUser.instagramHandle || "",
+        linkedinUrl: currentUser.linkedinUrl || "",
+        twitterHandle: currentUser.twitterHandle || "",
+        personalUrl: currentUser.personalUrl || "",
       });
     }
   }, [currentUser, isEditing]);
@@ -149,13 +321,18 @@ function ProfileInner() {
       const res = await fetch('/api/auth/user/profile', {
         method: 'PATCH',
         headers,
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({
+          ...editForm,
+          avatar: editPhotos[0]?.url || editForm.avatar,
+          profilePhotos: editPhotos,
+        }),
       });
       if (!res.ok) throw new Error('Failed to update profile');
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      queryClient.invalidateQueries({ queryKey: ["profilePhotos"] });
       setIsEditing(false);
     },
   });
@@ -264,6 +441,46 @@ function ProfileInner() {
     enabled: !!currentUser,
   });
 
+  useEffect(() => {
+    if (profilePhotos.length > 0 && !isEditing) {
+      setEditPhotos(profilePhotos.map(p => ({ url: p.url, caption: p.caption || "" })));
+    }
+  }, [profilePhotos, isEditing]);
+
+  const handlePhotoUpload = async (file: File, slotIndex: number) => {
+    setUploadingSlot(slotIndex);
+    try {
+      const url = await api.upload.image(file);
+      setEditPhotos(prev => {
+        const next = [...prev];
+        while (next.length <= slotIndex) {
+          next.push({ url: "", caption: "" });
+        }
+        next[slotIndex] = { url, caption: next[slotIndex]?.caption || "" };
+        return next.filter(p => p.url);
+      });
+    } catch (err) {
+      console.error("Upload failed:", err);
+    } finally {
+      setUploadingSlot(null);
+    }
+  };
+
+  const handleEditCaption = (index: number) => {
+    setCaptionDraft(editPhotos[index]?.caption || "");
+    setCaptionEditIndex(index);
+  };
+
+  const saveCaption = () => {
+    if (captionEditIndex !== null) {
+      setEditPhotos(prev =>
+        prev.map((p, i) => i === captionEditIndex ? { ...p, caption: captionDraft } : p)
+      );
+      setCaptionEditIndex(null);
+      setCaptionDraft("");
+    }
+  };
+
   const formattedUserExperiences = userExperiences.map(exp => formatExperience(exp as any));
   const formattedSavedExperiences = savedExperiences.map(exp => formatExperience(exp as any));
 
@@ -315,23 +532,64 @@ function ProfileInner() {
         </div>
 
         <div className="space-y-6 mb-8">
-          <div className="flex flex-col items-center">
-            <ImageUpload
-              currentImage={editForm.avatar}
-              onImageChange={(url) => setEditForm({ ...editForm, avatar: url })}
-              size="lg"
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Photos</label>
+            <p className="text-xs text-muted-foreground mb-3">Add up to 6 photos — tap a photo to add a caption</p>
+
+            {uploadingSlot !== null && (
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-3">
+                <div className="w-4 h-4 rounded-full border-2 border-foreground border-t-transparent animate-spin" />
+                Uploading...
+              </div>
+            )}
+
+            <ProfilePhotoGrid
+              photos={editPhotos}
+              onUpload={handlePhotoUpload}
+              onEditCaption={handleEditCaption}
             />
-            <p className="text-xs text-muted-foreground mt-2">Tap to change photo</p>
+
+            {/* Caption edit dialog */}
+            {captionEditIndex !== null && (
+              <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 p-4">
+                <div className="bg-background rounded-2xl p-6 w-full max-w-md space-y-4">
+                  <h3 className="font-medium text-foreground">Add a caption</h3>
+                  <input
+                    type="text"
+                    value={captionDraft}
+                    onChange={(e) => setCaptionDraft(e.target.value)}
+                    className="w-full border border-border rounded-xl px-4 py-3 text-sm outline-none focus:border-foreground"
+                    placeholder="What's happening in this photo?"
+                    autoFocus
+                    maxLength={100}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setCaptionEditIndex(null); setCaptionDraft(""); }}
+                      className="flex-1 py-3 rounded-full border border-border text-sm font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={saveCaption}
+                      className="flex-1 py-3 rounded-full bg-foreground text-background text-sm font-medium"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Family Name</label>
+            <label className="block text-sm font-medium text-foreground mb-2">What is your Name?</label>
             <input
               type="text"
               value={editForm.name}
               onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
               className="w-full rounded-xl border border-border bg-background p-4 text-base focus:border-foreground focus:outline-none"
-              placeholder="Your family name"
+              placeholder="Your name"
               data-testid="input-edit-name"
             />
           </div>
@@ -361,23 +619,110 @@ function ProfileInner() {
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Profession</label>
+            <div className="flex items-center rounded-xl border border-border bg-background overflow-hidden">
+              <span className="pl-4 text-muted-foreground"><Briefcase className="w-4 h-4" /></span>
+              <input
+                type="text"
+                value={editForm.profession}
+                onChange={(e) => setEditForm({ ...editForm, profession: e.target.value })}
+                className="w-full p-4 text-base bg-transparent focus:outline-none"
+                placeholder="e.g., Designer, Teacher"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Company</label>
+            <div className="flex items-center rounded-xl border border-border bg-background overflow-hidden">
+              <span className="pl-4 text-muted-foreground"><Briefcase className="w-4 h-4" /></span>
+              <input
+                type="text"
+                value={editForm.company}
+                onChange={(e) => setEditForm({ ...editForm, company: e.target.value })}
+                className="w-full p-4 text-base bg-transparent focus:outline-none"
+                placeholder="Company or organization"
+              />
+            </div>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-foreground mb-2">Interests</label>
             <div className="flex flex-wrap gap-2">
-              {INTEREST_OPTIONS.map((interest) => (
+              {INTEREST_TAGS.map((tag) => (
                 <button
-                  key={interest}
-                  onClick={() => toggleInterest(interest)}
+                  key={tag.label}
+                  onClick={() => toggleInterest(tag.label)}
                   className={cn(
                     "rounded-full px-4 py-2 text-sm font-medium transition-all border",
-                    editForm.interests.includes(interest)
+                    editForm.interests.includes(tag.label)
                       ? "bg-foreground text-background border-foreground"
                       : "bg-background text-muted-foreground border-border hover:bg-muted"
                   )}
-                  data-testid={`button-interest-${interest.toLowerCase()}`}
+                  data-testid={`button-interest-${tag.label.toLowerCase()}`}
                 >
-                  {INTEREST_EMOJIS[interest]} {interest}
+                  {tag.emoji} {tag.label}
                 </button>
               ))}
+              {/* Show any custom/legacy interests not in the standard tags */}
+              {editForm.interests
+                .filter(i => !INTEREST_TAGS.some(t => t.label === i))
+                .map((interest) => (
+                  <button
+                    key={interest}
+                    onClick={() => toggleInterest(interest)}
+                    className="rounded-full px-4 py-2 text-sm font-medium transition-all border bg-foreground text-background border-foreground"
+                    data-testid={`button-interest-${interest.toLowerCase()}`}
+                  >
+                    {interest}
+                  </button>
+                ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Social Links</label>
+            <div className="space-y-3">
+              <div className="flex items-center rounded-xl border border-border bg-background overflow-hidden">
+                <span className="pl-4 text-muted-foreground"><Instagram className="w-4 h-4" /></span>
+                <input
+                  type="text"
+                  value={editForm.instagramHandle}
+                  onChange={(e) => setEditForm({ ...editForm, instagramHandle: e.target.value })}
+                  className="w-full p-4 text-base bg-transparent focus:outline-none"
+                  placeholder="Instagram handle"
+                />
+              </div>
+              <div className="flex items-center rounded-xl border border-border bg-background overflow-hidden">
+                <span className="pl-4 text-muted-foreground"><Linkedin className="w-4 h-4" /></span>
+                <input
+                  type="text"
+                  value={editForm.linkedinUrl}
+                  onChange={(e) => setEditForm({ ...editForm, linkedinUrl: e.target.value })}
+                  className="w-full p-4 text-base bg-transparent focus:outline-none"
+                  placeholder="LinkedIn URL"
+                />
+              </div>
+              <div className="flex items-center rounded-xl border border-border bg-background overflow-hidden">
+                <span className="pl-4 text-muted-foreground"><Twitter className="w-4 h-4" /></span>
+                <input
+                  type="text"
+                  value={editForm.twitterHandle}
+                  onChange={(e) => setEditForm({ ...editForm, twitterHandle: e.target.value })}
+                  className="w-full p-4 text-base bg-transparent focus:outline-none"
+                  placeholder="Twitter handle"
+                />
+              </div>
+              <div className="flex items-center rounded-xl border border-border bg-background overflow-hidden">
+                <span className="pl-4 text-muted-foreground"><Globe className="w-4 h-4" /></span>
+                <input
+                  type="text"
+                  value={editForm.personalUrl}
+                  onChange={(e) => setEditForm({ ...editForm, personalUrl: e.target.value })}
+                  className="w-full p-4 text-base bg-transparent focus:outline-none"
+                  placeholder="Personal website"
+                />
+              </div>
             </div>
           </div>
 
@@ -775,7 +1120,7 @@ function ProfileInner() {
                 <p className="text-sm text-muted-foreground mt-1">Share your first family adventure!</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                 {[...formattedUserExperiences].reverse().map((exp) => (
                   <ExperienceCard key={exp.id} experience={exp} />
                 ))}
@@ -795,7 +1140,7 @@ function ProfileInner() {
                 <p className="text-sm text-muted-foreground mt-1">Join a pod and start planning!</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 {userTrips.map((trip: any) => (
                   <TripCard key={trip.id} trip={trip} />
                 ))}
@@ -815,7 +1160,7 @@ function ProfileInner() {
                 <p className="text-sm text-muted-foreground mt-1">Save experiences you want to try!</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                 {[...formattedSavedExperiences].reverse().map((exp) => (
                   <ExperienceCard key={exp.id} experience={exp} />
                 ))}
@@ -981,7 +1326,7 @@ function ProfileInner() {
                 <div className="flex flex-wrap gap-2">
                   {currentUser.interests.map((interest) => (
                     <span key={interest} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-border text-sm text-foreground">
-                      {INTEREST_EMOJIS[interest] || "🌟"} {interest}
+                      {INTEREST_EMOJI_MAP[interest] || "🌟"} {interest}
                     </span>
                   ))}
                 </div>
@@ -1270,5 +1615,9 @@ function AddMemberModal({
 }
 
 export default function Profile() {
-  return <ProfileInner />;
+  return (
+    <GoogleMapsProvider>
+      <ProfileInner />
+    </GoogleMapsProvider>
+  );
 }

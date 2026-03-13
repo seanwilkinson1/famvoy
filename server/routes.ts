@@ -264,6 +264,7 @@ export async function registerRoutes(
         'kids', 'interests', 'bio', 'avatar', 'familyValues', 'languages',
         'pets', 'familyMotto', 'favoriteTraditions', 'dreamVacation',
         'firstName', 'lastName', 'profileImageUrl', 'email',
+        'profession', 'company', 'instagramHandle', 'linkedinUrl', 'twitterHandle', 'personalUrl',
       ];
       const sanitizedData: Record<string, any> = {};
       for (const key of allowedFields) {
@@ -272,6 +273,27 @@ export async function registerRoutes(
         }
       }
       const updatedUser = await storage.updateUserProfile(user.id, sanitizedData);
+
+      // Handle profile photos if provided
+      if (req.body.profilePhotos && Array.isArray(req.body.profilePhotos)) {
+        const photos = req.body.profilePhotos as { url: string; caption?: string }[];
+        await storage.deleteProfilePhotosByUser(user.id);
+        for (let i = 0; i < photos.length; i++) {
+          if (photos[i].url) {
+            await storage.createProfilePhoto({
+              userId: user.id,
+              url: photos[i].url,
+              caption: photos[i].caption || null,
+              sortOrder: i,
+            });
+          }
+        }
+        // Update avatar to first photo for backward compat
+        if (photos[0]?.url) {
+          await storage.updateUserProfile(user.id, { avatar: photos[0].url });
+        }
+      }
+
       res.json(updatedUser);
     } catch (error) {
       console.error("Error updating profile:", error);

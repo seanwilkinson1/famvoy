@@ -48,25 +48,40 @@ export function TripCard({ trip, className, horizontal = false }: TripCardProps)
         )}
         data-testid={`card-trip-${trip.id}`}
       >
-        {/* Image */}
-        <div className="relative">
-          <ImageCarousel
-            images={images}
-            alt={trip.destination}
-            aspectRatio={horizontal ? "h-36" : "aspect-[16/10]"}
-          />
+        {/* Image — only show when a real cover image exists */}
+        {images.length > 0 && (
+          <div className="relative">
+            <ImageCarousel
+              images={images}
+              alt={trip.destination}
+              aspectRatio={horizontal ? "h-36" : "aspect-[16/10]"}
+            />
 
-          {/* Live indicator */}
-          {isLive && (
-            <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500 text-white text-xs font-medium z-10">
+            {/* Live indicator */}
+            {isLive && (
+              <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500 text-white text-xs font-medium z-10">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+                </span>
+                Live
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Live indicator when no image */}
+        {images.length === 0 && isLive && (
+          <div className="px-4 pt-3">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500 text-white text-xs font-medium">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
               </span>
               Live
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Content */}
         <div className="p-4 space-y-1.5">
