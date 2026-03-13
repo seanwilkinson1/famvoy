@@ -15,13 +15,20 @@ interface ExperienceCardProps {
 }
 
 export function ExperienceCard({ experience, className, horizontal = false }: ExperienceCardProps) {
-  const [isSaved, setIsSaved] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: currentUser } = useQuery({
     queryKey: ["currentUser"],
     queryFn: api.users.getMe,
   });
+
+  const { data: savedExperiences = [] } = useQuery({
+    queryKey: ["savedExperiences", currentUser?.id],
+    queryFn: () => currentUser ? api.users.getSavedExperiences(currentUser.id) : [],
+    enabled: !!currentUser,
+  });
+
+  const isSaved = savedExperiences.some((e: any) => e.id === experience.id);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -33,7 +40,6 @@ export function ExperienceCard({ experience, className, horizontal = false }: Ex
       }
     },
     onSuccess: () => {
-      setIsSaved(!isSaved);
       queryClient.invalidateQueries({ queryKey: ["savedExperiences"] });
     },
   });

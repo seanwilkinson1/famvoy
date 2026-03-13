@@ -16,7 +16,6 @@ import { GoogleMapsProvider } from "@/components/shared/GoogleMapsProvider";
 function ExperienceDetailsInner() {
   const [match, params] = useRoute("/experience/:id");
   const [, setLocation] = useLocation();
-  const [isSaved, setIsSaved] = useState(false);
   const [showAddToPodModal, setShowAddToPodModal] = useState(false);
   const [showCheckinModal, setShowCheckinModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -65,6 +64,32 @@ function ExperienceDetailsInner() {
     queryKey: ["hasCheckedIn", experienceId],
     queryFn: () => api.checkins.hasCheckedIn(experienceId),
     enabled: experienceId > 0 && !!user,
+  });
+
+  const { data: currentUser } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: api.users.getMe,
+  });
+
+  const { data: savedExperiences = [] } = useQuery({
+    queryKey: ["savedExperiences", currentUser?.id],
+    queryFn: () => currentUser ? api.users.getSavedExperiences(currentUser.id) : [],
+    enabled: !!currentUser,
+  });
+
+  const isSaved = savedExperiences.some((e: any) => e.id === experienceId);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (isSaved) {
+        await api.experiences.unsave(experienceId);
+      } else {
+        await api.experiences.save(experienceId);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["savedExperiences"] });
+    },
   });
 
   const checkinMutation = useMutation({
@@ -208,8 +233,8 @@ function ExperienceDetailsInner() {
             >
               <Share2 className="h-5 w-5" />
             </button>
-            <button 
-              onClick={() => setIsSaved(!isSaved)}
+            <button
+              onClick={(e) => { e.preventDefault(); saveMutation.mutate(); }}
               className="rounded-full bg-white/20 backdrop-blur-md p-2 text-white hover:bg-white/30 transition-colors"
               data-testid="button-save"
             >
