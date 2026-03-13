@@ -1,7 +1,7 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
 import { ExploreMap, MapBounds } from "@/components/shared/ExploreMap";
 import { GoogleMapsProvider, useGoogleMapsContext } from "@/components/shared/GoogleMapsProvider";
-import { Search, Navigation, X, MapPin, Filter, Loader2, Users, Eye, EyeOff, Check, List, Map as MapIcon, ChevronDown, Calendar } from "lucide-react";
+import { Search, Navigation, X, MapPin, Filter, Loader2, Users, Eye, EyeOff, Check, List, Map as MapIcon, ChevronDown, Calendar, Star } from "lucide-react";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -789,9 +789,14 @@ function ExploreInner() {
                     <h3 className="font-heading text-lg font-bold text-foreground mb-1">
                       {selectedExperience.title}
                     </h3>
-                    <p className="text-sm text-muted-foreground mb-3">
+                    <p className="text-sm text-muted-foreground mb-1">
                       {selectedExperience.locationName}
                     </p>
+                    {(selectedExperience as any).creator?.name && (
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Added by {(selectedExperience as any).creator.name}
+                      </p>
+                    )}
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
                       {selectedExperience.duration && (
                         <span>{selectedExperience.duration}</span>
@@ -806,6 +811,18 @@ function ExploreInner() {
                         <>
                           <span>·</span>
                           <span>{selectedExperience.ages}</span>
+                        </>
+                      )}
+                      {(selectedExperience as any).rating > 0 && (
+                        <>
+                          <span>·</span>
+                          <span className="flex items-center gap-1">
+                            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                            {(selectedExperience as any).rating}
+                            {(selectedExperience as any).ratingCount > 0 && (
+                              <span className="text-muted-foreground">({(selectedExperience as any).ratingCount})</span>
+                            )}
+                          </span>
                         </>
                       )}
                     </div>
