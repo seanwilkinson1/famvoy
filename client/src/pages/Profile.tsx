@@ -578,7 +578,7 @@ function ProfileInner() {
                 return filtered.map((user: any) => (
                   <button
                     key={user.id}
-                    onClick={() => { setFollowSheet(null); setFollowSearch(""); setLocation(`/family-profile/${user.id}`); }}
+                    onClick={() => { setFollowSheet(null); setFollowSearch(""); setLocation(`/family/${user.id}`); }}
                     className="flex items-center gap-3 w-full py-3 border-b border-border/50 last:border-0 text-left hover:bg-muted/30 rounded-lg px-2 transition-colors"
                   >
                     {user.avatar || user.profileImageUrl ? (
@@ -1109,7 +1109,7 @@ function ProfileInner() {
               return filtered.map((user: any) => (
                 <button
                   key={user.id}
-                  onClick={() => { setFollowSheet(null); setFollowSearch(""); setLocation(`/family-profile/${user.id}`); }}
+                  onClick={() => { setFollowSheet(null); setFollowSearch(""); setLocation(`/family/${user.id}`); }}
                   className="flex items-center gap-3 w-full py-3 border-b border-border/50 last:border-0 text-left hover:bg-muted/30 rounded-lg px-2 transition-colors"
                 >
                   {user.avatar || user.profileImageUrl ? (
