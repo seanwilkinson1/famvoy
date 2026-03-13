@@ -194,7 +194,7 @@ export default function FamilyProfile() {
   return (
     <div className="min-h-screen bg-background pb-32 md:pb-8 md:max-w-5xl md:mx-auto md:px-8">
       {/* Top bar — back arrow */}
-      <div className="flex justify-start items-center px-6 pt-16 md:pt-8 pb-2">
+      <div className="flex justify-start items-center px-6 pt-4 md:pt-8 pb-2">
         <button
           onClick={() => window.history.back()}
           className="p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors"

@@ -510,7 +510,7 @@ function ProfileInner() {
   // Edit mode
   if (isEditing) {
     return (
-      <div className="min-h-screen bg-background pt-14 md:pt-8 pb-32 md:pb-8 px-6 md:max-w-4xl md:mx-auto">
+      <div className="min-h-screen bg-background pt-4 md:pt-8 pb-32 md:pb-8 px-6 md:max-w-4xl md:mx-auto">
         <div className="mb-6 flex justify-between">
           <button
             onClick={() => setIsEditing(false)}
@@ -964,7 +964,7 @@ function ProfileInner() {
   return (
     <div className="min-h-screen bg-background pb-32 md:pb-8 md:max-w-5xl md:mx-auto md:px-8">
       {/* Top bar — Instagram-style corner icon */}
-      <div className="flex justify-end items-center px-6 pt-16 md:pt-8 pb-2">
+      <div className="flex justify-end items-center px-6 pt-4 md:pt-8 pb-2">
         <button
           onClick={() => setLocation("/settings")}
           className="p-2 -mr-2 text-muted-foreground hover:text-foreground transition-colors"
