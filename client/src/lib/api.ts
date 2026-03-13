@@ -184,7 +184,13 @@ export const api = {
       if (!res.ok) throw new Error("Failed to fetch family members");
       return res.json();
     },
-    
+
+    getProfilePhotos: async (userId: number): Promise<{ id: number; url: string; caption: string | null; sortOrder: number }[]> => {
+      const res = await fetch(`${API_BASE}/users/${userId}/profile-photos`);
+      if (!res.ok) throw new Error("Failed to fetch profile photos");
+      return res.json();
+    },
+
     getCheckins: async (userId: number): Promise<any[]> => {
       const res = await fetch(`${API_BASE}/users/${userId}/checkins`);
       if (!res.ok) throw new Error("Failed to fetch user check-ins");
@@ -919,6 +925,16 @@ export const api = {
     getLiveState: async (tripId: number): Promise<any> => {
       const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/live`);
       if (!res.ok) throw new Error("Failed to fetch live state");
+      return res.json();
+    },
+
+    addSpontaneousItem: async (tripId: number, data: { title: string; description?: string; dayNumber: number; time?: string }): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/items/spontaneous`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to add item");
       return res.json();
     },
   },

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import {
@@ -8,11 +8,11 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { MapPin } from "lucide-react";
+import { MapPin, Camera, X, Loader2 } from "lucide-react";
 
 const EMOJI_OPTIONS = [
-  "😍", "🤩", "😋", "😌", "🥳",
-  "😎", "🫶", "😮", "🤔", "😂",
+  "\u{1F60D}", "\u{1F929}", "\u{1F60B}", "\u{1F60C}", "\u{1F973}",
+  "\u{1F60E}", "\u{1FAF6}", "\u{1F62E}", "\u{1F914}", "\u{1F602}",
 ];
 
 const TAG_OPTIONS = [
@@ -42,20 +42,36 @@ export function MemoryLogSheet({
   tripStopId,
 }: MemoryLogSheetProps) {
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [emoji, setEmoji] = useState<string>("");
   const [caption, setCaption] = useState("");
   const [tag, setTag] = useState<string>("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const createMutation = useMutation({
-    mutationFn: () =>
-      api.tripMemories.create(tripId, {
+    mutationFn: async () => {
+      let photos: string[] | null = null;
+
+      // Upload photo if one is selected
+      if (photoFile) {
+        setUploadProgress(0);
+        const photoUrl = await api.upload.image(photoFile, setUploadProgress);
+        photos = [photoUrl];
+        setUploadProgress(null);
+      }
+
+      return api.tripMemories.create(tripId, {
         dayNumber,
         tripStopId: tripStopId || null,
         emoji: emoji || null,
         caption: caption || null,
+        photos,
         tag: tag || null,
         isHighlight: false,
-      }),
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tripMemories", tripId] });
       queryClient.invalidateQueries({ queryKey: ["tripLive", tripId] });
@@ -63,10 +79,31 @@ export function MemoryLogSheet({
     },
   });
 
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    const url = URL.createObjectURL(file);
+    setPhotoPreview(url);
+  };
+
+  const removePhoto = () => {
+    setPhotoFile(null);
+    if (photoPreview) {
+      URL.revokeObjectURL(photoPreview);
+      setPhotoPreview(null);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const resetAndClose = () => {
     setEmoji("");
     setCaption("");
     setTag("");
+    removePhoto();
+    setUploadProgress(null);
     onOpenChange(false);
   };
 
@@ -87,6 +124,44 @@ export function MemoryLogSheet({
               <span>At: {stopName}</span>
             </div>
           )}
+
+          {/* Photo upload */}
+          <div>
+            <label className="text-white/60 text-xs font-medium uppercase tracking-wider block mb-2">
+              Photo
+            </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handlePhotoSelect}
+              className="hidden"
+            />
+            {photoPreview ? (
+              <div className="relative inline-block">
+                <img
+                  src={photoPreview}
+                  alt="Preview"
+                  className="h-24 w-24 rounded-xl object-cover"
+                />
+                <button
+                  onClick={removePhoto}
+                  className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5 text-white" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 px-4 py-3 bg-white/5 border border-white/10 border-dashed rounded-xl text-white/40 hover:text-white/60 hover:bg-white/8 transition-colors text-sm"
+              >
+                <Camera className="w-4 h-4" />
+                Add a photo
+              </button>
+            )}
+          </div>
 
           {/* Emoji mood picker */}
           <div>
@@ -151,10 +226,19 @@ export function MemoryLogSheet({
           <Button
             size="pill"
             onClick={() => createMutation.mutate()}
-            disabled={createMutation.isPending || (!caption && !emoji)}
+            disabled={createMutation.isPending || (!caption && !emoji && !photoFile)}
             className="w-full bg-white text-[#0D1117] hover:bg-white/90"
           >
-            {createMutation.isPending ? "Saving..." : "Save Memory"}
+            {uploadProgress !== null ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                Uploading {uploadProgress}%
+              </>
+            ) : createMutation.isPending ? (
+              "Saving..."
+            ) : (
+              "Save Memory"
+            )}
           </Button>
         </div>
       </SheetContent>

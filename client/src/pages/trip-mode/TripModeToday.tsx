@@ -1,9 +1,10 @@
 import { useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { CheckCircle, Circle, Clock, MapPin, ChevronRight, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle, Circle, Clock, MapPin, ChevronRight, Sparkles, Plus } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { MemoryLogSheet } from "@/components/trip/MemoryLogSheet";
+import { AddStopSheet } from "@/components/trip/AddStopSheet";
 import TripModeLayout from "./TripModeLayout";
 
 const TYPE_COLORS: Record<string, string> = {
@@ -14,12 +15,48 @@ const TYPE_COLORS: Record<string, string> = {
   accommodation: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
 };
 
+/** Parse a time string like "09:00 AM" or "2:30 PM" into minutes since midnight */
+function parseTimeToMinutes(time: string): number | null {
+  const match = time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return null;
+  let hours = parseInt(match[1]);
+  const minutes = parseInt(match[2]);
+  const period = match[3].toUpperCase();
+  if (period === "PM" && hours !== 12) hours += 12;
+  if (period === "AM" && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+}
+
+/** Find the index of the time-based "current" item — the last item whose time has passed */
+function findTimeBasedCurrentIndex(items: any[]): number {
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+  let currentIdx = -1;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].isCheckedIn) continue;
+    const itemMinutes = parseTimeToMinutes(items[i].time);
+    if (itemMinutes !== null && itemMinutes <= nowMinutes) {
+      currentIdx = i;
+    }
+  }
+
+  // If no item's time has passed yet, use the first unchecked item
+  if (currentIdx === -1) {
+    currentIdx = items.findIndex((item: any) => !item.isCheckedIn);
+  }
+
+  return currentIdx;
+}
+
 export default function TripModeToday() {
   const params = useParams<{ id: string }>();
   const tripId = Number(params.id);
   const queryClient = useQueryClient();
   const [memorySheetOpen, setMemorySheetOpen] = useState(false);
+  const [addStopSheetOpen, setAddStopSheetOpen] = useState(false);
   const [selectedItemForMemory, setSelectedItemForMemory] = useState<any>(null);
+  const currentItemRef = useRef<HTMLDivElement>(null);
 
   const { data: liveState, isLoading } = useQuery({
     queryKey: ["tripLive", tripId],
@@ -36,6 +73,27 @@ export default function TripModeToday() {
     },
   });
 
+  const { currentDay, totalDays, todayItems, progress } = liveState || {
+    currentDay: 1,
+    totalDays: 1,
+    todayItems: [],
+    progress: { totalItems: 0, checkedInCount: 0, percentage: 0 },
+  };
+
+  // Time-based current item highlighting
+  const currentItemIndex = useMemo(
+    () => findTimeBasedCurrentIndex(todayItems),
+    [todayItems]
+  );
+  const currentItem = currentItemIndex >= 0 ? todayItems[currentItemIndex] : null;
+
+  // Auto-scroll to current item on mount
+  useEffect(() => {
+    if (currentItemRef.current) {
+      currentItemRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [currentItemIndex]);
+
   if (isLoading) {
     return (
       <TripModeLayout>
@@ -45,17 +103,6 @@ export default function TripModeToday() {
       </TripModeLayout>
     );
   }
-
-  const { currentDay, totalDays, todayItems, progress } = liveState || {
-    currentDay: 1,
-    totalDays: 1,
-    todayItems: [],
-    progress: { totalItems: 0, checkedInCount: 0, percentage: 0 },
-  };
-
-  // Find current (first unchecked) item
-  const currentItemIndex = todayItems.findIndex((item: any) => !item.isCheckedIn);
-  const currentItem = currentItemIndex >= 0 ? todayItems[currentItemIndex] : null;
 
   return (
     <TripModeLayout>
@@ -81,7 +128,7 @@ export default function TripModeToday() {
 
         {/* Current stop hero card */}
         {currentItem ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 space-y-4">
+          <div ref={currentItemRef} className="rounded-2xl border border-white/10 bg-white/5 p-5 space-y-4">
             <div className="flex items-start justify-between">
               <div>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${TYPE_COLORS[currentItem.itemType] || TYPE_COLORS.activity}`}>
@@ -161,7 +208,12 @@ export default function TripModeToday() {
             const isDone = item.isCheckedIn;
 
             return (
-              <div key={item.id} className="flex items-start gap-3 py-2">
+              <div
+                key={item.id}
+                className={`flex items-start gap-3 py-2 rounded-lg transition-colors ${
+                  isCurrent ? "bg-white/5 -mx-2 px-2 ring-1 ring-white/10" : ""
+                }`}
+              >
                 {/* Timeline dot */}
                 <div className="flex flex-col items-center pt-0.5">
                   {isDone ? (
@@ -204,6 +256,14 @@ export default function TripModeToday() {
         </div>
       </div>
 
+      {/* Add Stop FAB */}
+      <button
+        onClick={() => setAddStopSheetOpen(true)}
+        className="fixed bottom-24 right-5 z-40 w-14 h-14 rounded-full bg-white text-[#0D1117] shadow-lg flex items-center justify-center hover:bg-white/90 active:scale-95 transition-all"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
+
       <MemoryLogSheet
         open={memorySheetOpen}
         onOpenChange={setMemorySheetOpen}
@@ -211,6 +271,13 @@ export default function TripModeToday() {
         dayNumber={currentDay}
         stopName={selectedItemForMemory?.title}
         tripStopId={selectedItemForMemory?.id}
+      />
+
+      <AddStopSheet
+        open={addStopSheetOpen}
+        onOpenChange={setAddStopSheetOpen}
+        tripId={tripId}
+        dayNumber={currentDay}
       />
     </TripModeLayout>
   );

@@ -1,5 +1,5 @@
 import { useParams } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Plus, Star, StarOff, BookOpen } from "lucide-react";
 import { useState } from "react";
@@ -9,6 +9,7 @@ import TripModeLayout from "./TripModeLayout";
 export default function TripModeMemories() {
   const params = useParams<{ id: string }>();
   const tripId = Number(params.id);
+  const queryClient = useQueryClient();
   const [memorySheetOpen, setMemorySheetOpen] = useState(false);
 
   const { data: liveState } = useQuery({
@@ -21,6 +22,14 @@ export default function TripModeMemories() {
     queryKey: ["tripMemories", tripId],
     queryFn: () => api.tripMemories.list(tripId),
     enabled: !!tripId,
+  });
+
+  const highlightMutation = useMutation({
+    mutationFn: ({ memoryId, isHighlight }: { memoryId: number; isHighlight: boolean }) =>
+      api.tripMemories.update(tripId, memoryId, { isHighlight }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tripMemories", tripId] });
+    },
   });
 
   const currentDay = liveState?.currentDay || 1;
@@ -85,7 +94,10 @@ export default function TripModeMemories() {
                       )}
                     </div>
                   </div>
-                  <button className="p-1 text-white/30 hover:text-yellow-400 transition-colors">
+                  <button
+                    onClick={() => highlightMutation.mutate({ memoryId: memory.id, isHighlight: !memory.isHighlight })}
+                    className="p-1 text-white/30 hover:text-yellow-400 transition-colors"
+                  >
                     {memory.isHighlight ? (
                       <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                     ) : (

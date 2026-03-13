@@ -222,7 +222,7 @@ export default function Home() {
                 {/* 1. Your Current Trip — hero card */}
                 {currentTrip && (
                   <section>
-                    <Link href={`/trip/${currentTrip.id}`}>
+                    <Link href={`/trip/${currentTrip.id}/live`}>
                       <div className="relative rounded-2xl overflow-hidden bg-card cursor-pointer transition-all hover:-translate-y-0.5">
                         {currentTrip.coverImage ? (
                           <img
@@ -247,7 +247,7 @@ export default function Home() {
                             <MapPin className="h-3.5 w-3.5" />
                             {currentTrip.destination}
                           </p>
-                          <p className="text-xs font-medium text-foreground pt-1">You're on this trip! →</p>
+                          <p className="text-xs font-medium text-foreground pt-1">Continue in Trip Mode →</p>
                         </div>
                       </div>
                     </Link>

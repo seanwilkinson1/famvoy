@@ -151,8 +151,12 @@ export async function registerRoutes(
         return res.status(401).json({ message: "Unauthorized" });
       }
       
-      const { name, location, kids, interests, bio, avatar } = req.body;
-      
+      const {
+        name, location, kids, interests, bio, avatar,
+        profession, company, instagramHandle, linkedinUrl,
+        twitterHandle, personalUrl, householdType, profilePhotos,
+      } = req.body;
+
       let email: string | null = null;
       try {
         const clerkUser = await clerkClient.users.getUser(userId);
@@ -160,7 +164,11 @@ export async function registerRoutes(
       } catch (e) {
         console.error("Failed to fetch email from Clerk:", e);
       }
-      
+
+      // Use first profile photo as avatar for backward compat
+      const photos = profilePhotos as { url: string; caption?: string }[] | undefined;
+      const resolvedAvatar = photos?.[0]?.url || avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400';
+
       const user = await storage.upsertUser({
         clerkId: userId,
         email: email,
@@ -169,9 +177,29 @@ export async function registerRoutes(
         kids: kids || 'Not specified',
         interests: interests || [],
         bio: bio || null,
-        avatar: avatar || 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=400',
+        avatar: resolvedAvatar,
+        profession: profession || null,
+        company: company || null,
+        instagramHandle: instagramHandle || null,
+        linkedinUrl: linkedinUrl || null,
+        twitterHandle: twitterHandle || null,
+        personalUrl: personalUrl || null,
+        householdType: householdType || null,
       });
-      
+
+      // Save profile photos
+      if (photos && photos.length > 0) {
+        await storage.deleteProfilePhotosByUser(user.id);
+        for (let i = 0; i < photos.length; i++) {
+          await storage.createProfilePhoto({
+            userId: user.id,
+            url: photos[i].url,
+            caption: photos[i].caption || null,
+            sortOrder: i,
+          });
+        }
+      }
+
       res.json(user);
     } catch (error) {
       console.error("Error during onboarding:", error);
@@ -206,6 +234,17 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  app.get('/api/users/:id/profile-photos', async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const photos = await storage.getProfilePhotos(userId);
+      res.json(photos);
+    } catch (error) {
+      console.error("Error fetching profile photos:", error);
+      res.status(500).json({ message: "Failed to fetch profile photos" });
     }
   });
 
@@ -2164,6 +2203,50 @@ export async function registerRoutes(
     }
   });
 
+  // Add spontaneous trip item (during active trip)
+  app.post("/api/trips/:id/items/spontaneous", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      if (isNaN(tripId)) return res.status(400).json({ error: "Invalid trip ID" });
+
+      await assertTripAccess(user.id, tripId, "write");
+
+      const { title, description, dayNumber, time } = req.body;
+      if (!title || !dayNumber) return res.status(400).json({ error: "Title and dayNumber are required" });
+
+      // Get current items for this day to determine sort order
+      const existingItems = await storage.getTripItems(tripId);
+      const dayItems = existingItems.filter((item: any) => item.dayNumber === dayNumber);
+      const maxSortOrder = dayItems.length > 0
+        ? Math.max(...dayItems.map((item: any) => item.sortOrder))
+        : -1;
+
+      // Default time to current time if not provided
+      const itemTime = time || new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+
+      const item = await storage.createTripItem({
+        tripId,
+        dayNumber,
+        dayTitle: null,
+        time: itemTime,
+        title,
+        description: description || null,
+        itemType: "ACTIVITY",
+        sortOrder: maxSortOrder + 1,
+        experienceId: null,
+      });
+
+      res.json(item);
+    } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.patch("/api/trip-items/:id", requireAuth(), async (req, res) => {
     try {
       const itemId = parseInt(req.params.id);
@@ -2890,11 +2973,12 @@ Return ONLY valid JSON.`;
 
       // Import the booking search service dynamically
       const { generateAndSaveOptions } = await import("./bookingSearchService");
-      
+
+      const regenerate = req.body?.regenerate === true;
       const result = await generateAndSaveOptions(item, trip.destination, {
         startDate: trip.startDate,
         endDate: trip.endDate,
-      });
+      }, regenerate);
 
       res.json(result);
     } catch (error: any) {
@@ -3011,6 +3095,58 @@ Return ONLY valid JSON.`;
       res.json({ success: true, message: "Item skipped" });
     } catch (error: any) {
       console.error("Skip item error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Go back to previous item in confirmation wizard
+  app.post("/api/trips/:tripId/confirm/back", requireAuth(), async (req, res) => {
+    try {
+      const tripId = parseInt(req.params.tripId);
+      const { userId: clerkUserId } = getAuth(req);
+
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      const trip = await storage.getTripById(tripId);
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+
+      if (trip.podId) {
+        const isMember = await storage.isPodMember(trip.podId, user.id);
+        if (!isMember) {
+          return res.status(403).json({ error: "You don't have access to this trip" });
+        }
+      } else if (trip.createdByUserId !== user.id) {
+        return res.status(403).json({ error: "You don't have access to this trip" });
+      }
+
+      const session = await storage.getConfirmationSession(tripId);
+      if (!session || session.currentItemIndex <= 0) {
+        return res.status(400).json({ error: "Already at the first item" });
+      }
+
+      const prevIndex = session.currentItemIndex - 1;
+      await storage.updateConfirmationSession(session.id, {
+        currentItemIndex: prevIndex,
+      });
+
+      // Reset the previous item's confirmation state so the user can re-choose
+      const items = await storage.getConfirmableItems(tripId);
+      if (items[prevIndex]) {
+        await storage.updateTripItemConfirmation(items[prevIndex].id, "pending");
+      }
+
+      res.json({ success: true, message: "Went back to previous item" });
+    } catch (error: any) {
+      console.error("Go back error:", error);
       res.status(500).json({ error: error.message });
     }
   });
