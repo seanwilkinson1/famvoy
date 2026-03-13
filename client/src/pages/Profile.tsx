@@ -4,7 +4,7 @@ import { TripCard } from "@/components/shared/TripCard";
 import { ImageUpload } from "@/components/shared/ImageUpload";
 import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
 import { VerificationBadge } from "@/components/shared/VerificationBadge";
-import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Heart, Globe, Quote, Plane, Users, Share2, UserPlus, ChevronLeft, Star } from "lucide-react";
+import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Heart, Globe, Quote, Plane, Users, Share2, UserPlus, ChevronLeft, Star, Instagram, Linkedin, Twitter, Briefcase } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -16,6 +16,12 @@ import type { FamilyMember } from "@shared/schema";
 import { FAMILY_VALUES, LANGUAGES, FAMILY_ROLES, AGE_GROUPS } from "@/lib/constants";
 import { Plus, Trash2 } from "lucide-react";
 import { ImageCarousel } from "@/components/ui/image-carousel";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 const BADGE_ICONS: Record<string, string> = {
   "Park Explorer": "🌲",
@@ -54,8 +60,12 @@ const INTEREST_EMOJIS: Record<string, string> = {
 const INTEREST_OPTIONS = Object.keys(INTEREST_EMOJIS);
 
 function ProfileInner() {
-  const [activeTab, setActiveTab] = useState<"experiences" | "about" | "saved" | "trips">("about");
-  const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState<"experiences" | "saved" | "trips">("experiences");
+  const [showMeetModal, setShowMeetModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("edit") === "true";
+  });
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [newMember, setNewMember] = useState({
     name: "",
@@ -248,6 +258,12 @@ function ProfileInner() {
     enabled: !!currentUser,
   });
 
+  const { data: profilePhotos = [] } = useQuery({
+    queryKey: ["profilePhotos", currentUser?.id],
+    queryFn: () => currentUser ? api.users.getProfilePhotos(currentUser.id) : [],
+    enabled: !!currentUser,
+  });
+
   const formattedUserExperiences = userExperiences.map(exp => formatExperience(exp as any));
   const formattedSavedExperiences = savedExperiences.map(exp => formatExperience(exp as any));
 
@@ -256,7 +272,7 @@ function ProfileInner() {
     { label: "Photo", done: !!(currentUser?.avatar) },
     { label: "Bio", done: !!(currentUser?.bio) },
     { label: "Location", done: !!(currentUser?.location) },
-    { label: "Family member", done: familyMembers.length > 0 },
+    ...(currentUser?.householdType === "solo" ? [] : [{ label: "Crew member", done: familyMembers.length > 0 }]),
     { label: "Interests", done: (currentUser?.interests?.length || 0) >= 3 },
   ];
   const completenessScore = completenessItems.filter(i => i.done).length;
@@ -329,18 +345,6 @@ function ProfileInner() {
               placeholder="City, State"
               showCurrentLocation={false}
               isSelected={false}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Kids</label>
-            <input
-              type="text"
-              value={editForm.kids}
-              onChange={(e) => setEditForm({ ...editForm, kids: e.target.value })}
-              className="w-full rounded-xl border border-border bg-background p-4 text-base focus:border-foreground focus:outline-none"
-              placeholder="e.g., 2 Kids (ages 3 & 7)"
-              data-testid="input-edit-kids"
             />
           </div>
 
@@ -469,7 +473,7 @@ function ProfileInner() {
 
           <div className="border-t border-border pt-6">
             <div className="flex items-center justify-between mb-4">
-              <label className="block text-sm font-medium text-foreground">Family Members</label>
+              <label className="block text-sm font-medium text-foreground">Crew Members</label>
               <button
                 onClick={() => setShowAddMemberModal(true)}
                 className="flex items-center gap-1 px-3 py-1.5 bg-foreground text-background text-sm font-medium rounded-full"
@@ -483,12 +487,12 @@ function ProfileInner() {
             {familyMembers.length === 0 ? (
               <div className="text-center py-8 bg-muted rounded-2xl border border-dashed border-border">
                 <UserPlus className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No family members added yet</p>
+                <p className="text-sm text-muted-foreground">No crew members added yet</p>
                 <button
                   onClick={() => setShowAddMemberModal(true)}
                   className="mt-2 text-sm text-foreground font-medium"
                 >
-                  Add your first family member
+                  Add your first crew member
                 </button>
               </div>
             ) : (
@@ -539,30 +543,21 @@ function ProfileInner() {
     );
   }
 
-  // Profile photos for carousel
-  const profileImages = [
-    currentUser?.avatar || currentUser?.profileImageUrl || "",
-  ].filter(Boolean);
+  // Profile photos for carousel — use profile_photos table, fall back to avatar
+  const profileImages = profilePhotos.length > 0
+    ? profilePhotos.map(p => p.url)
+    : [currentUser?.avatar || currentUser?.profileImageUrl || ""].filter(Boolean);
 
   return (
     <div className="min-h-screen bg-background pb-32 md:pb-8 md:max-w-5xl md:mx-auto md:px-8">
-      {/* Top bar */}
-      <div className="flex justify-between items-center px-6 pt-16 md:pt-8 pb-2">
-        <button
-          onClick={() => setIsEditing(true)}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          data-testid="button-edit-profile"
-        >
-          <Edit2 className="h-4 w-4" />
-          Edit
-        </button>
+      {/* Top bar — Instagram-style corner icon */}
+      <div className="flex justify-end items-center px-6 pt-16 md:pt-8 pb-2">
         <button
           onClick={() => setLocation("/settings")}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="p-2 -mr-2 text-muted-foreground hover:text-foreground transition-colors"
           data-testid="button-settings"
         >
-          <SettingsIcon className="h-4 w-4" />
-          Settings
+          <SettingsIcon className="h-5 w-5" />
         </button>
       </div>
 
@@ -626,23 +621,14 @@ function ProfileInner() {
           </p>
         )}
 
-        {/* Action buttons */}
-        <div className="mt-5 flex gap-3 max-w-sm mx-auto">
+        {/* Meet button */}
+        <div className="mt-5 max-w-sm mx-auto">
           <button
-            onClick={handleShareProfile}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-border rounded-full text-foreground font-medium text-sm hover:bg-muted transition-colors"
-            data-testid="button-share-profile"
+            onClick={() => setShowMeetModal(true)}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-foreground text-background rounded-full font-medium text-sm"
+            data-testid="button-meet"
           >
-            <Share2 className="h-4 w-4" />
-            Share
-          </button>
-          <button
-            onClick={() => setIsEditing(true)}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-foreground text-background rounded-full font-medium text-sm"
-            data-testid="button-edit-profile-cta"
-          >
-            <Edit2 className="h-4 w-4" />
-            Edit Profile
+            Meet {currentUser?.name?.split(" ")[0] || "Me"}
           </button>
         </div>
       </div>
@@ -687,7 +673,6 @@ function ProfileInner() {
       <div className="mt-6 sticky top-14 z-20 bg-background border-b border-border">
         <div className="flex px-6">
           {[
-            { id: "about", label: "About" },
             { id: "experiences", label: "Experiences" },
             { id: "trips", label: "Trips" },
             { id: "saved", label: "Saved" },
@@ -711,139 +696,6 @@ function ProfileInner() {
 
       {/* Tab Content */}
       <div className="px-6 py-6">
-        {activeTab === "about" && (
-          <div className="space-y-8">
-            {/* Household section */}
-            {familyMembers.length > 0 && (
-              <section>
-                <h3 className="font-heading text-lg font-medium text-foreground mb-4">Household</h3>
-                <div className="flex flex-wrap gap-4">
-                  {familyMembers.map((member) => (
-                    <div key={member.id} className="flex flex-col items-center w-20" data-testid={`family-member-${member.id}`}>
-                      <div className="w-16 h-16 rounded-full overflow-hidden bg-muted">
-                        {member.photo ? (
-                          <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-lg text-muted-foreground">
-                            {member.name.charAt(0)}
-                          </div>
-                        )}
-                      </div>
-                      <p className="mt-1.5 text-sm font-medium text-foreground text-center truncate w-full">{member.name}</p>
-                      <p className="text-[11px] text-muted-foreground">{member.role}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Interest tags with emojis */}
-            {currentUser?.interests && currentUser.interests.length > 0 && (
-              <section>
-                <h3 className="font-heading text-lg font-medium text-foreground mb-3">Interests</h3>
-                <div className="flex flex-wrap gap-2">
-                  {currentUser.interests.map((interest) => (
-                    <span
-                      key={interest}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-sm text-foreground"
-                    >
-                      {INTEREST_EMOJIS[interest] || "🌟"} {interest}
-                    </span>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Family Values */}
-            {currentUser?.familyValues && currentUser.familyValues.length > 0 && (
-              <section>
-                <h3 className="font-heading text-lg font-medium text-foreground mb-3">Values</h3>
-                <div className="flex flex-wrap gap-2">
-                  {currentUser.familyValues.map((value) => (
-                    <span key={value} className="px-3 py-1.5 rounded-full border border-border text-sm text-foreground">
-                      {value}
-                    </span>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Languages */}
-            {currentUser?.languages && currentUser.languages.length > 0 && (
-              <section>
-                <h3 className="font-heading text-lg font-medium text-foreground mb-3 flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-muted-foreground" />
-                  Languages
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {currentUser.languages.map((lang) => (
-                    <span key={lang} className="px-3 py-1.5 rounded-full border border-border text-sm text-foreground">
-                      {lang}
-                    </span>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Pets */}
-            {currentUser?.pets && (
-              <section>
-                <h3 className="font-heading text-lg font-medium text-foreground mb-2">🐾 Pets</h3>
-                <p className="text-sm text-muted-foreground">{currentUser.pets}</p>
-              </section>
-            )}
-
-            {/* Family Motto */}
-            {currentUser?.familyMotto && (
-              <section>
-                <h3 className="font-heading text-lg font-medium text-foreground mb-2">Family Motto</h3>
-                <p className="text-sm text-muted-foreground italic">"{currentUser.familyMotto}"</p>
-              </section>
-            )}
-
-            {/* Dream Vacation */}
-            {currentUser?.dreamVacation && (
-              <section>
-                <h3 className="font-heading text-lg font-medium text-foreground mb-2 flex items-center gap-2">
-                  <Plane className="h-4 w-4 text-muted-foreground" />
-                  Dream Vacation
-                </h3>
-                <p className="text-sm text-muted-foreground">{currentUser.dreamVacation}</p>
-              </section>
-            )}
-
-            {/* Badges */}
-            {userBadges.length > 0 && (
-              <section>
-                <h3 className="font-heading text-lg font-medium text-foreground mb-3">Badges</h3>
-                <div className="flex flex-wrap gap-2">
-                  {userBadges.map((badge: any) => (
-                    <span
-                      key={badge.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-sm text-foreground"
-                      data-testid={`badge-${badge.id}`}
-                    >
-                      {BADGE_ICONS[badge.badge?.name || ''] || '🏅'} {badge.badge?.name || 'Badge'}
-                    </span>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Pods */}
-            {pods.length > 0 && (
-              <section>
-                <h3 className="font-heading text-lg font-medium text-foreground mb-3">Pods</h3>
-                <div className="space-y-3">
-                  {pods.map((pod) => (
-                    <PodCard key={pod.id} pod={pod} />
-                  ))}
-                </div>
-              </section>
-            )}
-          </div>
-        )}
-
         {activeTab === "experiences" && (
           <div>
             {formattedUserExperiences.length === 0 ? (
@@ -914,6 +766,242 @@ function ProfileInner() {
           addMemberMutation={addMemberMutation}
         />
       )}
+
+      {/* Meet modal */}
+      <Sheet open={showMeetModal} onOpenChange={setShowMeetModal}>
+        <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh] overflow-y-auto">
+          <SheetHeader className="text-left pb-4">
+            <SheetTitle className="font-heading text-xl">
+              Meet {currentUser?.name || ""}
+            </SheetTitle>
+          </SheetHeader>
+          <div className="space-y-6 pb-8">
+            {/* Profile photos grid */}
+            {profilePhotos.length > 0 && (
+              <section>
+                <div className="grid grid-cols-3 gap-1.5 rounded-2xl overflow-hidden">
+                  {profilePhotos.map((photo, i) => (
+                    <div
+                      key={photo.id}
+                      className={cn(
+                        "relative overflow-hidden",
+                        i === 0 && profilePhotos.length > 1 && "col-span-2 row-span-2"
+                      )}
+                    >
+                      <img
+                        src={photo.url}
+                        alt={photo.caption || ""}
+                        className={cn(
+                          "w-full object-cover",
+                          i === 0 && profilePhotos.length > 1 ? "aspect-square" : "aspect-square"
+                        )}
+                      />
+                      {photo.caption && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1.5">
+                          <p className="text-white text-xs">{photo.caption}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Bio */}
+            {currentUser?.bio && (
+              <p className="text-sm text-foreground leading-relaxed">{currentUser.bio}</p>
+            )}
+
+            {/* Location */}
+            {currentUser?.location && (
+              <section className="flex items-center gap-2 text-sm text-foreground">
+                <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span>{currentUser.location}</span>
+              </section>
+            )}
+
+            {/* Profession / Company */}
+            {(currentUser?.profession || currentUser?.company) && (
+              <section className="flex items-center gap-2 text-sm text-foreground">
+                <Briefcase className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span>
+                  {currentUser.profession}{currentUser.profession && currentUser.company ? " at " : ""}{currentUser.company}
+                </span>
+              </section>
+            )}
+
+            {/* Social links */}
+            {(currentUser?.instagramHandle || currentUser?.linkedinUrl || currentUser?.twitterHandle || currentUser?.personalUrl) && (
+              <section>
+                <div className="flex flex-wrap gap-2">
+                  {currentUser.instagramHandle && (
+                    <a
+                      href={`https://instagram.com/${currentUser.instagramHandle.replace(/^@/, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-sm text-foreground hover:bg-muted transition-colors"
+                    >
+                      <Instagram className="h-3.5 w-3.5" />
+                      {currentUser.instagramHandle}
+                    </a>
+                  )}
+                  {currentUser.linkedinUrl && (
+                    <a
+                      href={currentUser.linkedinUrl.startsWith("http") ? currentUser.linkedinUrl : `https://linkedin.com/in/${currentUser.linkedinUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-sm text-foreground hover:bg-muted transition-colors"
+                    >
+                      <Linkedin className="h-3.5 w-3.5" />
+                      LinkedIn
+                    </a>
+                  )}
+                  {currentUser.twitterHandle && (
+                    <a
+                      href={`https://x.com/${currentUser.twitterHandle.replace(/^@/, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-sm text-foreground hover:bg-muted transition-colors"
+                    >
+                      <Twitter className="h-3.5 w-3.5" />
+                      {currentUser.twitterHandle}
+                    </a>
+                  )}
+                  {currentUser.personalUrl && (
+                    <a
+                      href={currentUser.personalUrl.startsWith("http") ? currentUser.personalUrl : `https://${currentUser.personalUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-sm text-foreground hover:bg-muted transition-colors"
+                    >
+                      <Globe className="h-3.5 w-3.5" />
+                      Website
+                    </a>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* Household */}
+            {familyMembers.length > 0 && (
+              <section>
+                <h3 className="font-heading text-base font-medium text-foreground mb-3">Household</h3>
+                <div className="flex flex-wrap gap-4">
+                  {familyMembers.map((member) => (
+                    <div key={member.id} className="flex flex-col items-center w-20">
+                      <div className="w-14 h-14 rounded-full overflow-hidden bg-muted">
+                        {member.photo ? (
+                          <img src={member.photo} alt={member.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-base text-muted-foreground">
+                            {member.name.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs font-medium text-foreground text-center truncate w-full">{member.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{member.role}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Interests */}
+            {currentUser?.interests && currentUser.interests.length > 0 && (
+              <section>
+                <h3 className="font-heading text-base font-medium text-foreground mb-2">Interests</h3>
+                <div className="flex flex-wrap gap-2">
+                  {currentUser.interests.map((interest) => (
+                    <span key={interest} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-border text-sm text-foreground">
+                      {INTEREST_EMOJIS[interest] || "🌟"} {interest}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Family Values */}
+            {currentUser?.familyValues && currentUser.familyValues.length > 0 && (
+              <section>
+                <h3 className="font-heading text-base font-medium text-foreground mb-2">Values</h3>
+                <div className="flex flex-wrap gap-2">
+                  {currentUser.familyValues.map((value) => (
+                    <span key={value} className="px-3 py-1.5 rounded-full border border-border text-sm text-foreground">{value}</span>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Languages */}
+            {currentUser?.languages && currentUser.languages.length > 0 && (
+              <section>
+                <h3 className="font-heading text-base font-medium text-foreground mb-2 flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  Languages
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {currentUser.languages.map((lang) => (
+                    <span key={lang} className="px-3 py-1.5 rounded-full border border-border text-sm text-foreground">{lang}</span>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Pets */}
+            {currentUser?.pets && (
+              <section>
+                <h3 className="font-heading text-base font-medium text-foreground mb-1">🐾 Pets</h3>
+                <p className="text-sm text-muted-foreground">{currentUser.pets}</p>
+              </section>
+            )}
+
+            {/* Family Motto */}
+            {currentUser?.familyMotto && (
+              <section>
+                <h3 className="font-heading text-base font-medium text-foreground mb-1">Family Motto</h3>
+                <p className="text-sm text-muted-foreground italic">"{currentUser.familyMotto}"</p>
+              </section>
+            )}
+
+            {/* Dream Vacation */}
+            {currentUser?.dreamVacation && (
+              <section>
+                <h3 className="font-heading text-base font-medium text-foreground mb-1 flex items-center gap-2">
+                  <Plane className="h-4 w-4 text-muted-foreground" />
+                  Dream Vacation
+                </h3>
+                <p className="text-sm text-muted-foreground">{currentUser.dreamVacation}</p>
+              </section>
+            )}
+
+            {/* Badges */}
+            {userBadges.length > 0 && (
+              <section>
+                <h3 className="font-heading text-base font-medium text-foreground mb-2">Badges</h3>
+                <div className="flex flex-wrap gap-2">
+                  {userBadges.map((badge: any) => (
+                    <span key={badge.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-sm text-foreground">
+                      {BADGE_ICONS[badge.badge?.name || ''] || '🏅'} {badge.badge?.name || 'Badge'}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Pods */}
+            {pods.length > 0 && (
+              <section>
+                <h3 className="font-heading text-base font-medium text-foreground mb-2">Pods</h3>
+                <div className="space-y-3">
+                  {pods.map((pod) => (
+                    <PodCard key={pod.id} pod={pod} />
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
@@ -935,7 +1023,7 @@ function AddMemberModal({
     <div className="fixed inset-0 bg-black/50 z-[100] flex items-end sm:items-center justify-center">
       <div className="bg-background rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[85vh] overflow-y-auto animate-slide-up mb-20 sm:mb-0 mx-4">
         <div className="sticky top-0 bg-background border-b border-border px-6 py-4 flex items-center justify-between">
-          <h2 className="font-heading text-xl font-medium">Add Family Member</h2>
+          <h2 className="font-heading text-xl font-medium">Add Crew Member</h2>
           <button
             onClick={() => {
               setShowModal(false);
@@ -1037,7 +1125,7 @@ function AddMemberModal({
             className="w-full py-3.5 bg-foreground text-background font-medium rounded-full disabled:opacity-50"
             data-testid="button-submit-member"
           >
-            {addMemberMutation.isPending ? "Adding..." : "Add Family Member"}
+            {addMemberMutation.isPending ? "Adding..." : "Add Crew Member"}
           </button>
         </div>
       </div>

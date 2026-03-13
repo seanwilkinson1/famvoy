@@ -117,14 +117,6 @@ export function ExperienceCard({ experience, className, horizontal = false }: Ex
             </span>
           </div>
 
-          {/* 6. Category tag (green outlined pill) */}
-          {experience.category && (
-            <div className="flex gap-1.5 pt-1.5">
-              <span className="inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-medium border border-emerald-500/30 text-emerald-600 bg-emerald-50">
-                {experience.category}
-              </span>
-            </div>
-          )}
         </div>
       </div>
     </Link>

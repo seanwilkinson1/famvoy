@@ -104,19 +104,19 @@ export default function TripConfirmWizard() {
     }
   }, [session?.currentItem?.id]);
 
-  const generateOptions = async () => {
+  const generateOptions = async (regenerate = false) => {
     if (!session?.currentItem) return;
     setIsGenerating(true);
     try {
       const res = await fetch(`/api/trips/${tripId}/items/${session.currentItem.id}/options/generate`, {
         method: "POST",
         credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ regenerate }),
       });
       if (!res.ok) throw new Error("Failed to generate options");
-      const data = await res.json();
-      console.log("Generated new options:", data);
       await refetch();
-      toast.success("New options generated!");
+      toast.success(regenerate ? "Fresh options generated!" : "Options generated!");
     } catch (error) {
       console.error("Generate options error:", error);
       toast.error("Failed to generate booking options");
@@ -124,6 +124,24 @@ export default function TripConfirmWizard() {
       setIsGenerating(false);
     }
   };
+
+  const goBackMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/trips/${tripId}/confirm/back`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to go back");
+      return res.json();
+    },
+    onSuccess: () => {
+      setSelectedOption(null);
+      queryClient.invalidateQueries({ queryKey: ["confirmSession", tripId] });
+    },
+    onError: () => {
+      toast.error("Can't go back further");
+    },
+  });
 
   const lockOptionMutation = useMutation({
     mutationFn: async ({ itemId, optionId }: { itemId: number; optionId: number }) => {
@@ -244,7 +262,14 @@ export default function TripConfirmWizard() {
         <div className="max-w-lg mx-auto px-4 py-3">
           <div className="flex items-center justify-between mb-2">
             <button
-              onClick={() => navigate(`/trip/${tripId}`)}
+              onClick={() => {
+                if (session.progress.current > 1) {
+                  goBackMutation.mutate();
+                } else {
+                  navigate(`/trip/${tripId}`);
+                }
+              }}
+              disabled={goBackMutation.isPending}
               className="p-2 -ml-2 hover:bg-muted rounded-full"
               data-testid="button-back"
             >
@@ -311,7 +336,7 @@ export default function TripConfirmWizard() {
                 <div className="text-center py-16">
                   <p className="text-muted-foreground mb-4">No options available</p>
                   <button
-                    onClick={generateOptions}
+                    onClick={() => generateOptions()}
                     className="text-primary hover:underline flex items-center gap-2 mx-auto"
                     data-testid="button-generate-options"
                   >
@@ -442,7 +467,7 @@ export default function TripConfirmWizard() {
 
                     <div className="flex gap-2">
                       <button
-                        onClick={generateOptions}
+                        onClick={() => generateOptions(true)}
                         disabled={isGenerating}
                         className="flex-1 py-3 border border-gray-300 rounded-full font-medium text-foreground flex items-center justify-center gap-2 hover:bg-muted"
                         data-testid="button-regenerate"

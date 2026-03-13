@@ -95,27 +95,30 @@ function getPlaceholderImage(itemType: string, index: number): string {
 export async function searchBookingOptions(
   tripItem: TripItem,
   destination: string,
-  tripDates: { startDate: string; endDate: string }
+  tripDates: { startDate: string; endDate: string },
+  skipGooglePlaces: boolean = false
 ): Promise<BookingSearchResult[]> {
-  // First, try to get real places from Google Places API
-  try {
-    const googlePlacesResults = await searchPlacesForTripItem(
-      tripItem.title,
-      tripItem.description,
-      tripItem.itemType,
-      destination
-    );
-    
-    if (googlePlacesResults.length > 0) {
-      console.log(`Found ${googlePlacesResults.length} real places from Google Places API`);
-      return googlePlacesResults;
+  // First, try to get real places from Google Places API (skip on regenerate for variety)
+  if (!skipGooglePlaces) {
+    try {
+      const googlePlacesResults = await searchPlacesForTripItem(
+        tripItem.title,
+        tripItem.description,
+        tripItem.itemType,
+        destination
+      );
+
+      if (googlePlacesResults.length > 0) {
+        console.log(`Found ${googlePlacesResults.length} real places from Google Places API`);
+        return googlePlacesResults;
+      }
+    } catch (error) {
+      console.error("Error searching Google Places:", error);
     }
-  } catch (error) {
-    console.error("Error searching Google Places:", error);
   }
 
-  // Fall back to AI-generated options if Google Places returns no results
-  console.log("Falling back to AI-generated options");
+  // Fall back to AI-generated options (or forced via regenerate for fresh results)
+  console.log(skipGooglePlaces ? "Generating fresh AI options (regenerate)" : "Falling back to AI-generated options");
   const itemTypeLabel = getItemTypeLabel(tripItem.itemType);
   const provider = getProviderByType(tripItem.itemType);
 
@@ -142,7 +145,7 @@ Respond in JSON format with an array of exactly 3 options, each with:
   "imageSearch": "Short search term for finding an image of this place"
 }
 
-Make the options realistic and varied. Include real-sounding business names that would exist in ${destination}.`;
+Make the options realistic and varied. Include real-sounding business names that would exist in ${destination}.${skipGooglePlaces ? " Suggest DIFFERENT and ALTERNATIVE options than the most obvious or popular choices — think hidden gems, lesser-known spots, or unique alternatives." : ""}`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -228,7 +231,8 @@ function isCheckoutItem(tripItem: TripItem): boolean {
 export async function generateAndSaveOptions(
   tripItem: TripItem,
   destination: string,
-  tripDates: { startDate: string; endDate: string }
+  tripDates: { startDate: string; endDate: string },
+  regenerate: boolean = false
 ): Promise<{ generationId: string; options: any[] }> {
   const generationId = generateGenerationId();
   
@@ -262,7 +266,7 @@ export async function generateAndSaveOptions(
     }
   }
   
-  const searchResults = await searchBookingOptions(tripItem, destination, tripDates);
+  const searchResults = await searchBookingOptions(tripItem, destination, tripDates, regenerate);
   
   const optionsToInsert: InsertTripItemOption[] = searchResults.map((result) => ({
     tripItemId: tripItem.id,

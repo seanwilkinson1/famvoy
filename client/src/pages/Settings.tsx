@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { 
-  ArrowLeft, 
-  Bell, 
-  Shield, 
-  Eye, 
-  Users, 
-  MapPin, 
+import {
+  ArrowLeft,
+  Bell,
+  Shield,
+  Eye,
+  Users,
+  MapPin,
   LogOut,
   ChevronRight,
   Trash2,
@@ -15,7 +15,8 @@ import {
   FileText,
   Mail,
   Navigation,
-  Loader2
+  Loader2,
+  UserPen,
 } from "lucide-react";
 import { useClerk } from "@clerk/clerk-react";
 import { Switch } from "@/components/ui/switch";
@@ -206,6 +207,16 @@ export default function Settings() {
           </button>
           <h1 className="font-heading text-2xl font-bold text-foreground">Settings</h1>
         </div>
+
+        <SettingSection title="Profile">
+          <SettingItem
+            icon={<UserPen className="h-5 w-5 text-primary" />}
+            title="Edit Profile"
+            subtitle="Update your photo, bio, and details"
+            rightElement={<ChevronRight className="h-5 w-5 text-muted-foreground" />}
+            onClick={() => setLocation("/profile?edit=true")}
+          />
+        </SettingSection>
 
         <SettingSection title="Location Sharing">
           <SettingItem

@@ -29,6 +29,7 @@ const mapOptions: google.maps.MapOptions = {
   streetViewControl: false,
   fullscreenControl: false,
   gestureHandling: 'greedy',
+  minZoom: 3,
   styles: [
     {
       featureType: "poi",
@@ -103,7 +104,6 @@ export const ExploreMap = memo(function ExploreMap({
   onBoundsChange,
 }: ExploreMapProps) {
   const [, setLocation] = useLocation();
-  const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
   const [selectedPerson, setSelectedPerson] = useState<ExplorePerson | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [zoomLevel, setZoomLevel] = useState(12);
@@ -214,8 +214,6 @@ export const ExploreMap = memo(function ExploreMap({
   const handleExperienceClick = (exp: Experience) => {
     if (onExperienceClick) {
       onExperienceClick(exp);
-    } else {
-      setLocation(`/experience/${exp.id}`);
     }
   };
 
@@ -279,7 +277,7 @@ export const ExploreMap = memo(function ExploreMap({
           <Marker
             key={exp.id}
             position={{ lat: exp.locationLat, lng: exp.locationLng }}
-            onClick={() => setSelectedExperience(exp)}
+            onClick={() => handleExperienceClick(exp)}
             icon={{
               path: google.maps.SymbolPath.CIRCLE,
               scale: 10,
@@ -290,36 +288,6 @@ export const ExploreMap = memo(function ExploreMap({
             }}
           />
         ))}
-
-        {selectedExperience && (
-          <InfoWindow
-            position={{
-              lat: selectedExperience.locationLat,
-              lng: selectedExperience.locationLng,
-            }}
-            onCloseClick={() => setSelectedExperience(null)}
-          >
-            <div
-              className="cursor-pointer min-w-[150px] p-1"
-              onClick={() => handleExperienceClick(selectedExperience)}
-            >
-              <img
-                src={selectedExperience.image}
-                alt={selectedExperience.title}
-                className="w-full h-20 object-cover rounded-lg mb-2"
-              />
-              <h3 className="font-semibold text-sm text-foreground">
-                {selectedExperience.title}
-              </h3>
-              <p className="text-xs text-muted-foreground">{selectedExperience.locationName}</p>
-              <div className="flex gap-2 mt-1 text-xs">
-                <span className="text-primary font-medium">{selectedExperience.cost}</span>
-                <span className="text-muted-foreground">•</span>
-                <span className="text-muted-foreground">{selectedExperience.duration}</span>
-              </div>
-            </div>
-          </InfoWindow>
-        )}
 
         {showClusters ? (
           <>

@@ -37,6 +37,13 @@ export const users = pgTable("users", {
   familyMotto: text("family_motto"),
   favoriteTraditions: text("favorite_traditions"),
   dreamVacation: text("dream_vacation"),
+  profession: text("profession"),
+  company: text("company"),
+  instagramHandle: text("instagram_handle"),
+  linkedinUrl: text("linkedin_url"),
+  twitterHandle: text("twitter_handle"),
+  personalUrl: text("personal_url"),
+  householdType: text("household_type"),
   isAgent: boolean("is_agent").default(false),
   isAdmin: boolean("is_admin").default(false),
   adminRole: text("admin_role"),
@@ -52,6 +59,15 @@ export const familyMembers = pgTable("family_members", {
   photo: text("photo"),
   ageGroup: text("age_group"),
   isAdult: boolean("is_adult").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const profilePhotos = pgTable("profile_photos", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  url: text("url").notNull(),
+  caption: text("caption"),
   sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -538,6 +554,7 @@ export const chatMessages = pgTable("chat_messages", {
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({ id: true });
+export const insertProfilePhotoSchema = createInsertSchema(profilePhotos).omit({ id: true, createdAt: true });
 export const insertExperienceSchema = createInsertSchema(experiences).omit({ id: true, createdAt: true });
 export const insertPodSchema = createInsertSchema(pods).omit({ id: true, createdAt: true });
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
@@ -594,10 +611,20 @@ export type UpsertUser = {
   familyMotto?: string | null;
   favoriteTraditions?: string | null;
   dreamVacation?: string | null;
+  profession?: string | null;
+  company?: string | null;
+  instagramHandle?: string | null;
+  linkedinUrl?: string | null;
+  twitterHandle?: string | null;
+  personalUrl?: string | null;
+  householdType?: string | null;
 };
 
 export type FamilyMember = typeof familyMembers.$inferSelect;
 export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;
+
+export type ProfilePhoto = typeof profilePhotos.$inferSelect;
+export type InsertProfilePhoto = z.infer<typeof insertProfilePhotoSchema>;
 
 export type Experience = typeof experiences.$inferSelect;
 export type InsertExperience = z.infer<typeof insertExperienceSchema>;

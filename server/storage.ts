@@ -59,6 +59,8 @@ import {
   type InsertTripDestination,
   type FamilyMember,
   type InsertFamilyMember,
+  type ProfilePhoto,
+  type InsertProfilePhoto,
   type BookingOption,
   type InsertBookingOption,
   type Cart,
@@ -124,6 +126,7 @@ import {
   tripBooklets,
   bookletChapters,
   familyMembers,
+  profilePhotos,
   bookingOptions,
   carts,
   cartItems,
@@ -276,7 +279,11 @@ export interface IStorage {
   createFamilyMember(data: InsertFamilyMember): Promise<FamilyMember>;
   updateFamilyMember(memberId: number, data: Partial<FamilyMember>): Promise<FamilyMember>;
   deleteFamilyMember(memberId: number): Promise<void>;
-  
+
+  getProfilePhotos(userId: number): Promise<ProfilePhoto[]>;
+  createProfilePhoto(data: InsertProfilePhoto): Promise<ProfilePhoto>;
+  deleteProfilePhotosByUser(userId: number): Promise<void>;
+
   getBookingOptions(tripItemId?: number): Promise<BookingOption[]>;
   getBookingOptionById(id: number): Promise<BookingOption | undefined>;
   createBookingOption(data: InsertBookingOption): Promise<BookingOption>;
@@ -423,6 +430,13 @@ export class DatabaseStorage implements IStorage {
           familyMotto: userData.familyMotto || existingUser.familyMotto,
           favoriteTraditions: userData.favoriteTraditions || existingUser.favoriteTraditions,
           dreamVacation: userData.dreamVacation || existingUser.dreamVacation,
+          profession: userData.profession ?? existingUser.profession,
+          company: userData.company ?? existingUser.company,
+          instagramHandle: userData.instagramHandle ?? existingUser.instagramHandle,
+          linkedinUrl: userData.linkedinUrl ?? existingUser.linkedinUrl,
+          twitterHandle: userData.twitterHandle ?? existingUser.twitterHandle,
+          personalUrl: userData.personalUrl ?? existingUser.personalUrl,
+          householdType: userData.householdType ?? existingUser.householdType,
           updatedAt: new Date(),
         })
         .where(eq(users.clerkId, userData.clerkId))
@@ -441,6 +455,13 @@ export class DatabaseStorage implements IStorage {
         kids: userData.kids || 'Not specified',
         interests: userData.interests || [],
         bio: userData.bio,
+        profession: userData.profession,
+        company: userData.company,
+        instagramHandle: userData.instagramHandle,
+        linkedinUrl: userData.linkedinUrl,
+        twitterHandle: userData.twitterHandle,
+        personalUrl: userData.personalUrl,
+        householdType: userData.householdType,
       })
       .returning();
     return user;
@@ -1568,6 +1589,22 @@ export class DatabaseStorage implements IStorage {
 
   async deleteFamilyMember(memberId: number): Promise<void> {
     await db.delete(familyMembers).where(eq(familyMembers.id, memberId));
+  }
+
+  async getProfilePhotos(userId: number): Promise<ProfilePhoto[]> {
+    return db.select()
+      .from(profilePhotos)
+      .where(eq(profilePhotos.userId, userId))
+      .orderBy(profilePhotos.sortOrder);
+  }
+
+  async createProfilePhoto(data: InsertProfilePhoto): Promise<ProfilePhoto> {
+    const [photo] = await db.insert(profilePhotos).values(data).returning();
+    return photo;
+  }
+
+  async deleteProfilePhotosByUser(userId: number): Promise<void> {
+    await db.delete(profilePhotos).where(eq(profilePhotos.userId, userId));
   }
 
   async getBookingOptions(tripItemId?: number): Promise<BookingOption[]> {
