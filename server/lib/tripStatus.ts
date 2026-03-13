@@ -23,13 +23,16 @@ export function computeLifecyclePhase(trip: {
   completedAt: Date | null;
 }): TripLifecyclePhase {
   if (trip.completedAt) return "completed";
-  if (trip.activatedAt) return "traveling";
 
   const now = new Date();
-  const start = new Date(trip.startDate + "T00:00:00");
   const endOfDay = new Date(trip.endDate + "T23:59:59");
 
+  // Trip is past its end date — completed regardless of activation
   if (now > endOfDay) return "completed";
+
+  if (trip.activatedAt) return "traveling";
+
+  const start = new Date(trip.startDate + "T00:00:00");
   if (now >= start && now <= endOfDay) return "traveling";
   return "planning";
 }
