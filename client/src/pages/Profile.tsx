@@ -4,7 +4,7 @@ import { TripCard } from "@/components/shared/TripCard";
 import { ImageUpload } from "@/components/shared/ImageUpload";
 import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
 import { VerificationBadge } from "@/components/shared/VerificationBadge";
-import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Heart, Globe, Quote, Plane, Users, Share2, UserPlus, ChevronLeft, Star, Instagram, Linkedin, Twitter, Briefcase } from "lucide-react";
+import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Heart, Globe, Quote, Plane, Users, Share2, UserPlus, ChevronLeft, Star, Instagram, Linkedin, Twitter, Briefcase, Search } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -66,6 +66,8 @@ function ProfileInner() {
     const params = new URLSearchParams(window.location.search);
     return params.get("edit") === "true";
   });
+  const [followSheet, setFollowSheet] = useState<"following" | "followers" | null>(null);
+  const [followSearch, setFollowSearch] = useState("");
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [newMember, setNewMember] = useState({
     name: "",
@@ -98,22 +100,20 @@ function ProfileInner() {
     queryFn: api.users.getMe,
   });
 
-  const { data: followersCount = 0 } = useQuery({
+  const { data: followersData = [] } = useQuery({
     queryKey: ["followersCount", currentUser?.id],
     queryFn: async () => {
-      if (!currentUser) return 0;
-      const followers = await api.follows.getFollowers(currentUser.id);
-      return followers.length;
+      if (!currentUser) return [];
+      return api.follows.getFollowers(currentUser.id);
     },
     enabled: !!currentUser,
   });
 
-  const { data: followingCount = 0 } = useQuery({
+  const { data: followingData = [] } = useQuery({
     queryKey: ["followingCount", currentUser?.id],
     queryFn: async () => {
-      if (!currentUser) return 0;
-      const following = await api.follows.getFollowing(currentUser.id);
-      return following.length;
+      if (!currentUser) return [];
+      return api.follows.getFollowing(currentUser.id);
     },
     enabled: !!currentUser,
   });
@@ -539,6 +539,74 @@ function ProfileInner() {
             addMemberMutation={addMemberMutation}
           />
         )}
+
+        {/* Followers/Following Sheet */}
+        <Sheet open={followSheet !== null} onOpenChange={(open) => { if (!open) { setFollowSheet(null); setFollowSearch(""); } }}>
+          <SheetContent side="bottom" className="h-[70vh] rounded-t-2xl">
+            <SheetHeader>
+              <SheetTitle>{followSheet === "followers" ? "Followers" : "Following"}</SheetTitle>
+            </SheetHeader>
+            <div className="px-4 pt-3 pb-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search by name..."
+                  value={followSearch}
+                  onChange={(e) => setFollowSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 rounded-full border border-border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+            </div>
+            <div className="overflow-y-auto flex-1 px-4 pb-4">
+              {(() => {
+                const list = followSheet === "followers" ? followersData : followingData;
+                const filtered = list.filter((u: any) =>
+                  (u.name || "").toLowerCase().includes(followSearch.toLowerCase())
+                );
+                if (filtered.length === 0) {
+                  return (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      {followSearch
+                        ? "No results found"
+                        : followSheet === "followers"
+                          ? "No followers yet"
+                          : "Not following anyone yet"}
+                    </p>
+                  );
+                }
+                return filtered.map((user: any) => (
+                  <button
+                    key={user.id}
+                    onClick={() => { setFollowSheet(null); setFollowSearch(""); setLocation(`/family-profile/${user.id}`); }}
+                    className="flex items-center gap-3 w-full py-3 border-b border-border/50 last:border-0 text-left hover:bg-muted/30 rounded-lg px-2 transition-colors"
+                  >
+                    {user.avatar || user.profileImageUrl ? (
+                      <img
+                        src={user.avatar || user.profileImageUrl}
+                        alt={user.name}
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
+                        {(user.name || "?").charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
+                      {user.location && (
+                        <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          {user.location}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                ));
+              })()}
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     );
   }
@@ -596,13 +664,13 @@ function ProfileInner() {
 
         {/* Stats row */}
         <div className="mt-5 flex items-center justify-center gap-6">
-          <button className="text-center" data-testid="button-following">
-            <p className="text-lg font-semibold text-foreground">{followingCount}</p>
+          <button className="text-center" data-testid="button-following" onClick={() => setFollowSheet("following")}>
+            <p className="text-lg font-semibold text-foreground">{followingData.length}</p>
             <p className="text-xs text-muted-foreground">following</p>
           </button>
           <div className="w-px h-8 bg-border" />
-          <button className="text-center" data-testid="button-followers">
-            <p className="text-lg font-semibold text-foreground">{followersCount}</p>
+          <button className="text-center" data-testid="button-followers" onClick={() => setFollowSheet("followers")}>
+            <p className="text-lg font-semibold text-foreground">{followersData.length}</p>
             <p className="text-xs text-muted-foreground">followers</p>
           </button>
           <div className="w-px h-8 bg-border" />
@@ -999,6 +1067,74 @@ function ProfileInner() {
                 </div>
               </section>
             )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Followers/Following Sheet */}
+      <Sheet open={followSheet !== null} onOpenChange={(open) => { if (!open) { setFollowSheet(null); setFollowSearch(""); } }}>
+        <SheetContent side="bottom" className="h-[70vh] rounded-t-2xl">
+          <SheetHeader>
+            <SheetTitle>{followSheet === "followers" ? "Followers" : "Following"}</SheetTitle>
+          </SheetHeader>
+          <div className="px-4 pt-3 pb-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search by name..."
+                value={followSearch}
+                onChange={(e) => setFollowSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2.5 rounded-full border border-border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+          </div>
+          <div className="overflow-y-auto flex-1 px-4 pb-4">
+            {(() => {
+              const list = followSheet === "followers" ? followersData : followingData;
+              const filtered = list.filter((u: any) =>
+                (u.name || "").toLowerCase().includes(followSearch.toLowerCase())
+              );
+              if (filtered.length === 0) {
+                return (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    {followSearch
+                      ? "No results found"
+                      : followSheet === "followers"
+                        ? "No followers yet"
+                        : "Not following anyone yet"}
+                  </p>
+                );
+              }
+              return filtered.map((user: any) => (
+                <button
+                  key={user.id}
+                  onClick={() => { setFollowSheet(null); setFollowSearch(""); setLocation(`/family-profile/${user.id}`); }}
+                  className="flex items-center gap-3 w-full py-3 border-b border-border/50 last:border-0 text-left hover:bg-muted/30 rounded-lg px-2 transition-colors"
+                >
+                  {user.avatar || user.profileImageUrl ? (
+                    <img
+                      src={user.avatar || user.profileImageUrl}
+                      alt={user.name}
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
+                      {(user.name || "?").charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
+                    {user.location && (
+                      <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        {user.location}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              ));
+            })()}
           </div>
         </SheetContent>
       </Sheet>
