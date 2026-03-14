@@ -546,10 +546,22 @@ export const chatMessages = pgTable("chat_messages", {
   userId: integer("user_id").notNull().references(() => users.id),
   content: text("content").notNull(),
   imageUrl: text("image_url"),
+  editedAt: timestamp("edited_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   index("idx_chat_messages_conversation_id").on(table.conversationId),
   index("idx_chat_messages_created_at").on(table.createdAt),
+]);
+
+export const chatMessageReactions = pgTable("chat_message_reactions", {
+  id: serial("id").primaryKey(),
+  messageId: integer("message_id").notNull().references(() => chatMessages.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  emoji: text("emoji").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("idx_chat_reaction_unique").on(table.messageId, table.userId, table.emoji),
+  index("idx_chat_reactions_message_id").on(table.messageId),
 ]);
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
@@ -589,7 +601,8 @@ export const insertConciergeAiSuggestionSchema = createInsertSchema(conciergeAiS
 export const insertPodPostSchema = createInsertSchema(podPosts).omit({ id: true, createdAt: true });
 export const insertConversationSchema = createInsertSchema(conversations).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertConversationMemberSchema = createInsertSchema(conversationMembers).omit({ id: true, joinedAt: true });
-export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true, createdAt: true });
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true, createdAt: true, editedAt: true });
+export const insertChatMessageReactionSchema = createInsertSchema(chatMessageReactions).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -730,6 +743,9 @@ export type InsertConversationMember = z.infer<typeof insertConversationMemberSc
 
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+
+export type ChatMessageReaction = typeof chatMessageReactions.$inferSelect;
+export type InsertChatMessageReaction = z.infer<typeof insertChatMessageReactionSchema>;
 
 export const adminAuditLogs = pgTable("admin_audit_logs", {
   id: serial("id").primaryKey(),

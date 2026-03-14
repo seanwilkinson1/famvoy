@@ -626,6 +626,46 @@ export const api = {
       if (!res.ok) throw new Error("Failed to send message");
       return res.json();
     },
+
+    editMessage: async (conversationId: number, messageId: number, content: string): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/conversations/${conversationId}/messages/${messageId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) throw new Error("Failed to edit message");
+      return res.json();
+    },
+
+    deleteMessage: async (conversationId: number, messageId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/conversations/${conversationId}/messages/${messageId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete message");
+    },
+
+    getReactions: async (conversationId: number): Promise<any[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/conversations/${conversationId}/reactions`);
+      if (!res.ok) throw new Error("Failed to fetch reactions");
+      return res.json();
+    },
+
+    addReaction: async (conversationId: number, messageId: number, emoji: string): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/conversations/${conversationId}/messages/${messageId}/reactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emoji }),
+      });
+      if (!res.ok) throw new Error("Failed to add reaction");
+      return res.json();
+    },
+
+    removeReaction: async (conversationId: number, messageId: number, emoji: string): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/conversations/${conversationId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to remove reaction");
+    },
   },
   
   albums: {

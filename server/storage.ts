@@ -93,6 +93,8 @@ import {
   type ConversationMember,
   type ChatMessage,
   type InsertChatMessage,
+  type ChatMessageReaction,
+  type InsertChatMessageReaction,
   users,
   experiences,
   pods,
@@ -144,6 +146,7 @@ import {
   conversations,
   conversationMembers,
   chatMessages,
+  chatMessageReactions,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ne, notInArray, ilike, isNotNull, isNull, inArray, sql, count } from "drizzle-orm";
@@ -366,6 +369,13 @@ export interface IStorage {
   // Chat Messages
   getChatMessages(conversationId: number): Promise<Array<ChatMessage & { user: User }>>;
   createChatMessage(data: InsertChatMessage): Promise<ChatMessage>;
+  updateChatMessage(messageId: number, userId: number, content: string): Promise<ChatMessage | undefined>;
+  deleteChatMessage(messageId: number, userId: number): Promise<boolean>;
+
+  // Chat Message Reactions
+  getReactionsForConversation(conversationId: number): Promise<ChatMessageReaction[]>;
+  addMessageReaction(data: InsertChatMessageReaction): Promise<ChatMessageReaction>;
+  removeMessageReaction(messageId: number, userId: number, emoji: string): Promise<boolean>;
   
   // Trip linking to pods
   linkTripToPod(tripId: number, podId: number): Promise<void>;
@@ -2286,6 +2296,58 @@ export class DatabaseStorage implements IStorage {
       .set({ updatedAt: new Date() })
       .where(eq(conversations.id, data.conversationId));
     return message;
+  }
+
+  async updateChatMessage(messageId: number, userId: number, content: string): Promise<ChatMessage | undefined> {
+    const [updated] = await db.update(chatMessages)
+      .set({ content, editedAt: new Date() })
+      .where(and(eq(chatMessages.id, messageId), eq(chatMessages.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteChatMessage(messageId: number, userId: number): Promise<boolean> {
+    const deleted = await db.delete(chatMessages)
+      .where(and(eq(chatMessages.id, messageId), eq(chatMessages.userId, userId)))
+      .returning();
+    return deleted.length > 0;
+  }
+
+  async getReactionsForConversation(conversationId: number): Promise<ChatMessageReaction[]> {
+    const msgIds = await db.select({ id: chatMessages.id })
+      .from(chatMessages)
+      .where(eq(chatMessages.conversationId, conversationId));
+    if (msgIds.length === 0) return [];
+    return db.select().from(chatMessageReactions)
+      .where(inArray(chatMessageReactions.messageId, msgIds.map(m => m.id)));
+  }
+
+  async addMessageReaction(data: InsertChatMessageReaction): Promise<ChatMessageReaction> {
+    const [reaction] = await db.insert(chatMessageReactions)
+      .values(data)
+      .onConflictDoNothing()
+      .returning();
+    if (!reaction) {
+      const [existing] = await db.select().from(chatMessageReactions)
+        .where(and(
+          eq(chatMessageReactions.messageId, data.messageId),
+          eq(chatMessageReactions.userId, data.userId),
+          eq(chatMessageReactions.emoji, data.emoji),
+        ));
+      return existing;
+    }
+    return reaction;
+  }
+
+  async removeMessageReaction(messageId: number, userId: number, emoji: string): Promise<boolean> {
+    const deleted = await db.delete(chatMessageReactions)
+      .where(and(
+        eq(chatMessageReactions.messageId, messageId),
+        eq(chatMessageReactions.userId, userId),
+        eq(chatMessageReactions.emoji, emoji),
+      ))
+      .returning();
+    return deleted.length > 0;
   }
 
   // Trip linking to pods

@@ -1176,6 +1176,86 @@ export async function registerRoutes(
     }
   });
 
+  // Edit message (own only)
+  app.put("/api/conversations/:convId/messages/:msgId", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) return res.status(401).json({ error: "Not authenticated" });
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) return res.status(401).json({ error: "User not found" });
+      const messageId = parseInt(req.params.msgId);
+      const { content } = req.body;
+      if (!content || typeof content !== "string") return res.status(400).json({ error: "Content is required" });
+      const updated = await storage.updateChatMessage(messageId, user.id, content);
+      if (!updated) return res.status(404).json({ error: "Message not found or not yours" });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete message (own only)
+  app.delete("/api/conversations/:convId/messages/:msgId", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) return res.status(401).json({ error: "Not authenticated" });
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) return res.status(401).json({ error: "User not found" });
+      const messageId = parseInt(req.params.msgId);
+      const deleted = await storage.deleteChatMessage(messageId, user.id);
+      if (!deleted) return res.status(404).json({ error: "Message not found or not yours" });
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get reactions for conversation
+  app.get("/api/conversations/:id/reactions", requireAuth(), async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      if (isNaN(conversationId)) return res.status(400).json({ error: "Invalid conversation ID" });
+      const reactions = await storage.getReactionsForConversation(conversationId);
+      res.json(reactions);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Add reaction
+  app.post("/api/conversations/:convId/messages/:msgId/reactions", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) return res.status(401).json({ error: "Not authenticated" });
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) return res.status(401).json({ error: "User not found" });
+      const messageId = parseInt(req.params.msgId);
+      const { emoji } = req.body;
+      if (!emoji) return res.status(400).json({ error: "Emoji is required" });
+      const reaction = await storage.addMessageReaction({ messageId, userId: user.id, emoji });
+      res.status(201).json(reaction);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Remove reaction
+  app.delete("/api/conversations/:convId/messages/:msgId/reactions/:emoji", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) return res.status(401).json({ error: "Not authenticated" });
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) return res.status(401).json({ error: "User not found" });
+      const messageId = parseInt(req.params.msgId);
+      const emoji = decodeURIComponent(req.params.emoji);
+      const removed = await storage.removeMessageReaction(messageId, user.id, emoji);
+      if (!removed) return res.status(404).json({ error: "Reaction not found" });
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/pods/:id/experiences", async (req, res) => {
     try {
       const podId = parseInt(req.params.id);
