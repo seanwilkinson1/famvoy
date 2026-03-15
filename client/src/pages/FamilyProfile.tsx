@@ -151,10 +151,10 @@ export default function FamilyProfile() {
 
   const messageMutation = useMutation({
     mutationFn: async () => {
-      return api.pods.createDirect(userId);
+      return api.conversations.getOrCreateDirect(userId);
     },
-    onSuccess: (pod) => {
-      setLocation(`/pod/${pod.id}`);
+    onSuccess: (conv) => {
+      setLocation(`/conversation/${conv.id}`);
     },
   });
 
@@ -299,18 +299,15 @@ export default function FamilyProfile() {
                   </>
                 )}
               </button>
-              {isConnected && (
-                <button
-                  onClick={() => messageMutation.mutate()}
-                  disabled={messageMutation.isPending}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full font-medium text-sm text-white"
-                  style={{ backgroundColor: '#14b8a6' }}
-                  data-testid="button-message-family"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  {messageMutation.isPending ? "Opening..." : "Message"}
-                </button>
-              )}
+              <button
+                onClick={() => messageMutation.mutate()}
+                disabled={messageMutation.isPending}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full font-medium text-sm bg-muted text-foreground hover:bg-border transition-colors"
+                data-testid="button-message-family"
+              >
+                <MessageCircle className="h-4 w-4" />
+                {messageMutation.isPending ? "Opening..." : "Message"}
+              </button>
             </div>
           </div>
         )}

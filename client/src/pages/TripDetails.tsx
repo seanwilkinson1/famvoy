@@ -138,6 +138,7 @@ export default function TripDetails() {
   const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [showExperiencePicker, setShowExperiencePicker] = useState(false);
   const [showPreferencesModal, setShowPreferencesModal] = useState(false);
+  const [showTripInsights, setShowTripInsights] = useState(false);
   const [addItemDayNumber, setAddItemDayNumber] = useState(1);
   const [editingItem, setEditingItem] = useState<TripItem | null>(null);
   const [itemForm, setItemForm] = useState({
@@ -516,7 +517,7 @@ export default function TripDetails() {
 
   return (
     <div className="flex h-screen flex-col bg-background md:pb-0 md:max-w-6xl md:mx-auto md:px-8">
-      <div className="border-b border-border bg-white px-6 pt-14 md:pt-6 pb-4 shadow-sm z-10 md:max-w-5xl md:mx-auto md:w-full">
+      <div className="border-b border-border bg-white px-6 pt-8 md:pt-6 pb-4 shadow-sm z-10 md:max-w-5xl md:mx-auto md:w-full">
         <div className="flex items-center justify-between mb-3">
           <button 
             onClick={() => setLocation(trip.podId ? `/pod/${trip.podId}` : "/trips")} 
@@ -639,19 +640,33 @@ export default function TripDetails() {
           </div>
         )}
 
-        {trip.aiSummary && (
-          <details className="mx-4 mt-4 group">
-            <summary className="flex items-center justify-between p-3 bg-muted/50 rounded-2xl cursor-pointer hover:bg-muted transition-colors list-none" data-testid="accordion-trip-insights">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-muted-foreground">Trip Insights</span>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90" />
-            </summary>
-            <div className="mt-2 p-4 bg-card rounded-2xl border border-border/50">
-              <p className="text-sm text-muted-foreground leading-relaxed">{trip.aiSummary}</p>
-            </div>
-          </details>
+        {(trip.status === "confirmed" || trip.status === "booking_in_progress" || trip.status === "booked") && !conciergeRequest && (
+          <div className="mx-4 mt-4 flex gap-3">
+            <button
+              onClick={() => setLocation(`/trip/${tripId}/concierge`)}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full bg-muted text-foreground font-medium text-sm hover:bg-border transition-colors"
+              data-testid="button-book-concierge"
+            >
+              <Users className="h-4 w-4" />
+              Concierge
+            </button>
+            {trip.aiSummary && (
+              <button
+                onClick={() => setShowTripInsights(!showTripInsights)}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full bg-muted text-foreground font-medium text-sm hover:bg-border transition-colors"
+                data-testid="accordion-trip-insights"
+              >
+                <Sparkles className="h-4 w-4" />
+                Trip Insights
+              </button>
+            )}
+          </div>
+        )}
+
+        {showTripInsights && trip.aiSummary && (
+          <div className="mx-4 mt-2 p-4 bg-card rounded-2xl border border-border/50">
+            <p className="text-sm text-muted-foreground leading-relaxed">{trip.aiSummary}</p>
+          </div>
         )}
 
         {trip.items.length > 0 && trip.status === "draft" && (
@@ -693,7 +708,7 @@ export default function TripDetails() {
 
         {(trip.status === "confirmed" || trip.status === "booking_in_progress" || trip.status === "booked") && (
           <>
-            {trip.status === "booked" ? (
+            {trip.status === "booked" && (
               <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-emerald-500 to-green-500 rounded-2xl">
                 <div className="flex items-center gap-3 text-white">
                   <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
@@ -705,7 +720,9 @@ export default function TripDetails() {
                   </div>
                 </div>
               </div>
-            ) : trip.status === "booking_in_progress" ? (
+            )}
+
+            {trip.status === "booking_in_progress" && (
               <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl">
                 <div className="flex items-center gap-3 text-white">
                   <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
@@ -717,66 +734,6 @@ export default function TripDetails() {
                   </div>
                 </div>
               </div>
-            ) : (
-              <div className="mx-4 mt-4 p-4 bg-card rounded-2xl border border-border/50 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                      <Check className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">Trip Confirmed</h3>
-                      <p className="text-sm text-muted-foreground">Your trip is curated and ready</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      try {
-                        if (navigator.share) {
-                          await navigator.share({
-                            title: trip.name,
-                            text: `Check out my trip to ${trip.destination}!`,
-                            url: window.location.href,
-                          });
-                        } else {
-                          await navigator.clipboard.writeText(window.location.href);
-                          toast.success("Link copied to clipboard!");
-                        }
-                      } catch (err) {
-                        if ((err as Error).name !== 'AbortError') {
-                          try {
-                            await navigator.clipboard.writeText(window.location.href);
-                            toast.success("Link copied to clipboard!");
-                          } catch {
-                            toast.error("Failed to share");
-                          }
-                        }
-                      }
-                    }}
-                    className="shrink-0 bg-muted text-muted-foreground p-2.5 rounded-xl hover:bg-muted/80 transition-colors"
-                    data-testid="button-share-trip"
-                  >
-                    <Share2 className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {!conciergeRequest && trip.status === "confirmed" && (
-              <button
-                onClick={() => setLocation(`/trip/${tripId}/concierge`)}
-                className="mx-4 mt-4 w-[calc(100%-2rem)] p-4 bg-gradient-to-r from-primary to-teal-600 rounded-2xl flex items-center justify-between shadow-md hover:shadow-lg transition-shadow"
-                data-testid="button-book-concierge"
-              >
-                <div className="text-white text-left">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <Users className="h-5 w-5" />
-                    <h3 className="font-semibold">Book with Concierge</h3>
-                  </div>
-                  <p className="text-sm text-white/80">Let our travel agent handle everything</p>
-                </div>
-                <ChevronRight className="h-5 w-5 text-white/80 shrink-0" />
-              </button>
             )}
 
             {conciergeRequest && (
@@ -814,19 +771,6 @@ export default function TripDetails() {
               </div>
             )}
 
-            <div className="mx-4 mt-4 p-4 bg-card rounded-2xl border border-border/50 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                  <MapPin className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-foreground">{trip.destination}</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {trip.items.length} activities across {numDays} days
-                  </p>
-                </div>
-              </div>
-            </div>
           </>
         )}
 

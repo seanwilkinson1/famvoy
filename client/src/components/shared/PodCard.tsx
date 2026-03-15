@@ -22,16 +22,6 @@ export function PodCard({ pod, className, horizontal = false }: PodCardProps) {
           )}
           data-testid={`card-pod-${pod.id}`}
         >
-          {/* Image */}
-          <div className="h-28 w-full overflow-hidden bg-muted">
-            <img
-              src={pod.image || defaultImage}
-              alt={pod.name}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              loading="lazy"
-            />
-          </div>
-
           {/* Content */}
           <div className="p-3.5 space-y-1">
             <h3 className="font-semibold text-sm text-foreground truncate">{pod.name}</h3>
