@@ -1153,7 +1153,13 @@ export const api = {
       if (!res.ok) {
         const text = await res.text();
         console.error("boards.create failed:", res.status, text.slice(0, 200));
-        throw new Error("Failed to create board");
+        throw new Error(`Failed to create board (${res.status})`);
+      }
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const text = await res.text();
+        console.error("boards.create non-JSON response:", text.slice(0, 200));
+        throw new Error("Server returned non-JSON response");
       }
       return res.json();
     },
