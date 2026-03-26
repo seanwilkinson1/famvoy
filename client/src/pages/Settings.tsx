@@ -286,15 +286,20 @@ export default function Settings() {
           <SettingItem
             icon={<MapPin className="h-5 w-5 text-primary" />}
             title="Nearby Experiences"
-            subtitle="Discover new activities in your area"
+            subtitle={shareLocation
+              ? "Showing activities near your location"
+              : "Enable location to discover nearby activities"
+            }
             rightElement={
-              <Switch
-                checked={notifications.nearbyExperiences}
-                onCheckedChange={(checked) => 
-                  setNotifications({ ...notifications, nearbyExperiences: checked })
-                }
-                data-testid="switch-nearby-experiences"
-              />
+              isUpdatingLocation ? (
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              ) : (
+                <Switch
+                  checked={shareLocation}
+                  onCheckedChange={handleShareLocationToggle}
+                  data-testid="switch-nearby-experiences"
+                />
+              )
             }
           />
         </SettingSection>

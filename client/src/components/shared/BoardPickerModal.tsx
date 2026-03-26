@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Plus, LayoutGrid, Loader2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -64,9 +65,9 @@ export function BoardPickerModal({ experienceId, onClose, userId }: BoardPickerM
 
   const isPending = pinMutation.isPending;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 z-[100] flex items-end md:items-center md:justify-center"
+      className="fixed inset-0 bg-black/50 z-[9999] flex items-end md:items-center md:justify-center"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -163,6 +164,7 @@ export function BoardPickerModal({ experienceId, onClose, userId }: BoardPickerM
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
