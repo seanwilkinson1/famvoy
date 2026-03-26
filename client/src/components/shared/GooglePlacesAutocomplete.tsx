@@ -13,6 +13,12 @@ interface PlaceResult {
   photoUrl?: string;
 }
 
+interface Suggestion {
+  placeId: string;
+  mainText: string;
+  secondaryText: string;
+}
+
 interface GooglePlacesAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
@@ -37,20 +43,15 @@ export function GooglePlacesAutocomplete({
   const { isLoaded } = useGoogleMapsContext();
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
-  const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
   const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
-  
-  const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
-  const [showPredictions, setShowPredictions] = useState(false);
+
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isGettingCurrentLocation, setIsGettingCurrentLocation] = useState(false);
 
   useEffect(() => {
-    if (isLoaded && !autocompleteServiceRef.current && typeof google !== 'undefined' && google.maps?.places) {
-      autocompleteServiceRef.current = new google.maps.places.AutocompleteService();
-      const mapDiv = document.createElement("div");
-      placesServiceRef.current = new google.maps.places.PlacesService(mapDiv);
+    if (isLoaded && typeof google !== "undefined" && google.maps?.places) {
       sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
     }
   }, [isLoaded]);
@@ -58,7 +59,7 @@ export function GooglePlacesAutocomplete({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setShowPredictions(false);
+        setShowSuggestions(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -67,33 +68,39 @@ export function GooglePlacesAutocomplete({
 
   const searchPlaces = useCallback(
     async (query: string) => {
-      if (!autocompleteServiceRef.current || query.length < 2) {
-        setPredictions([]);
+      if (!isLoaded || query.length < 2) {
+        setSuggestions([]);
         return;
       }
 
       setIsSearching(true);
       try {
-        const request: google.maps.places.AutocompletionRequest = {
-          input: query,
-          sessionToken: sessionTokenRef.current!,
-        };
+        // Use the new Places API (AutocompleteSuggestion)
+        const { suggestions: results } =
+          await (google.maps.places as any).AutocompleteSuggestion.fetchAutocompleteSuggestions({
+            input: query,
+            sessionToken: sessionTokenRef.current,
+          });
 
-        autocompleteServiceRef.current.getPlacePredictions(request, (results, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-            setPredictions(results);
-            setShowPredictions(true);
-          } else {
-            setPredictions([]);
-          }
-          setIsSearching(false);
+        const mapped: Suggestion[] = (results || []).map((s: any) => {
+          const pred = s.placePrediction;
+          return {
+            placeId: pred.placeId,
+            mainText: pred.mainText?.text || pred.text?.text || "",
+            secondaryText: pred.secondaryText?.text || "",
+          };
         });
+
+        setSuggestions(mapped);
+        setShowSuggestions(mapped.length > 0);
       } catch (error) {
         console.error("Places search error:", error);
+        setSuggestions([]);
+      } finally {
         setIsSearching(false);
       }
     },
-    []
+    [isLoaded]
   );
 
   useEffect(() => {
@@ -105,61 +112,63 @@ export function GooglePlacesAutocomplete({
     return () => clearTimeout(debounce);
   }, [value, isSelected, searchPlaces]);
 
-  const handleSelectPrediction = (prediction: google.maps.places.AutocompletePrediction) => {
-    if (!placesServiceRef.current) return;
+  const handleSelectSuggestion = async (suggestion: Suggestion) => {
+    try {
+      // Use the new Places API (Place class)
+      const place = new (google.maps.places as any).Place({
+        id: suggestion.placeId,
+      });
 
-    const request: google.maps.places.PlaceDetailsRequest = {
-      placeId: prediction.place_id,
-      fields: ["name", "formatted_address", "geometry", "types", "photos"],
-      sessionToken: sessionTokenRef.current!,
-    };
+      await place.fetchFields({
+        fields: ["displayName", "formattedAddress", "location", "types", "photos"],
+      });
 
-    placesServiceRef.current.getDetails(request, (place, status) => {
-      if (status === google.maps.places.PlacesServiceStatus.OK && place && place.geometry?.location) {
-        const formattedAddress = place.formatted_address || prediction.description;
-        const displayName = prediction.structured_formatting.main_text;
-        const secondaryPart = prediction.structured_formatting.secondary_text?.split(",")[0]?.trim();
-        const displayValue = secondaryPart ? `${displayName}, ${secondaryPart}` : displayName;
+      const location = place.location;
+      if (!location) return;
 
-        let photoUrl: string | undefined;
-        if (place.photos && place.photos.length > 0) {
-          // Use getUrl() to get the Google-hosted photo URL directly
-          photoUrl = place.photos[0].getUrl({ maxWidth: 400 });
-        }
+      const displayValue = suggestion.secondaryText
+        ? `${suggestion.mainText}, ${suggestion.secondaryText.split(",")[0]?.trim()}`
+        : suggestion.mainText;
 
-        const result: PlaceResult = {
-          name: displayValue,
-          address: formattedAddress,
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng(),
-          placeId: prediction.place_id,
-          types: place.types || [],
-          photoUrl,
-        };
-        
-        onPlaceSelect(result);
-        onChange(displayValue);
-        setPredictions([]);
-        setShowPredictions(false);
-        if (typeof google !== 'undefined' && google.maps?.places) {
-          sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
-        }
+      let photoUrl: string | undefined;
+      if (place.photos && place.photos.length > 0) {
+        photoUrl = place.photos[0].getURI({ maxWidth: 400 });
       }
-    });
+
+      const result: PlaceResult = {
+        name: displayValue,
+        address: place.formattedAddress || displayValue,
+        lat: location.lat(),
+        lng: location.lng(),
+        placeId: suggestion.placeId,
+        types: place.types || [],
+        photoUrl,
+      };
+
+      onPlaceSelect(result);
+      onChange(displayValue);
+      setSuggestions([]);
+      setShowSuggestions(false);
+
+      // Refresh session token
+      if (typeof google !== "undefined" && google.maps?.places) {
+        sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+      }
+    } catch (error) {
+      console.error("Place details error:", error);
+    }
   };
 
   const handleUseCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      return;
-    }
+    if (!navigator.geolocation) return;
 
     setIsGettingCurrentLocation(true);
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-        
-        if (placesServiceRef.current) {
+
+        try {
           const geocoder = new google.maps.Geocoder();
           geocoder.geocode(
             { location: { lat: latitude, lng: longitude } },
@@ -167,16 +176,19 @@ export function GooglePlacesAutocomplete({
               setIsGettingCurrentLocation(false);
               if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
                 const result = results[0];
-                const cityComponent = result.address_components.find(c => 
-                  c.types.includes("locality") || c.types.includes("administrative_area_level_2")
+                const cityComponent = result.address_components.find(
+                  (c) =>
+                    c.types.includes("locality") ||
+                    c.types.includes("administrative_area_level_2")
                 );
-                const stateComponent = result.address_components.find(c => 
+                const stateComponent = result.address_components.find((c) =>
                   c.types.includes("administrative_area_level_1")
                 );
-                
-                const locationName = cityComponent && stateComponent 
-                  ? `${cityComponent.long_name}, ${stateComponent.short_name}`
-                  : result.formatted_address.split(",").slice(0, 2).join(", ");
+
+                const locationName =
+                  cityComponent && stateComponent
+                    ? `${cityComponent.long_name}, ${stateComponent.short_name}`
+                    : result.formatted_address.split(",").slice(0, 2).join(", ");
 
                 onPlaceSelect({
                   name: locationName,
@@ -189,7 +201,7 @@ export function GooglePlacesAutocomplete({
               }
             }
           );
-        } else {
+        } catch {
           setIsGettingCurrentLocation(false);
         }
       },
@@ -202,7 +214,7 @@ export function GooglePlacesAutocomplete({
 
   const handleClear = () => {
     onChange("");
-    setPredictions([]);
+    setSuggestions([]);
     onClear?.();
     inputRef.current?.focus();
   };
@@ -248,7 +260,7 @@ export function GooglePlacesAutocomplete({
           </button>
         </div>
       )}
-      
+
       <div className="relative">
         <MapPin className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
         <input
@@ -262,7 +274,7 @@ export function GooglePlacesAutocomplete({
               onClear();
             }
           }}
-          onFocus={() => predictions.length > 0 && setShowPredictions(true)}
+          onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
           className={cn(
             "w-full rounded-xl border bg-white py-4 pl-12 pr-10 text-base font-medium placeholder:text-muted-foreground focus:border-primary focus:outline-none",
             isSelected ? "border-primary bg-primary/5" : "border-border"
@@ -283,22 +295,22 @@ export function GooglePlacesAutocomplete({
         )}
       </div>
 
-      {showPredictions && predictions.length > 0 && (
+      {showSuggestions && suggestions.length > 0 && (
         <div className="absolute z-50 mt-2 w-full rounded-xl border border-border bg-white shadow-lg overflow-hidden">
-          {predictions.map((prediction) => (
+          {suggestions.map((suggestion) => (
             <button
-              key={prediction.place_id}
-              onClick={() => handleSelectPrediction(prediction)}
+              key={suggestion.placeId}
+              onClick={() => handleSelectSuggestion(suggestion)}
               className="w-full px-4 py-3 text-left hover:bg-muted flex items-start gap-3 border-b border-border last:border-0"
-              data-testid={`place-suggestion-${prediction.place_id}`}
+              data-testid={`place-suggestion-${suggestion.placeId}`}
             >
               <MapPin className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">
-                  {prediction.structured_formatting.main_text}
+                  {suggestion.mainText}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {prediction.structured_formatting.secondary_text}
+                  {suggestion.secondaryText}
                 </p>
               </div>
             </button>

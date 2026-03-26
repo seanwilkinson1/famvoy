@@ -528,12 +528,59 @@ export async function registerRoutes(
       if (!user) {
         return res.status(401).json({ error: "User not found" });
       }
-      const parsed = insertExperienceSchema.safeParse({ ...req.body, userId: user.id });
+      // Sync image from images array for backward compat
+      const body = { ...req.body, userId: user.id };
+      if (body.images?.length > 0 && !body.image) {
+        body.image = body.images[0];
+      }
+      const parsed = insertExperienceSchema.safeParse(body);
       if (!parsed.success) {
         return res.status(400).json({ error: fromError(parsed.error).toString() });
       }
       const experience = await storage.createExperience(parsed.data);
       res.status(201).json(experience);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/experiences/:id", requireAuth(), async (req, res) => {
+    try {
+      const experienceId = parseInt(req.params.id);
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      const experience = await storage.getExperienceById(experienceId);
+      if (!experience) {
+        return res.status(404).json({ error: "Experience not found" });
+      }
+      if (experience.userId !== user.id) {
+        return res.status(403).json({ error: "You can only edit your own experiences" });
+      }
+
+      // Only allow updating known fields
+      const body = req.body;
+      const updates: Record<string, any> = {};
+      const allowedFields = ['title', 'image', 'images', 'duration', 'cost', 'ages', 'category',
+        'locationName', 'locationLat', 'locationLng', 'description', 'tip', 'tips'];
+      for (const field of allowedFields) {
+        if (body[field] !== undefined) {
+          updates[field] = body[field];
+        }
+      }
+      // Sync image from images array for backward compat
+      if (updates.images?.length > 0) {
+        updates.image = updates.images[0];
+      }
+
+      const updated = await storage.updateExperience(experienceId, updates);
+      res.json(updated);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

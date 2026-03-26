@@ -119,6 +119,19 @@ export const api = {
       if (!res.ok) throw new Error("Failed to unsave experience");
     },
     
+    update: async (id: number, data: any): Promise<Experience> => {
+      const res = await fetchWithAuth(`${API_BASE}/experiences/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: "Failed to update experience" }));
+        throw new Error(error.error || "Failed to update experience");
+      }
+      return res.json();
+    },
+
     delete: async (id: number): Promise<void> => {
       const res = await fetchWithAuth(`${API_BASE}/experiences/${id}`, {
         method: "DELETE",

@@ -56,10 +56,14 @@ export function ExperienceCard({ experience, className, horizontal = false, onSa
     }
   };
 
-  const imageUrl = experience.image?.startsWith('/objects')
-    ? experience.image
-    : experience.image || '';
-  const images = imageUrl ? [imageUrl] : [];
+  const experienceImages = (experience as any).images?.length
+    ? (experience as any).images
+    : experience.image
+      ? [experience.image]
+      : [];
+  const images = experienceImages.map((url: string) =>
+    url.startsWith('/objects') ? url : url || ''
+  ).filter(Boolean);
 
   return (
     <Link href={`/experience/${experience.id}`}>

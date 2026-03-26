@@ -185,6 +185,7 @@ export interface IStorage {
   deleteExperience(id: number): Promise<void>;
   getSavedExperiences(userId: number): Promise<Experience[]>;
   createExperience(experience: InsertExperience): Promise<Experience>;
+  updateExperience(id: number, data: Partial<InsertExperience>): Promise<Experience>;
   saveExperience(data: InsertSavedExperience): Promise<void>;
   unsaveExperience(userId: number, experienceId: number): Promise<void>;
   searchExperiences(query: string): Promise<Experience[]>;
@@ -563,6 +564,15 @@ export class DatabaseStorage implements IStorage {
       .values(experience)
       .returning();
     return newExperience;
+  }
+
+  async updateExperience(id: number, data: Partial<InsertExperience>): Promise<Experience> {
+    const [updated] = await db
+      .update(experiences)
+      .set(data)
+      .where(eq(experiences.id, id))
+      .returning();
+    return updated;
   }
 
   async saveExperience(data: InsertSavedExperience): Promise<void> {

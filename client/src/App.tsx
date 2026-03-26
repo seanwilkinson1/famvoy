@@ -180,6 +180,7 @@ function AuthenticatedRouter() {
                 <Route path="/profile" component={Profile} />
                 <Route path="/settings" component={Settings} />
                 <Route path="/experience/:id" component={ExperienceDetails} />
+                <Route path="/experience/:id/edit" component={Create} />
                 <Route path="/pod/:id" component={PodDetails} />
                 <Route path="/trip/:id" component={TripDetails} />
                 <Route path="/trip/:id/confirm" component={TripConfirmWizard} />

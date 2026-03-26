@@ -1,6 +1,6 @@
 import { useRoute, useLocation } from "wouter";
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
-import { ChevronLeft, Heart, Clock, DollarSign, Users, MapPin, Share2, Navigation, Plus, X, FolderPlus, Camera, Star, CheckCircle, Loader2, Trash2 } from "lucide-react";
+import { ChevronLeft, Heart, Clock, DollarSign, Users, MapPin, Share2, Navigation, Plus, X, FolderPlus, Camera, Star, CheckCircle, Loader2, Trash2, Pencil } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useCallback } from "react";
@@ -171,8 +171,11 @@ function ExperienceDetailsInner() {
   
   const isCreator = user?.id === experience.userId;
 
+  const experienceImages = (experience as any).images?.length
+    ? (experience as any).images
+    : [experience.image];
   const galleryImages = [
-    experience.image,
+    ...experienceImages,
     ...checkins.filter((c: any) => c.photoUrl).map((c: any) => c.photoUrl)
   ];
 
@@ -184,12 +187,20 @@ function ExperienceDetailsInner() {
       {/* Hero Image */}
       <div className="relative h-72 w-full md:max-w-5xl md:mx-auto md:mt-6 md:rounded-2xl md:overflow-hidden">
         <img
-          src={experience.image}
+          src={experienceImages[0] || experience.image}
           alt={experience.title}
           className="h-full w-full object-cover cursor-pointer"
           onClick={() => openGallery(0)}
           data-testid="button-open-gallery"
         />
+        {experienceImages.length > 1 && (
+          <button
+            onClick={() => openGallery(0)}
+            className="absolute bottom-4 right-4 bg-black/60 text-white text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-sm z-10"
+          >
+            {experienceImages.length} photos
+          </button>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
         
         {/* Top Nav */}
@@ -203,13 +214,22 @@ function ExperienceDetailsInner() {
           </button>
           <div className="flex gap-3">
             {isCreator && (
-              <button 
-                onClick={() => setShowDeleteConfirm(true)}
-                className="rounded-full bg-red-500/80 backdrop-blur-md p-2 text-white hover:bg-red-500 transition-colors" 
-                data-testid="button-delete-experience"
-              >
-                <Trash2 className="h-5 w-5" />
-              </button>
+              <>
+                <button
+                  onClick={() => setLocation(`/experience/${experienceId}/edit`)}
+                  className="rounded-full bg-white/20 backdrop-blur-md p-2 text-white hover:bg-white/30 transition-colors"
+                  data-testid="button-edit-experience"
+                >
+                  <Pencil className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="rounded-full bg-red-500/80 backdrop-blur-md p-2 text-white hover:bg-red-500 transition-colors"
+                  data-testid="button-delete-experience"
+                >
+                  <Trash2 className="h-5 w-5" />
+                </button>
+              </>
             )}
             {user && (
               <button 
@@ -383,23 +403,27 @@ function ExperienceDetailsInner() {
           </p>
         </section>
 
-        {/* Good to Know */}
-        <section className="mb-8">
-          <h2 className="mb-3 font-heading text-xl font-bold text-foreground">Good to Know</h2>
-          <ul className="space-y-2">
-            {(experience.tips || [
-              "Stroller friendly paths throughout",
-              "Restrooms located near the entrance",
-              "Best time to visit is early morning",
-              "Parking is free on weekends"
-            ]).map((tip, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-secondary-foreground/50 flex-shrink-0" />
-                {tip}
-              </li>
-            ))}
-          </ul>
-        </section>
+        {/* Insider Tip / Good to Know */}
+        {((experience as any).tip || (experience.tips && experience.tips.length > 0)) && (
+          <section className="mb-8">
+            <h2 className="mb-3 font-heading text-xl font-bold text-foreground">Insider Tip</h2>
+            {(experience as any).tip ? (
+              <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-2xl">
+                <span className="text-amber-500 mt-0.5">💡</span>
+                <p className="text-sm text-amber-800">{(experience as any).tip}</p>
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {(experience.tips || []).map((tip, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-secondary-foreground/50 flex-shrink-0" />
+                    {tip}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
 
         {/* Families Who Did This */}
         {checkins.length > 0 && (
