@@ -43,17 +43,29 @@ export function GooglePlacesAutocomplete({
   const { isLoaded } = useGoogleMapsContext();
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
+  const sessionTokenRef = useRef<any>(null);
+  const placesReadyRef = useRef(false);
 
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isGettingCurrentLocation, setIsGettingCurrentLocation] = useState(false);
 
+  // Import the places library using the new API
   useEffect(() => {
-    if (isLoaded && typeof google !== "undefined" && google.maps?.places) {
-      sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+    if (!isLoaded || placesReadyRef.current) return;
+
+    async function init() {
+      try {
+        // importLibrary ensures the new Places API classes are available
+        await google.maps.importLibrary("places");
+        sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+        placesReadyRef.current = true;
+      } catch (e) {
+        console.error("Failed to import places library:", e);
+      }
     }
+    init();
   }, [isLoaded]);
 
   useEffect(() => {
@@ -68,31 +80,52 @@ export function GooglePlacesAutocomplete({
 
   const searchPlaces = useCallback(
     async (query: string) => {
-      if (!isLoaded || query.length < 2) {
+      if (!placesReadyRef.current || query.length < 2) {
         setSuggestions([]);
         return;
       }
 
       setIsSearching(true);
       try {
-        // Use the new Places API (AutocompleteSuggestion)
-        const { suggestions: results } =
-          await (google.maps.places as any).AutocompleteSuggestion.fetchAutocompleteSuggestions({
-            input: query,
-            sessionToken: sessionTokenRef.current,
+        // Try the new API first (AutocompleteSuggestion)
+        if ((google.maps.places as any).AutocompleteSuggestion) {
+          const { suggestions: results } =
+            await (google.maps.places as any).AutocompleteSuggestion.fetchAutocompleteSuggestions({
+              input: query,
+              sessionToken: sessionTokenRef.current,
+            });
+
+          const mapped: Suggestion[] = (results || []).map((s: any) => {
+            const pred = s.placePrediction;
+            return {
+              placeId: pred.placeId,
+              mainText: pred.mainText?.text || pred.text?.text || "",
+              secondaryText: pred.secondaryText?.text || "",
+            };
           });
 
-        const mapped: Suggestion[] = (results || []).map((s: any) => {
-          const pred = s.placePrediction;
-          return {
-            placeId: pred.placeId,
-            mainText: pred.mainText?.text || pred.text?.text || "",
-            secondaryText: pred.secondaryText?.text || "",
-          };
-        });
-
-        setSuggestions(mapped);
-        setShowSuggestions(mapped.length > 0);
+          setSuggestions(mapped);
+          setShowSuggestions(mapped.length > 0);
+        } else {
+          // Fallback to legacy API
+          const service = new google.maps.places.AutocompleteService();
+          service.getPlacePredictions(
+            { input: query, sessionToken: sessionTokenRef.current! },
+            (results, status) => {
+              if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+                const mapped: Suggestion[] = results.map((p) => ({
+                  placeId: p.place_id,
+                  mainText: p.structured_formatting.main_text,
+                  secondaryText: p.structured_formatting.secondary_text || "",
+                }));
+                setSuggestions(mapped);
+                setShowSuggestions(mapped.length > 0);
+              } else {
+                setSuggestions([]);
+              }
+            }
+          );
+        }
       } catch (error) {
         console.error("Places search error:", error);
         setSuggestions([]);
@@ -100,7 +133,7 @@ export function GooglePlacesAutocomplete({
         setIsSearching(false);
       }
     },
-    [isLoaded]
+    []
   );
 
   useEffect(() => {
@@ -114,39 +147,78 @@ export function GooglePlacesAutocomplete({
 
   const handleSelectSuggestion = async (suggestion: Suggestion) => {
     try {
-      // Use the new Places API (Place class)
-      const place = new (google.maps.places as any).Place({
-        id: suggestion.placeId,
-      });
+      // Try the new API first (Place class with fetchFields)
+      if ((google.maps.places as any).Place) {
+        const place = new (google.maps.places as any).Place({
+          id: suggestion.placeId,
+        });
 
-      await place.fetchFields({
-        fields: ["displayName", "formattedAddress", "location", "types", "photos"],
-      });
+        await place.fetchFields({
+          fields: ["displayName", "formattedAddress", "location", "types", "photos"],
+        });
 
-      const location = place.location;
-      if (!location) return;
+        const location = place.location;
+        if (!location) return;
 
-      const displayValue = suggestion.secondaryText
-        ? `${suggestion.mainText}, ${suggestion.secondaryText.split(",")[0]?.trim()}`
-        : suggestion.mainText;
+        const displayValue = suggestion.secondaryText
+          ? `${suggestion.mainText}, ${suggestion.secondaryText.split(",")[0]?.trim()}`
+          : suggestion.mainText;
 
-      let photoUrl: string | undefined;
-      if (place.photos && place.photos.length > 0) {
-        photoUrl = place.photos[0].getURI({ maxWidth: 400 });
+        let photoUrl: string | undefined;
+        if (place.photos && place.photos.length > 0) {
+          try {
+            photoUrl = place.photos[0].getURI?.({ maxWidth: 400 }) || place.photos[0].getUrl?.({ maxWidth: 400 });
+          } catch {}
+        }
+
+        const result: PlaceResult = {
+          name: displayValue,
+          address: place.formattedAddress || displayValue,
+          lat: location.lat(),
+          lng: location.lng(),
+          placeId: suggestion.placeId,
+          types: place.types || [],
+          photoUrl,
+        };
+
+        onPlaceSelect(result);
+        onChange(displayValue);
+      } else {
+        // Fallback to legacy PlacesService
+        const mapDiv = document.createElement("div");
+        const service = new google.maps.places.PlacesService(mapDiv);
+        service.getDetails(
+          {
+            placeId: suggestion.placeId,
+            fields: ["name", "formatted_address", "geometry", "types", "photos"],
+            sessionToken: sessionTokenRef.current!,
+          },
+          (place, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+              const displayValue = suggestion.secondaryText
+                ? `${suggestion.mainText}, ${suggestion.secondaryText.split(",")[0]?.trim()}`
+                : suggestion.mainText;
+
+              let photoUrl: string | undefined;
+              if (place.photos && place.photos.length > 0) {
+                photoUrl = place.photos[0].getUrl({ maxWidth: 400 });
+              }
+
+              onPlaceSelect({
+                name: displayValue,
+                address: place.formatted_address || displayValue,
+                lat: place.geometry.location.lat(),
+                lng: place.geometry.location.lng(),
+                placeId: suggestion.placeId,
+                types: place.types || [],
+                photoUrl,
+              });
+              onChange(displayValue);
+            }
+          }
+        );
       }
 
-      const result: PlaceResult = {
-        name: displayValue,
-        address: place.formattedAddress || displayValue,
-        lat: location.lat(),
-        lng: location.lng(),
-        placeId: suggestion.placeId,
-        types: place.types || [],
-        photoUrl,
-      };
-
-      onPlaceSelect(result);
-      onChange(displayValue);
       setSuggestions([]);
       setShowSuggestions(false);
 
