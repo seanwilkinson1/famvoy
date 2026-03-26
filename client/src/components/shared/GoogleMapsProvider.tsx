@@ -55,6 +55,7 @@ function GoogleMapsLoaderWrapper({ apiKey, children }: { apiKey: string; childre
     id: 'google-map-script',
     googleMapsApiKey: apiKey,
     libraries: GOOGLE_MAPS_LIBRARIES,
+    version: "weekly",
   });
 
   return (
