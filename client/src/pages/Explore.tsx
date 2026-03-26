@@ -1,7 +1,8 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
+import { BoardPickerModal } from "@/components/shared/BoardPickerModal";
 import { ExploreMap, MapBounds } from "@/components/shared/ExploreMap";
 import { GoogleMapsProvider, useGoogleMapsContext } from "@/components/shared/GoogleMapsProvider";
-import { Search, Navigation, X, MapPin, Filter, Loader2, Users, Eye, EyeOff, Check, List, Map as MapIcon, ChevronDown, Calendar, Star } from "lucide-react";
+import { Search, Navigation, X, MapPin, Filter, Loader2, Users, Eye, EyeOff, Check, List, Map as MapIcon, ChevronDown, Calendar, Star, Heart } from "lucide-react";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -313,12 +314,51 @@ function UnifiedFilterSheet({
   );
 }
 
+function MapHeartButton({ experienceId, onSaveToBoard }: { experienceId: number; onSaveToBoard: (id: number) => void }) {
+  const queryClient = useQueryClient();
+  const { data: currentUser } = useQuery({ queryKey: ["currentUser"], queryFn: api.users.getMe });
+  const { data: savedExperiences = [] } = useQuery({
+    queryKey: ["savedExperiences", currentUser?.id],
+    queryFn: () => currentUser ? api.users.getSavedExperiences(currentUser.id) : [],
+    enabled: !!currentUser,
+  });
+  const isSaved = savedExperiences.some((e: any) => e.id === experienceId);
+  const unsaveMutation = useMutation({
+    mutationFn: () => api.experiences.unsave(experienceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["savedExperiences"] });
+      queryClient.invalidateQueries({ queryKey: ["boards"] });
+    },
+  });
+
+  return (
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isSaved) {
+          unsaveMutation.mutate();
+        } else {
+          onSaveToBoard(experienceId);
+        }
+      }}
+      className="absolute right-6 top-2 rounded-full bg-white/90 p-2 backdrop-blur-sm transition-all hover:bg-white hover:scale-110 active:scale-90 z-10"
+    >
+      <Heart
+        fill={isSaved ? "currentColor" : "none"}
+        className={cn("h-5 w-5 transition-colors", isSaved ? "text-foreground" : "text-foreground/50")}
+      />
+    </button>
+  );
+}
+
 function ExploreInner() {
   const [viewMode, setViewMode] = useState<ViewMode>("map");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
   const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
+  const [boardPickerExperienceId, setBoardPickerExperienceId] = useState<number | null>(null);
 
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
@@ -515,9 +555,18 @@ function ExploreInner() {
     setFollowingFilter(false);
   };
 
-  // Pin tap handler — sets selected experience for bottom sheet
+  const sidePanelRef = useRef<HTMLDivElement>(null);
+
+  // Pin tap handler — mobile: sets selected experience for bottom sheet; desktop: scroll side panel + highlight
   const handlePinTap = useCallback((experience: Experience) => {
     setSelectedExperience(experience);
+    // Desktop: scroll the side panel to the matching card
+    if (sidePanelRef.current) {
+      const card = sidePanelRef.current.querySelector(`[data-testid="card-experience-${experience.id}"]`);
+      if (card) {
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
   }, []);
 
   return (
@@ -736,7 +785,7 @@ function ExploreInner() {
                 </div>
               ) : (
                 formattedExperiences.map((exp) => (
-                  <ExperienceCard key={exp.id} experience={exp} className="shadow-none border border-border" />
+                  <ExperienceCard key={exp.id} experience={exp} className="shadow-none border border-border" onSaveToBoard={(id) => setBoardPickerExperienceId(id)} />
                 ))
               )}
             </div>
@@ -776,11 +825,15 @@ function ExploreInner() {
                   onClick={() => setLocation(`/experience/${selectedExperience.id}`)}
                 >
                   {/* Image */}
-                  <div className="px-4 pb-3">
+                  <div className="px-4 pb-3 relative">
                     <img
                       src={selectedExperience.image}
                       alt={selectedExperience.title}
                       className="w-full h-44 object-cover rounded-2xl"
+                    />
+                    <MapHeartButton
+                      experienceId={selectedExperience.id}
+                      onSaveToBoard={(id) => setBoardPickerExperienceId(id)}
                     />
                   </div>
 
@@ -843,7 +896,7 @@ function ExploreInner() {
               {searchQuery ? `Results for "${searchQuery}"` : `${formattedExperiences.length} experiences in view`}
             </h3>
           </div>
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          <div ref={sidePanelRef} className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             {loadingExperiences ? (
               <div className="text-center py-4 text-muted-foreground">Loading...</div>
             ) : formattedExperiences.length === 0 ? (
@@ -858,7 +911,17 @@ function ExploreInner() {
               </div>
             ) : (
               formattedExperiences.map((exp) => (
-                <ExperienceCard key={exp.id} experience={exp} className="shadow-none border border-border" />
+                <ExperienceCard
+                  key={exp.id}
+                  experience={exp}
+                  className={cn(
+                    "shadow-none border transition-all duration-300",
+                    selectedExperience?.id === exp.id
+                      ? "border-foreground ring-2 ring-foreground/20"
+                      : "border-border"
+                  )}
+                  onSaveToBoard={(id) => setBoardPickerExperienceId(id)}
+                />
               ))
             )}
           </div>
@@ -885,6 +948,14 @@ function ExploreInner() {
 
       {/* Show BottomNav in list view only */}
       {viewMode === "list" && <BottomNav />}
+
+      {boardPickerExperienceId !== null && currentUser && (
+        <BoardPickerModal
+          experienceId={boardPickerExperienceId}
+          onClose={() => setBoardPickerExperienceId(null)}
+          userId={currentUser.id}
+        />
+      )}
     </div>
   );
 }

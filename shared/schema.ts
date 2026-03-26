@@ -316,11 +316,16 @@ export const tripItems = pgTable("trip_items", {
   title: text("title").notNull(),
   description: text("description"),
   itemType: text("item_type").notNull(),
+  categoryLabel: text("category_label"),
   sortOrder: integer("sort_order").notNull(),
   experienceId: integer("experience_id").references(() => experiences.id),
   isConfirmable: boolean("is_confirmable").default(true),
   confirmationState: text("confirmation_state").default("pending"),
   selectedOptionId: integer("selected_option_id"),
+  locationLat: real("location_lat"),
+  locationLng: real("location_lng"),
+  googlePlaceId: text("google_place_id"),
+  isPersonalAnchor: boolean("is_personal_anchor").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   index("idx_trip_items_trip_id").on(table.tripId),
@@ -350,6 +355,9 @@ export const tripItemOptions = pgTable("trip_item_options", {
   image: text("image"),
   bookingUrl: text("booking_url"),
   address: text("address"),
+  locationLat: real("location_lat"),
+  locationLng: real("location_lng"),
+  googlePlaceId: text("google_place_id"),
   metadata: jsonb("metadata"),
   isLocked: boolean("is_locked").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -986,3 +994,52 @@ export const bookletChapters = pgTable("booklet_chapters", {
 export const insertBookletChapterSchema = createInsertSchema(bookletChapters).omit({ id: true });
 export type BookletChapter = typeof bookletChapters.$inferSelect;
 export type InsertBookletChapter = z.infer<typeof insertBookletChapterSchema>;
+
+export const boardCards = pgTable("board_cards", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => podTrips.id, { onDelete: "cascade" }),
+  cardType: text("card_type").notNull().default("personal"),
+  bucket: text("bucket"),
+  title: text("title").notNull(),
+  notes: text("notes"),
+  locationLat: real("location_lat"),
+  locationLng: real("location_lng"),
+  confirmedTime: text("confirmed_time"),
+  confirmedDayNumber: integer("confirmed_day_number"),
+  photoUrl: text("photo_url"),
+  createdByUserId: integer("created_by_user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_board_cards_trip_id").on(table.tripId),
+]);
+
+export const insertBoardCardSchema = createInsertSchema(boardCards).omit({ id: true, createdAt: true });
+export type BoardCard = typeof boardCards.$inferSelect;
+export type InsertBoardCard = z.infer<typeof insertBoardCardSchema>;
+
+export const boards = pgTable("boards", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_boards_user_id").on(table.userId),
+]);
+
+export const boardPins = pgTable("board_pins", {
+  id: serial("id").primaryKey(),
+  boardId: integer("board_id").notNull().references(() => boards.id, { onDelete: "cascade" }),
+  experienceId: integer("experience_id").notNull().references(() => experiences.id, { onDelete: "cascade" }),
+  pinnedAt: timestamp("pinned_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_board_pins_board_id").on(table.boardId),
+  uniqueIndex("idx_board_pins_board_exp").on(table.boardId, table.experienceId),
+]);
+
+export const insertBoardSchema = createInsertSchema(boards).omit({ id: true, createdAt: true });
+export type Board = typeof boards.$inferSelect;
+export type InsertBoard = z.infer<typeof insertBoardSchema>;
+
+export const insertBoardPinSchema = createInsertSchema(boardPins).omit({ id: true, pinnedAt: true });
+export type BoardPin = typeof boardPins.$inferSelect;
+export type InsertBoardPin = z.infer<typeof insertBoardPinSchema>;

@@ -5,7 +5,7 @@ import { ImageUpload } from "@/components/shared/ImageUpload";
 import { GooglePlacesAutocomplete } from "@/components/shared/GooglePlacesAutocomplete";
 import { GoogleMapsProvider } from "@/components/shared/GoogleMapsProvider";
 import { VerificationBadge } from "@/components/shared/VerificationBadge";
-import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Heart, Globe, Quote, Plane, Users, Share2, UserPlus, ChevronLeft, Star, Instagram, Linkedin, Twitter, Briefcase, Search } from "lucide-react";
+import { Settings as SettingsIcon, MapPin, Edit2, X, Check, Award, Heart, Globe, Quote, Plane, Users, Share2, UserPlus, ChevronLeft, Star, Instagram, Linkedin, Twitter, Briefcase, Search, LayoutGrid } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +17,7 @@ import type { FamilyMember } from "@shared/schema";
 import { FAMILY_VALUES, LANGUAGES, FAMILY_ROLES, AGE_GROUPS } from "@/lib/constants";
 import { Plus, Trash2, Pencil } from "lucide-react";
 import { ImageCarousel } from "@/components/ui/image-carousel";
+import { BoardPickerModal } from "@/components/shared/BoardPickerModal";
 import {
   Sheet,
   SheetContent,
@@ -216,7 +217,8 @@ function ProfilePhotoGrid({
 }
 
 function ProfileInner() {
-  const [activeTab, setActiveTab] = useState<"experiences" | "saved" | "trips">("experiences");
+  const [activeTab, setActiveTab] = useState<"experiences" | "boards" | "trips">("experiences");
+  const [boardPickerExperienceId, setBoardPickerExperienceId] = useState<number | null>(null);
   const [showMeetModal, setShowMeetModal] = useState(false);
   const [isEditing, setIsEditing] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -387,10 +389,10 @@ function ProfileInner() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: savedExperiences = [] } = useQuery({
-    queryKey: ["savedExperiences", currentUser?.id],
-    queryFn: () => currentUser ? api.users.getSavedExperiences(currentUser.id) : [],
-    enabled: !!currentUser && activeTab === "saved",
+  const { data: userBoards = [] } = useQuery({
+    queryKey: ["boards", currentUser?.id],
+    queryFn: () => currentUser ? api.boards.getAll(currentUser.id) : [],
+    enabled: !!currentUser && activeTab === "boards",
     staleTime: 5 * 60 * 1000,
   });
 
@@ -482,7 +484,6 @@ function ProfileInner() {
   };
 
   const formattedUserExperiences = userExperiences.map(exp => formatExperience(exp as any));
-  const formattedSavedExperiences = savedExperiences.map(exp => formatExperience(exp as any));
 
   // Profile completeness check
   const completenessItems = [
@@ -1088,7 +1089,7 @@ function ProfileInner() {
           {[
             { id: "experiences", label: "Experiences" },
             { id: "trips", label: "Trips" },
-            { id: "saved", label: "Saved" },
+            { id: "boards", label: "Boards" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1122,7 +1123,7 @@ function ProfileInner() {
             ) : (
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                 {[...formattedUserExperiences].reverse().map((exp) => (
-                  <ExperienceCard key={exp.id} experience={exp} />
+                  <ExperienceCard key={exp.id} experience={exp} onSaveToBoard={(id) => setBoardPickerExperienceId(id)} />
                 ))}
               </div>
             )}
@@ -1149,20 +1150,58 @@ function ProfileInner() {
           </div>
         )}
 
-        {activeTab === "saved" && (
+        {activeTab === "boards" && (
           <div>
-            {formattedSavedExperiences.length === 0 ? (
+            {userBoards.length === 0 ? (
               <div className="py-12 text-center">
                 <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Heart className="h-8 w-8 text-muted-foreground" />
+                  <LayoutGrid className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <p className="text-foreground font-medium">No saved experiences yet</p>
-                <p className="text-sm text-muted-foreground mt-1">Save experiences you want to try!</p>
+                <p className="text-foreground font-medium">No boards yet</p>
+                <p className="text-sm text-muted-foreground mt-1">Save an experience to create your first board!</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                {[...formattedSavedExperiences].reverse().map((exp) => (
-                  <ExperienceCard key={exp.id} experience={exp} />
+                {userBoards.map((board: any) => (
+                  <div
+                    key={board.id}
+                    onClick={() => setLocation(`/boards/${board.id}`)}
+                    className="rounded-2xl bg-card w-full cursor-pointer transition-all duration-300 hover:-translate-y-0.5 overflow-hidden"
+                  >
+                    {/* 2x2 quadrant preview */}
+                    <div className="aspect-[4/3] grid grid-cols-2 grid-rows-2 bg-muted">
+                      {board.previewImages.length === 0 ? (
+                        <div className="col-span-2 row-span-2 flex items-center justify-center">
+                          <LayoutGrid className="h-10 w-10 text-muted-foreground" />
+                        </div>
+                      ) : (
+                        <>
+                          {[0, 1, 2, 3].map((i) => (
+                            <div key={i} className="overflow-hidden">
+                              {board.previewImages[i] ? (
+                                <img
+                                  src={board.previewImages[i]}
+                                  alt=""
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-muted" />
+                              )}
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                    {/* Board info */}
+                    <div className="p-3">
+                      <h3 className="font-semibold text-[15px] leading-snug text-foreground line-clamp-1">
+                        {board.name}
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {board.pinCount} {board.pinCount === 1 ? "pin" : "pins"}
+                      </p>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
@@ -1483,6 +1522,14 @@ function ProfileInner() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {boardPickerExperienceId !== null && currentUser && (
+        <BoardPickerModal
+          experienceId={boardPickerExperienceId}
+          onClose={() => setBoardPickerExperienceId(null)}
+          userId={currentUser.id}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { Heart, Clock, DollarSign, Users, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 import { Link } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -12,9 +11,10 @@ interface ExperienceCardProps {
   className?: string;
   horizontal?: boolean;
   index?: number;
+  onSaveToBoard?: (experienceId: number) => void;
 }
 
-export function ExperienceCard({ experience, className, horizontal = false }: ExperienceCardProps) {
+export function ExperienceCard({ experience, className, horizontal = false, onSaveToBoard }: ExperienceCardProps) {
   const queryClient = useQueryClient();
 
   const { data: currentUser } = useQuery({
@@ -30,19 +30,31 @@ export function ExperienceCard({ experience, className, horizontal = false }: Ex
 
   const isSaved = savedExperiences.some((e: any) => e.id === experience.id);
 
-  const saveMutation = useMutation({
+  const unsaveMutation = useMutation({
     mutationFn: async () => {
       if (!currentUser) return;
-      if (isSaved) {
-        await api.experiences.unsave(experience.id);
-      } else {
-        await api.experiences.save(experience.id);
-      }
+      await api.experiences.unsave(experience.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["savedExperiences"] });
+      queryClient.invalidateQueries({ queryKey: ["boards"] });
     },
   });
+
+  const handleHeartClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isSaved) {
+      unsaveMutation.mutate();
+    } else if (onSaveToBoard) {
+      onSaveToBoard(experience.id);
+    } else {
+      // Fallback: legacy save behavior if no board picker provided
+      api.experiences.save(experience.id).then(() => {
+        queryClient.invalidateQueries({ queryKey: ["savedExperiences"] });
+      });
+    }
+  };
 
   const imageUrl = experience.image?.startsWith('/objects')
     ? experience.image
@@ -69,11 +81,7 @@ export function ExperienceCard({ experience, className, horizontal = false }: Ex
 
           {/* Heart/save overlay (top-right) */}
           <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              saveMutation.mutate();
-            }}
+            onClick={handleHeartClick}
             className="absolute right-3 top-3 rounded-full bg-white/90 p-2 backdrop-blur-sm transition-all hover:bg-white hover:scale-110 active:scale-90 z-10"
             data-testid={`button-save-${experience.id}`}
           >

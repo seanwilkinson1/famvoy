@@ -44,6 +44,7 @@ const BookletChapters = lazy(() => import("@/pages/booklet/BookletChapters"));
 const BookletMap = lazy(() => import("@/pages/booklet/BookletMap"));
 const BookletPublish = lazy(() => import("@/pages/booklet/BookletPublish"));
 const Dreams = lazy(() => import("@/pages/Dreams"));
+const BoardDetail = lazy(() => import("@/pages/BoardDetail"));
 const TripSetup = lazy(() => import("@/pages/trip-wizard/TripSetup"));
 const TravelStyle = lazy(() => import("@/pages/trip-wizard/TravelStyle"));
 const AIGeneration = lazy(() => import("@/pages/trip-wizard/AIGeneration"));
@@ -188,6 +189,7 @@ function AuthenticatedRouter() {
                 <Route path="/trips/:id/booklet/chapters" component={BookletChapters} />
                 <Route path="/trips/:id/booklet/map" component={BookletMap} />
                 <Route path="/trips/:id/booklet/publish" component={BookletPublish} />
+                <Route path="/boards/:id" component={BoardDetail} />
                 <Route path="/family/:id" component={FamilyProfile} />
                 <Route path="/cart" component={Cart} />
                 <Route path="/checkout/success" component={CheckoutSuccess} />

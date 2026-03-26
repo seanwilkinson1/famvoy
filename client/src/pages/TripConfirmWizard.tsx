@@ -1,8 +1,8 @@
 import { useRoute, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ChevronLeft, Loader2, RefreshCw, Check, ExternalLink, SkipForward, MapPin, Star, Clock, DollarSign, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, calculateDistance } from "@/lib/utils";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -18,6 +18,8 @@ interface TripItemOption {
   address: string | null;
   provider: string | null;
   isLocked: boolean;
+  locationLat: number | null;
+  locationLng: number | null;
 }
 
 interface TripItem {
@@ -28,6 +30,9 @@ interface TripItem {
   dayNumber: number;
   time: string;
   confirmationState: string | null;
+  categoryLabel: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
 }
 
 interface ConfirmSession {
@@ -97,6 +102,32 @@ export default function TripConfirmWizard() {
     },
     enabled: tripId > 0,
   });
+
+  // Items that have been locked (have coordinates) — must be before any early returns
+  const lockedItems = useMemo(() =>
+    session?.items.filter((item: TripItem) => item.confirmationState === "locked" && item.locationLat && item.locationLng) ?? [],
+    [session?.items]
+  );
+
+  // Distance from previous locked stop to current item's first option
+  const distFromPrev = useMemo(() => {
+    if (lockedItems.length === 0 || !session?.currentItem) return null;
+    const prev = lockedItems[lockedItems.length - 1];
+    const firstOpt = session.currentOptions.find((o: TripItemOption) => o.locationLat && o.locationLng);
+    const targetLat = firstOpt?.locationLat;
+    const targetLng = firstOpt?.locationLng;
+    if (!prev.locationLat || !prev.locationLng || !targetLat || !targetLng) return null;
+    return calculateDistance(prev.locationLat, prev.locationLng, targetLat, targetLng);
+  }, [lockedItems, session?.currentItem, session?.currentOptions]);
+
+  // Static map URL showing locked pins + current item area
+  const staticMapUrl = useMemo(() => {
+    if (lockedItems.length === 0) return null;
+    const markers = lockedItems
+      .map((item: TripItem) => `markers=color:0x14b8a6|${item.locationLat},${item.locationLng}`)
+      .join("&");
+    return `/api/places/staticmap?size=600x200&${markers}&maptype=roadmap`;
+  }, [lockedItems]);
 
   useEffect(() => {
     if (session?.currentItem && session.currentOptions.length === 0 && !isGenerating) {
@@ -276,7 +307,8 @@ export default function TripConfirmWizard() {
               <ChevronLeft className="h-6 w-6" />
             </button>
             <span className="text-sm text-muted-foreground">
-              {session.progress.current} of {session.progress.total}
+              Curating stop {session.progress.current} of {session.progress.total}
+              {currentItem?.categoryLabel && <span className="text-primary ml-1">· {currentItem.categoryLabel}</span>}
             </span>
             {currentItem && (
               <button
@@ -301,6 +333,17 @@ export default function TripConfirmWizard() {
         </div>
       </div>
 
+      {/* Static map preview */}
+      {staticMapUrl && (
+        <div className="max-w-lg mx-auto px-4 pt-3">
+          <img
+            src={staticMapUrl}
+            alt="Trip progress map"
+            className="w-full h-[120px] object-cover rounded-xl border border-border"
+          />
+        </div>
+      )}
+
       <div className="max-w-lg mx-auto px-4 py-6 pb-32">
         <AnimatePresence mode="wait">
           {currentItem && (
@@ -321,6 +364,9 @@ export default function TripConfirmWizard() {
                 <h1 className="text-2xl font-bold text-foreground mb-1">{currentItem.title}</h1>
                 <p className="text-muted-foreground text-sm">
                   Day {currentItem.dayNumber} • {currentItem.time}
+                  {distFromPrev !== null && (
+                    <span className="ml-2">• {distFromPrev.toFixed(1)} mi from last stop</span>
+                  )}
                 </p>
                 {currentItem.description && (
                   <p className="text-muted-foreground mt-2 text-sm">{currentItem.description}</p>
@@ -334,15 +380,25 @@ export default function TripConfirmWizard() {
                 </div>
               ) : session.currentOptions.length === 0 ? (
                 <div className="text-center py-16">
-                  <p className="text-muted-foreground mb-4">No options available</p>
-                  <button
-                    onClick={() => generateOptions()}
-                    className="text-primary hover:underline flex items-center gap-2 mx-auto"
-                    data-testid="button-generate-options"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Generate Options
-                  </button>
+                  <p className="text-muted-foreground mb-2">No results nearby</p>
+                  <p className="text-sm text-muted-foreground mb-4">Try generating options or skip this stop</p>
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      onClick={() => generateOptions()}
+                      className="text-primary hover:underline flex items-center gap-2"
+                      data-testid="button-generate-options"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      Generate Options
+                    </button>
+                    <button
+                      onClick={() => currentItem && skipItemMutation.mutate(currentItem.id)}
+                      className="text-muted-foreground hover:text-foreground flex items-center gap-2"
+                    >
+                      <SkipForward className="h-4 w-4" />
+                      Skip
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -366,7 +422,7 @@ export default function TripConfirmWizard() {
                         )}
                         data-testid={`option-card-${option.id}`}
                       >
-                        <div className="h-32 bg-gradient-to-br from-primary/20 to-primary/5 relative overflow-hidden">
+                        <div className="h-48 bg-gradient-to-br from-primary/20 to-primary/5 relative overflow-hidden">
                           {option.image && (
                             <img
                               src={option.image}
@@ -377,6 +433,20 @@ export default function TripConfirmWizard() {
                               }}
                             />
                           )}
+                          {/* Price + rating pills overlaid on image */}
+                          <div className="absolute bottom-2 left-2 flex gap-1.5">
+                            {option.priceEstimate && (
+                              <span className="bg-white/90 backdrop-blur-sm text-xs font-semibold px-2 py-1 rounded-full text-foreground shadow-sm">
+                                {option.priceEstimate}
+                              </span>
+                            )}
+                            {option.rating && parseFloat(option.rating) > 0 && (
+                              <span className="bg-white/90 backdrop-blur-sm text-xs font-semibold px-2 py-1 rounded-full text-foreground shadow-sm flex items-center gap-0.5">
+                                <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                                {option.rating}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="p-4">
                           <div className="flex items-start justify-between gap-2 mb-2">
@@ -387,29 +457,17 @@ export default function TripConfirmWizard() {
                               </div>
                             )}
                           </div>
-                          
+
                           {option.description && (
                             <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{option.description}</p>
                           )}
-                          
+
                           <div className="flex flex-wrap gap-3 text-sm">
-                            {option.priceEstimate && (
-                              <span className="flex items-center gap-1 text-muted-foreground">
-                                <DollarSign className="h-4 w-4" />
-                                {option.priceEstimate}
-                              </span>
-                            )}
-                            {option.rating && (
-                              <span className="flex items-center gap-1 text-muted-foreground">
-                                <Star className="h-4 w-4 text-yellow-500" />
-                                {option.rating}
-                                {option.reviewCount && (
-                                  <span className="text-muted-foreground">({option.reviewCount})</span>
-                                )}
-                              </span>
+                            {option.reviewCount && option.reviewCount > 0 && (
+                              <span className="text-muted-foreground text-xs">{option.reviewCount.toLocaleString()} reviews</span>
                             )}
                             {option.provider && (
-                              <span className="text-muted-foreground">{option.provider}</span>
+                              <span className="text-muted-foreground text-xs">via {option.provider}</span>
                             )}
                           </div>
                           

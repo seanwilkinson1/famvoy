@@ -78,19 +78,22 @@ export async function registerRoutes(
   // Google Places photo proxy - hides API key from clients
   app.get('/api/places/photo', async (req, res) => {
     try {
-      const { ref, maxwidth } = req.query;
-      if (!ref || typeof ref !== 'string') {
+      const { ref, name, maxwidth } = req.query;
+      if (!ref && !name) {
         return res.status(400).json({ error: 'Missing photo reference' });
       }
-      
+
       const apiKey = process.env.GOOGLE_PLACES_API_KEY;
       if (!apiKey) {
         return res.status(500).json({ error: 'Google Places API not configured' });
       }
-      
+
       const width = parseInt(maxwidth as string) || 400;
-      const googlePhotoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${width}&photo_reference=${ref}&key=${apiKey}`;
-      
+      // Support both New API (name) and legacy (ref) photo formats
+      const googlePhotoUrl = name
+        ? `https://places.googleapis.com/v1/${name}/media?maxWidthPx=${width}&key=${apiKey}`
+        : `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${width}&photo_reference=${ref}&key=${apiKey}`;
+
       const response = await fetch(googlePhotoUrl, { redirect: 'follow' });
       if (!response.ok) {
         return res.status(response.status).json({ error: 'Failed to fetch photo' });
@@ -107,6 +110,42 @@ export async function registerRoutes(
     } catch (error) {
       console.error('Error proxying Google Places photo:', error);
       res.status(500).json({ error: 'Failed to fetch photo' });
+    }
+  });
+
+  // Static map proxy (hides API key)
+  app.get('/api/places/staticmap', async (req, res) => {
+    try {
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      if (!apiKey) return res.status(500).json({ error: 'Google API not configured' });
+
+      const { size, maptype, ...rest } = req.query;
+      // Forward markers and other params, inject API key server-side
+      const params = new URLSearchParams();
+      params.set('size', (size as string) || '600x200');
+      params.set('maptype', (maptype as string) || 'roadmap');
+      params.set('key', apiKey);
+      // Forward all "markers" params (they can repeat)
+      const rawMarkers = req.query.markers;
+      if (typeof rawMarkers === 'string') {
+        params.append('markers', rawMarkers);
+      } else if (Array.isArray(rawMarkers)) {
+        for (const m of rawMarkers) params.append('markers', m as string);
+      }
+
+      const url = `https://maps.googleapis.com/maps/api/staticmap?${params.toString()}`;
+      const response = await fetch(url, { redirect: 'follow' });
+      if (!response.ok) return res.status(response.status).json({ error: 'Failed to fetch map' });
+
+      const contentType = response.headers.get('content-type');
+      if (contentType) res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+
+      const buffer = await response.arrayBuffer();
+      res.send(Buffer.from(buffer));
+    } catch (error) {
+      console.error('Error proxying static map:', error);
+      res.status(500).json({ error: 'Failed to fetch map' });
     }
   });
 
@@ -605,11 +644,17 @@ export async function registerRoutes(
 
   app.patch("/api/family-members/:id", requireAuth(), async (req, res) => {
     try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
       const memberId = parseInt(req.params.id);
-      const { userId } = getAuth(req);
-      if (!userId) {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
+      if (isNaN(memberId)) return res.status(400).json({ error: "Invalid member ID" });
+
+      const members = await storage.getFamilyMembers(user.id);
+      const owned = members.find(m => m.id === memberId);
+      if (!owned) return res.status(403).json({ error: "Not authorized to edit this family member" });
+
       const { name, role, photo, ageGroup, isAdult, sortOrder } = req.body;
       const member = await storage.updateFamilyMember(memberId, { name, role, photo, ageGroup, isAdult, sortOrder });
       res.json(member);
@@ -620,11 +665,17 @@ export async function registerRoutes(
 
   app.delete("/api/family-members/:id", requireAuth(), async (req, res) => {
     try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
       const memberId = parseInt(req.params.id);
-      const { userId } = getAuth(req);
-      if (!userId) {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
+      if (isNaN(memberId)) return res.status(400).json({ error: "Invalid member ID" });
+
+      const members = await storage.getFamilyMembers(user.id);
+      const owned = members.find(m => m.id === memberId);
+      if (!owned) return res.status(403).json({ error: "Not authorized to delete this family member" });
+
       await storage.deleteFamilyMember(memberId);
       res.status(200).json({ success: true });
     } catch (error: any) {
@@ -668,8 +719,90 @@ export async function registerRoutes(
       if (!user) {
         return res.status(401).json({ error: "User not found" });
       }
-      await storage.unsaveExperience(user.id, experienceId);
+      await storage.removeExperienceFromAllBoards(user.id, experienceId);
       res.status(200).json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ── Boards (Pinterest-style collections) ──
+
+  app.get("/api/users/:userId/boards", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const userBoards = await storage.getUserBoards(userId);
+      res.json(userBoards);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/boards", requireAuth(), async (req, res) => {
+    try {
+      const { userId } = getAuth(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) return res.status(401).json({ error: "User not found" });
+      const { name } = req.body;
+      if (!name || typeof name !== "string" || !name.trim()) {
+        return res.status(400).json({ error: "Board name is required" });
+      }
+      const board = await storage.createBoard({ userId: user.id, name: name.trim() });
+      res.status(201).json(board);
+    } catch (error: any) {
+      console.error("POST /api/boards error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/boards/:id", requireAuth(), async (req, res) => {
+    try {
+      const boardId = parseInt(req.params.id);
+      await storage.deleteBoard(boardId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/boards/:id/pins", async (req, res) => {
+    try {
+      const boardId = parseInt(req.params.id);
+      const pins = await storage.getBoardPins(boardId);
+      res.json(pins);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/boards/:id/pins", requireAuth(), async (req, res) => {
+    try {
+      const boardId = parseInt(req.params.id);
+      const { experienceId } = req.body;
+      if (!experienceId) return res.status(400).json({ error: "experienceId is required" });
+      const pin = await storage.addBoardPin({ boardId, experienceId });
+      res.status(201).json(pin || { success: true });
+    } catch (error: any) {
+      console.error("POST /api/boards/:id/pins error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/boards/:boardId/pins/:experienceId", requireAuth(), async (req, res) => {
+    try {
+      const { userId } = getAuth(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      const user = await storage.getUserByClerkId(userId);
+      if (!user) return res.status(401).json({ error: "User not found" });
+      const boardId = parseInt(req.params.boardId);
+      const experienceId = parseInt(req.params.experienceId);
+      await storage.removeBoardPin(boardId, experienceId);
+      // Check if experience is still pinned to any of user's boards
+      const userBoards = await storage.getUserBoards(user.id);
+      const stillPinned = userBoards.some(b => b.previewImages.length > 0);
+      // If not pinned to any board, we leave savedExperiences alone for now
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -980,9 +1113,18 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/pods/:id/messages", async (req, res) => {
+  app.get("/api/pods/:id/messages", requireAuth(), async (req, res) => {
     try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
       const podId = parseInt(req.params.id);
+      if (isNaN(podId)) return res.status(400).json({ error: "Invalid pod ID" });
+
+      const isMember = await storage.isPodMember(podId, user.id);
+      if (!isMember) return res.status(403).json({ error: "Not a member of this pod" });
+
       const podMessages = await storage.getMessages(podId);
       res.json(podMessages);
     } catch (error: any) {
@@ -2277,10 +2419,16 @@ export async function registerRoutes(
 
   app.post("/api/trips/:id/items", requireAuth(), async (req, res) => {
     try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
       const tripId = parseInt(req.params.id);
       if (isNaN(tripId)) {
         return res.status(400).json({ error: "Invalid trip ID" });
       }
+
+      await assertTripAccess(user.id, tripId, "write");
 
       const { dayNumber, time, title, description, itemType, sortOrder, dayTitle, experienceId } = req.body;
       if (dayNumber === undefined || !time || !title || !itemType || sortOrder === undefined) {
@@ -2301,6 +2449,7 @@ export async function registerRoutes(
 
       res.json(item);
     } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
       res.status(500).json({ error: error.message });
     }
   });
@@ -2351,39 +2500,67 @@ export async function registerRoutes(
 
   app.patch("/api/trip-items/:id", requireAuth(), async (req, res) => {
     try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
       const itemId = parseInt(req.params.id);
       if (isNaN(itemId)) {
         return res.status(400).json({ error: "Invalid item ID" });
       }
 
+      const existingItem = await storage.getTripItem(itemId);
+      if (!existingItem) return res.status(404).json({ error: "Item not found" });
+
+      await assertTripAccess(user.id, existingItem.tripId, "write");
+
       const { dayNumber, dayTitle, time, title, description, itemType, sortOrder, destinationId, confirmationState, selectedOptionId, isConfirmable } = req.body;
       const item = await storage.updateTripItem(itemId, { dayNumber, dayTitle, time, title, description, itemType, sortOrder, destinationId, confirmationState, selectedOptionId, isConfirmable });
       res.json(item);
     } catch (error: any) {
+      if (error instanceof NotFoundError) return res.status(404).json({ error: error.message });
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
   app.delete("/api/trip-items/:id", requireAuth(), async (req, res) => {
     try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
       const itemId = parseInt(req.params.id);
       if (isNaN(itemId)) {
         return res.status(400).json({ error: "Invalid item ID" });
       }
 
+      const existingItem = await storage.getTripItem(itemId);
+      if (!existingItem) return res.status(404).json({ error: "Item not found" });
+
+      await assertTripAccess(user.id, existingItem.tripId, "write");
+
       await storage.deleteTripItem(itemId);
       res.json({ success: true });
     } catch (error: any) {
+      if (error instanceof NotFoundError) return res.status(404).json({ error: error.message });
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
   app.post("/api/trips/:id/items/bulk", requireAuth(), async (req, res) => {
     try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
       const tripId = parseInt(req.params.id);
       if (isNaN(tripId)) {
         return res.status(400).json({ error: "Invalid trip ID" });
       }
+
+      await assertTripAccess(user.id, tripId, "write");
 
       const { items } = req.body;
       if (!Array.isArray(items)) {
@@ -2405,20 +2582,28 @@ export async function registerRoutes(
       const createdItems = await storage.bulkCreateTripItems(tripItems);
       res.json(createdItems);
     } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
   app.delete("/api/trips/:id/items", requireAuth(), async (req, res) => {
     try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
       const tripId = parseInt(req.params.id);
       if (isNaN(tripId)) {
         return res.status(400).json({ error: "Invalid trip ID" });
       }
 
+      await assertTripAccess(user.id, tripId, "write");
+
       await storage.clearTripItems(tripId);
       res.json({ success: true });
     } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
       res.status(500).json({ error: error.message });
     }
   });
@@ -2455,10 +2640,17 @@ export async function registerRoutes(
 
   app.post("/api/trips/:id/destinations", requireAuth(), async (req, res) => {
     try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
       const tripId = parseInt(req.params.id);
       if (isNaN(tripId)) {
         return res.status(400).json({ error: "Invalid trip ID" });
       }
+
+      await assertTripAccess(user.id, tripId, "write");
+
       const { destination, startDate, endDate, sortOrder } = req.body;
       if (!destination || !startDate || !endDate) {
         return res.status(400).json({ error: "Destination, start date, and end date are required" });
@@ -2478,6 +2670,15 @@ export async function registerRoutes(
 
   app.patch("/api/trips/:id/destinations/:destId", requireAuth(), async (req, res) => {
     try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      if (isNaN(tripId)) return res.status(400).json({ error: "Invalid trip ID" });
+
+      await assertTripAccess(user.id, tripId, "write");
+
       const destId = parseInt(req.params.destId);
       if (isNaN(destId)) {
         return res.status(400).json({ error: "Invalid destination ID" });
@@ -2486,12 +2687,22 @@ export async function registerRoutes(
       const dest = await storage.updateTripDestination(destId, { destination, startDate, endDate, sortOrder });
       res.json(dest);
     } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
   app.delete("/api/trips/:id/destinations/:destId", requireAuth(), async (req, res) => {
     try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      if (isNaN(tripId)) return res.status(400).json({ error: "Invalid trip ID" });
+
+      await assertTripAccess(user.id, tripId, "write");
+
       const destId = parseInt(req.params.destId);
       if (isNaN(destId)) {
         return res.status(400).json({ error: "Invalid destination ID" });
@@ -2499,19 +2710,26 @@ export async function registerRoutes(
       await storage.deleteTripDestination(destId);
       res.json({ success: true });
     } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
   app.patch("/api/trips/:id/preferences", requireAuth(), async (req, res) => {
     try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
       const tripId = parseInt(req.params.id);
       if (isNaN(tripId)) {
         return res.status(400).json({ error: "Invalid trip ID" });
       }
 
+      await assertTripAccess(user.id, tripId, "write");
+
       const { budgetMin, budgetMax, pace, kidsAgeGroups, tripInterests } = req.body;
-      
+
       const updatedTrip = await storage.updateTrip(tripId, {
         budgetMin: budgetMin || null,
         budgetMax: budgetMax || null,
@@ -2522,46 +2740,57 @@ export async function registerRoutes(
       
       res.json(updatedTrip);
     } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
   app.post("/api/trips/:id/reorder", requireAuth(), async (req, res) => {
     try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
       const tripId = parseInt(req.params.id);
       if (isNaN(tripId)) {
         return res.status(400).json({ error: "Invalid trip ID" });
       }
+
+      await assertTripAccess(user.id, tripId, "write");
 
       const { items } = req.body;
       if (!Array.isArray(items)) {
         return res.status(400).json({ error: "Items must be an array" });
       }
 
-      for (const item of items) {
-        await storage.updateTripItem(item.id, {
-          dayNumber: item.dayNumber,
-          sortOrder: item.sortOrder,
-        });
-      }
-      
+      await storage.batchReorderTripItems(items.map((item: any) => ({
+        id: item.id,
+        dayNumber: item.dayNumber,
+        sortOrder: item.sortOrder,
+      })));
+
       res.json({ success: true });
     } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
   app.post("/api/trips/:id/generate", requireAuth(), async (req, res) => {
     try {
+      const { userId: clerkUserId } = getAuth(req);
+      if (!clerkUserId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUserByClerkId(clerkUserId);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
       const tripId = parseInt(req.params.id);
       if (isNaN(tripId)) {
         return res.status(400).json({ error: "Invalid trip ID" });
       }
 
-      const { userId: clerkUserId } = getAuth(req);
-      if (!clerkUserId) {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
+      await assertTripAccess(user.id, tripId, "write");
 
       const { budgetMin, budgetMax, pace, kidsAgeGroups, tripInterests } = req.body;
       
@@ -2635,6 +2864,9 @@ export async function registerRoutes(
         }));
       }
 
+      // Fetch board cards (user's saved ideas)
+      const userBoardCards = await storage.getBoardCards(tripId);
+
       // Fetch trip destinations for multi-destination trips
       const tripDestinations = await storage.getTripDestinations(tripId);
 
@@ -2688,6 +2920,20 @@ ${JSON.stringify(familyProfiles, null, 2)}
 ${experiencesList.length > 0 ? `Saved experiences to consider including:
 ${JSON.stringify(experiencesList, null, 2)}` : ''}
 
+${userBoardCards.length > 0 ? `User's saved ideas (try to incorporate these into the itinerary):
+${userBoardCards.map(c => `- ${c.title}${c.bucket ? ` (${c.bucket})` : ''}${c.notes ? `: ${c.notes}` : ''}`).join('\n')}` : ''}
+
+CATEGORY LABELS (you MUST use one of these for each item's "categoryLabel"):
+Food: "Breakfast Spot", "Casual Lunch", "Fine Dining", "Quick Bite"
+Coffee: "Coffee Stop"
+Outdoors: "Beach Time", "Hike", "Nature Walk", "Park Visit", "Scenic Viewpoint", "Water Activity"
+Culture: "Museum", "Historic Site", "Neighborhood Explore"
+Shopping: "Shopping"
+Nightlife: "Drinks / Bar"
+Family Fun: "Theme Park", "Water Park", "Indoor Activity", "Outdoor Activity", "Sports Activity"
+Relaxation: "Pool / Resort Time", "Rest / Free Time"
+Transport: "Transport"
+
 Generate a structured JSON response with:
 1. "summary": A 2-3 sentence personalized overview explaining how the itinerary caters to the specified preferences, interests, and children's ages
 2. "days": An array of day objects, each containing:
@@ -2695,9 +2941,10 @@ Generate a structured JSON response with:
    - "dayTitle": A catchy thematic title for that day (e.g., "Tropical Arrival and Beach Exploration")
    - "items": Array of activities for that day, each with:
      - "time": Time in format "HH:MM AM/PM" (e.g., "09:00 AM")
-     - "title": Short activity title
+     - "title": Short descriptive activity title (e.g., "Morning coffee and pastries", "Beachside lunch")
      - "description": 1-2 sentence description mentioning which family interests it serves
      - "itemType": One of: "ACTIVITY", "MEAL", "STAY", "TRANSPORT"
+     - "categoryLabel": One of the category labels listed above (REQUIRED)
      - "sortOrder": Number for ordering (0, 1, 2, etc.)
      ${experiencesList.length > 0 ? '- "experienceId": If this activity matches a saved experience, include its ID' : ''}
 
@@ -2722,6 +2969,7 @@ Return ONLY valid JSON, no markdown or explanations.`;
         ],
         temperature: 0.7,
         max_tokens: 4000,
+        response_format: { type: "json_object" },
       });
 
       const content = response.choices[0]?.message?.content;
@@ -2731,8 +2979,7 @@ Return ONLY valid JSON, no markdown or explanations.`;
 
       let parsed;
       try {
-        const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        parsed = JSON.parse(cleanContent);
+        parsed = JSON.parse(content);
       } catch (e) {
         console.error("Failed to parse AI response:", content);
         return res.status(500).json({ error: "Failed to parse AI response" });
@@ -2751,6 +2998,7 @@ Return ONLY valid JSON, no markdown or explanations.`;
             title: item.title,
             description: item.description,
             itemType: item.itemType,
+            categoryLabel: item.categoryLabel || null,
             sortOrder: item.sortOrder,
             experienceId: item.experienceId || null,
           });
@@ -2771,12 +3019,18 @@ Return ONLY valid JSON, no markdown or explanations.`;
 
   app.post("/api/trips/:id/regenerate-day/:dayNumber", requireAuth(), async (req, res) => {
     try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
       const tripId = parseInt(req.params.id);
       const dayNumber = parseInt(req.params.dayNumber);
-      
+
       if (isNaN(tripId) || isNaN(dayNumber)) {
         return res.status(400).json({ error: "Invalid parameters" });
       }
+
+      await assertTripAccess(user.id, tripId, "write");
 
       const trip = await storage.getTripById(tripId);
       if (!trip) {
@@ -2823,13 +3077,25 @@ ${JSON.stringify(familyProfiles, null, 2)}
 
 Current day title: "${currentDayTitle}"
 
+CATEGORY LABELS (you MUST use one of these for each item's "categoryLabel"):
+Food: "Breakfast Spot", "Casual Lunch", "Fine Dining", "Quick Bite"
+Coffee: "Coffee Stop"
+Outdoors: "Beach Time", "Hike", "Nature Walk", "Park Visit", "Scenic Viewpoint", "Water Activity"
+Culture: "Museum", "Historic Site", "Neighborhood Explore"
+Shopping: "Shopping"
+Nightlife: "Drinks / Bar"
+Family Fun: "Theme Park", "Water Park", "Indoor Activity", "Outdoor Activity", "Sports Activity"
+Relaxation: "Pool / Resort Time", "Rest / Free Time"
+Transport: "Transport"
+
 Generate a fresh set of activities for this day. Return JSON with:
 - "dayTitle": A new catchy thematic title
 - "items": Array of 4-6 activities with:
   - "time": Time in "HH:MM AM/PM" format
-  - "title": Activity title
+  - "title": Descriptive activity title
   - "description": 1-2 sentence description
   - "itemType": One of: "ACTIVITY", "MEAL", "STAY", "TRANSPORT"
+  - "categoryLabel": One of the category labels listed above (REQUIRED)
   - "sortOrder": Number for ordering
 
 Make it different from typical tourist activities - suggest unique local experiences.
@@ -2843,6 +3109,7 @@ Return ONLY valid JSON.`;
         ],
         temperature: 0.9,
         max_tokens: 1500,
+        response_format: { type: "json_object" },
       });
 
       const content = response.choices[0]?.message?.content;
@@ -2852,8 +3119,7 @@ Return ONLY valid JSON.`;
 
       let parsed;
       try {
-        const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        parsed = JSON.parse(cleanContent);
+        parsed = JSON.parse(content);
       } catch (e) {
         return res.status(500).json({ error: "Failed to parse AI response" });
       }
@@ -2870,6 +3136,7 @@ Return ONLY valid JSON.`;
         title: item.title,
         description: item.description,
         itemType: item.itemType,
+        categoryLabel: item.categoryLabel || null,
         sortOrder: item.sortOrder,
         experienceId: null,
       }));
@@ -3077,10 +3344,28 @@ Return ONLY valid JSON.`;
       const { generateAndSaveOptions } = await import("./bookingSearchService");
 
       const regenerate = req.body?.regenerate === true;
+
+      // Find previous item's coordinates for distance sorting
+      const dayItems = trip.items
+        .filter(i => i.dayNumber === item.dayNumber)
+        .sort((a, b) => {
+          const timeA = a.time || "";
+          const timeB = b.time || "";
+          return timeA.localeCompare(timeB);
+        });
+      const currentIdx = dayItems.findIndex(i => i.id === item.id);
+      let referenceCoords: { lat: number; lng: number } | null = null;
+      if (currentIdx > 0) {
+        const prevItem = dayItems[currentIdx - 1];
+        if (prevItem.locationLat && prevItem.locationLng) {
+          referenceCoords = { lat: Number(prevItem.locationLat), lng: Number(prevItem.locationLng) };
+        }
+      }
+
       const result = await generateAndSaveOptions(item, trip.destination, {
         startDate: trip.startDate,
         endDate: trip.endDate,
-      }, regenerate);
+      }, regenerate, referenceCoords);
 
       res.json(result);
     } catch (error: any) {
@@ -3121,24 +3406,18 @@ Return ONLY valid JSON.`;
         return res.status(403).json({ error: "You don't have access to this trip" });
       }
 
-      // Lock the option
-      const lockedOption = await storage.lockTripItemOption(optionId);
-      
-      // Update the trip item confirmation state
-      await storage.updateTripItemConfirmation(itemId, "locked", optionId);
-
-      // Advance to next item (always advance, even past last item to trigger completion)
+      // Lock option, update item (copy coordinates), and advance session in one transaction
       const session = await storage.getConfirmationSession(tripId);
-      if (session) {
-        const nextIndex = session.currentItemIndex + 1;
-        await storage.updateConfirmationSession(session.id, {
-          currentItemIndex: nextIndex,
-        });
-      }
+      const { option: lockedOption, item: updatedItem } = await storage.lockOptionAndUpdateItem(
+        optionId,
+        itemId,
+        session?.id ?? null
+      );
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         lockedOption,
+        updatedItem,
         message: "Option locked successfully"
       });
     } catch (error: any) {
@@ -3499,6 +3778,89 @@ Return ONLY valid JSON.`;
           percentage: totalItems > 0 ? Math.round((checkedInCount / totalItems) * 100) : 0,
         },
       });
+    } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ===== Board Cards =====
+
+  app.get("/api/trips/:id/board-cards", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      await assertTripAccess(user.id, tripId, "read");
+
+      const cards = await storage.getBoardCards(tripId);
+      res.json(cards);
+    } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/trips/:id/board-cards", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      await assertTripAccess(user.id, tripId, "write");
+
+      const card = await storage.createBoardCard({
+        tripId,
+        createdByUserId: user.id,
+        title: req.body.title,
+        notes: req.body.notes || null,
+        bucket: req.body.bucket || null,
+        locationLat: req.body.locationLat || null,
+        locationLng: req.body.locationLng || null,
+        confirmedTime: req.body.confirmedTime || null,
+        confirmedDayNumber: req.body.confirmedDayNumber || null,
+        photoUrl: req.body.photoUrl || null,
+      });
+      res.json(card);
+    } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/trips/:id/board-cards/:cardId", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      await assertTripAccess(user.id, tripId, "write");
+
+      const cardId = parseInt(req.params.cardId);
+      const card = await storage.updateBoardCard(cardId, req.body);
+      if (!card) return res.status(404).json({ error: "Card not found" });
+      res.json(card);
+    } catch (error: any) {
+      if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/trips/:id/board-cards/:cardId", requireAuth(), async (req, res) => {
+    try {
+      const { userId: clerkId } = getAuth(req);
+      const user = await storage.getUserByClerkId(clerkId!);
+      if (!user) return res.status(401).json({ error: "User not found" });
+
+      const tripId = parseInt(req.params.id);
+      await assertTripAccess(user.id, tripId, "write");
+
+      await storage.deleteBoardCard(parseInt(req.params.cardId));
+      res.json({ success: true });
     } catch (error: any) {
       if (error instanceof ForbiddenError) return res.status(403).json({ error: error.message });
       res.status(500).json({ error: error.message });

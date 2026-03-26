@@ -1,4 +1,5 @@
 import { ExperienceCard } from "@/components/shared/ExperienceCard";
+import { BoardPickerModal } from "@/components/shared/BoardPickerModal";
 import { PodCard } from "@/components/shared/PodCard";
 import { TripCard } from "@/components/shared/TripCard";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -65,6 +66,7 @@ export default function Home() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [boardPickerExperienceId, setBoardPickerExperienceId] = useState<number | null>(null);
 
   useEffect(() => {
     if (activeFilter === "Nearby" && !userLocation && !locationError && !locationLoading) {
@@ -270,10 +272,10 @@ export default function Home() {
                     <div className="flex w-max space-x-4 pb-4 px-6">
                       {currentUser?.locationLat && currentUser?.locationLng
                         ? nearbyExperiences.slice(0, 6).map((exp: any) => (
-                            <ExperienceCard key={exp.id} experience={formatExperience(exp)} horizontal />
+                            <ExperienceCard key={exp.id} experience={formatExperience(exp)} horizontal onSaveToBoard={(id) => setBoardPickerExperienceId(id)} />
                           ))
                         : formattedExperiences.slice(0, 6).map((exp) => (
-                            <ExperienceCard key={exp.id} experience={exp} horizontal />
+                            <ExperienceCard key={exp.id} experience={exp} horizontal onSaveToBoard={(id) => setBoardPickerExperienceId(id)} />
                           ))
                       }
                     </div>
@@ -418,7 +420,7 @@ export default function Home() {
                 ) : (
                   <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {filteredExperiences.map((exp) => (
-                      <ExperienceCard key={`filtered-${exp.id}`} experience={exp} />
+                      <ExperienceCard key={`filtered-${exp.id}`} experience={exp} onSaveToBoard={(id) => setBoardPickerExperienceId(id)} />
                     ))}
                   </div>
                 )}
@@ -427,6 +429,14 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {boardPickerExperienceId !== null && currentUser && (
+        <BoardPickerModal
+          experienceId={boardPickerExperienceId}
+          onClose={() => setBoardPickerExperienceId(null)}
+          userId={currentUser.id}
+        />
+      )}
     </div>
   );
 }

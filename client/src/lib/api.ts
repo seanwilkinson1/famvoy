@@ -1108,6 +1108,91 @@ export const api = {
     },
   },
 
+  boardCards: {
+    getAll: async (tripId: number): Promise<any[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/board-cards`);
+      return res.json();
+    },
+    create: async (tripId: number, data: { title: string; notes?: string; bucket?: string; confirmedDayNumber?: number; confirmedTime?: string; locationLat?: number; locationLng?: number; photoUrl?: string }): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/board-cards`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    },
+    update: async (tripId: number, cardId: number, data: Partial<{ title: string; notes: string; bucket: string; confirmedDayNumber: number; confirmedTime: string }>): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/board-cards/${cardId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    },
+    delete: async (tripId: number, cardId: number): Promise<void> => {
+      await fetchWithAuth(`${API_BASE}/trips/${tripId}/board-cards/${cardId}`, { method: "DELETE" });
+    },
+  },
+
+  boards: {
+    getAll: async (userId: number): Promise<any[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/users/${userId}/boards`);
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("boards.getAll failed:", res.status, text.slice(0, 200));
+        throw new Error("Failed to fetch boards");
+      }
+      return res.json();
+    },
+    create: async (name: string): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/boards`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("boards.create failed:", res.status, text.slice(0, 200));
+        throw new Error("Failed to create board");
+      }
+      return res.json();
+    },
+    delete: async (id: number): Promise<void> => {
+      await fetchWithAuth(`${API_BASE}/boards/${id}`, { method: "DELETE" });
+    },
+    getPins: async (boardId: number): Promise<any[]> => {
+      const res = await fetchWithAuth(`${API_BASE}/boards/${boardId}/pins`);
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("boards.getPins failed:", res.status, text.slice(0, 200));
+        throw new Error("Failed to fetch board pins");
+      }
+      return res.json();
+    },
+    addPin: async (boardId: number, experienceId: number): Promise<any> => {
+      const res = await fetchWithAuth(`${API_BASE}/boards/${boardId}/pins`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ experienceId }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("boards.addPin failed:", res.status, text.slice(0, 200));
+        throw new Error("Failed to pin experience");
+      }
+      return res.json();
+    },
+    removePin: async (boardId: number, experienceId: number): Promise<void> => {
+      await fetchWithAuth(`${API_BASE}/boards/${boardId}/pins/${experienceId}`, { method: "DELETE" });
+    },
+    unsaveFromAll: async (experienceId: number): Promise<void> => {
+      const res = await fetchWithAuth(`${API_BASE}/experiences/${experienceId}/save`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to unsave experience");
+    },
+  },
+
   tripPhotos: {
     create: async (tripId: number, data: { photoUrl: string; tripItemId?: number; dayNumber?: number; caption?: string; locationLat?: number; locationLng?: number }): Promise<any> => {
       const res = await fetchWithAuth(`${API_BASE}/trips/${tripId}/photos`, {

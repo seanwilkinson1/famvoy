@@ -1,5 +1,5 @@
 import { useRoute, useLocation } from "wouter";
-import { ChevronLeft, ChevronRight, MapPin, Calendar, Sparkles, Loader2, RefreshCw, Plus, Trash2, Edit2, X, Clock, Utensils, BedDouble, Car, Ticket, Check, CreditCard, DollarSign, ExternalLink, Star, Share2, GripVertical, Users, CheckCircle2, BookOpen, Play } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Calendar, Sparkles, Loader2, RefreshCw, Plus, Trash2, Edit2, X, Clock, Utensils, BedDouble, Car, Ticket, Check, CreditCard, DollarSign, ExternalLink, Star, Share2, GripVertical, Users, CheckCircle2, BookOpen, Play, Search } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -806,6 +806,7 @@ export default function TripDetails() {
           </div>
         )}
 
+        {/* Itinerary */}
         {!isGenerating && trip.items.length > 0 && (
           <div className="p-4 space-y-6">
             {Array.from({ length: numDays }, (_, i) => i + 1).map((dayNumber) => {
@@ -873,7 +874,7 @@ export default function TripDetails() {
                       const Icon = config.icon;
                       const isConfirmed = trip.status === "confirmed";
                       const hasLockedOption = item.lockedOption;
-                      
+
                       return (
                         <DraggableItemWrapper key={item.id} id={item.id} disabled={isConfirmed}>
                         <div
@@ -884,7 +885,7 @@ export default function TripDetails() {
                           data-testid={`item-${item.id}`}
                         >
                           <div className="absolute -left-6 top-4 w-3 h-3 rounded-full bg-white border-2 border-gray-300" />
-                          
+
                           {hasLockedOption && hasLockedOption.image && (
                             <div className="h-24 bg-gradient-to-br from-primary/10 to-primary/5 relative overflow-hidden">
                               <img
@@ -897,7 +898,7 @@ export default function TripDetails() {
                               />
                             </div>
                           )}
-                          
+
                           <div className="p-3">
                             <div className="flex items-start gap-3">
                               <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", config.bg)}>
@@ -927,7 +928,7 @@ export default function TripDetails() {
                                     {hasLockedOption?.description || item.description}
                                   </p>
                                 )}
-                                
+
                                 {hasLockedOption && (
                                   <div className="flex flex-wrap items-center gap-3 mt-2 text-sm">
                                     {hasLockedOption.priceEstimate && (
@@ -947,7 +948,7 @@ export default function TripDetails() {
                                     )}
                                   </div>
                                 )}
-                                
+
                                 {hasLockedOption?.bookingUrl && (
                                   <a
                                     href={hasLockedOption.bookingUrl}
@@ -1558,6 +1559,7 @@ export default function TripDetails() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

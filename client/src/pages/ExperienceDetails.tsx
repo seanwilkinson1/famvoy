@@ -12,6 +12,7 @@ import { useClerkAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { ExperienceMap } from "@/components/shared/ExperienceMap";
 import { GoogleMapsProvider } from "@/components/shared/GoogleMapsProvider";
+import { BoardPickerModal } from "@/components/shared/BoardPickerModal";
 
 function ExperienceDetailsInner() {
   const [match, params] = useRoute("/experience/:id");
@@ -25,6 +26,7 @@ function ExperienceDetailsInner() {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+  const [boardPickerExperienceId, setBoardPickerExperienceId] = useState<number | null>(null);
   const checkinPhotoRef = useRef<HTMLInputElement>(null);
   const [emblaRef, emblaApi] = useEmblaCarousel({ startIndex: galleryStartIndex });
   const { user } = useClerkAuth();
@@ -79,18 +81,25 @@ function ExperienceDetailsInner() {
 
   const isSaved = savedExperiences.some((e: any) => e.id === experienceId);
 
-  const saveMutation = useMutation({
+  const unsaveMutation = useMutation({
     mutationFn: async () => {
-      if (isSaved) {
-        await api.experiences.unsave(experienceId);
-      } else {
-        await api.experiences.save(experienceId);
-      }
+      await api.experiences.unsave(experienceId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["savedExperiences"] });
+      queryClient.invalidateQueries({ queryKey: ["boards"] });
     },
   });
+
+  const handleHeartClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isSaved) {
+      unsaveMutation.mutate();
+    } else {
+      setBoardPickerExperienceId(experienceId);
+    }
+  };
 
   const checkinMutation = useMutation({
     mutationFn: (data: { photoUrl?: string; review?: string; rating?: number }) => 
@@ -234,7 +243,7 @@ function ExperienceDetailsInner() {
               <Share2 className="h-5 w-5" />
             </button>
             <button
-              onClick={(e) => { e.preventDefault(); saveMutation.mutate(); }}
+              onClick={handleHeartClick}
               className="rounded-full bg-white/20 backdrop-blur-md p-2 text-white hover:bg-white/30 transition-colors"
               data-testid="button-save"
             >
@@ -451,7 +460,7 @@ function ExperienceDetailsInner() {
             <ScrollArea className="-mx-6 w-[calc(100%+48px)] px-6 pb-4">
                <div className="flex gap-4 w-max">
                  {formattedSimilar.map(exp => (
-                   <ExperienceCard key={exp.id} experience={exp} horizontal className="w-[240px]" />
+                   <ExperienceCard key={exp.id} experience={exp} horizontal className="w-[240px]" onSaveToBoard={(id) => setBoardPickerExperienceId(id)} />
                  ))}
                </div>
                <ScrollBar orientation="horizontal" className="hidden" />
@@ -663,6 +672,15 @@ function ExperienceDetailsInner() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Board Picker Modal */}
+      {boardPickerExperienceId !== null && currentUser && (
+        <BoardPickerModal
+          experienceId={boardPickerExperienceId}
+          onClose={() => setBoardPickerExperienceId(null)}
+          userId={currentUser.id}
+        />
       )}
 
       {/* Photo Gallery Modal */}

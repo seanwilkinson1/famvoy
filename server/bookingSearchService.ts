@@ -18,6 +18,9 @@ interface BookingSearchResult {
   bookingUrl: string;
   address: string;
   provider: string;
+  placeId?: string;
+  locationLat?: number;
+  locationLng?: number;
 }
 
 function parseNumericPrice(priceEstimate: string, itemType: string): number {
@@ -80,23 +83,17 @@ function generateBookingUrl(itemType: string, title: string, destination: string
   return urls[itemType] || `https://www.tripadvisor.com/Search?q=${encodedQuery}`;
 }
 
-function getPlaceholderImage(itemType: string, index: number): string {
-  const imageIds: Record<string, number[]> = {
-    STAY: [164, 1048, 1076],
-    MEAL: [292, 312, 429],
-    ACTIVITY: [433, 685, 871],
-    TRANSPORT: [195, 416, 519],
-  };
-  const ids = imageIds[itemType] || imageIds.ACTIVITY;
-  const imageId = ids[index % ids.length];
-  return `https://picsum.photos/id/${imageId}/400/300`;
+function getPlaceholderImage(_itemType: string, _index: number): string {
+  // No stock images — return empty so the UI shows its gradient background
+  return "";
 }
 
 export async function searchBookingOptions(
   tripItem: TripItem,
   destination: string,
   tripDates: { startDate: string; endDate: string },
-  skipGooglePlaces: boolean = false
+  skipGooglePlaces: boolean = false,
+  referenceCoords?: { lat: number; lng: number } | null
 ): Promise<BookingSearchResult[]> {
   // First, try to get real places from Google Places API (skip on regenerate for variety)
   if (!skipGooglePlaces) {
@@ -105,7 +102,9 @@ export async function searchBookingOptions(
         tripItem.title,
         tripItem.description,
         tripItem.itemType,
-        destination
+        destination,
+        tripItem.categoryLabel,
+        referenceCoords
       );
 
       if (googlePlacesResults.length > 0) {
@@ -232,12 +231,13 @@ export async function generateAndSaveOptions(
   tripItem: TripItem,
   destination: string,
   tripDates: { startDate: string; endDate: string },
-  regenerate: boolean = false
+  regenerate: boolean = false,
+  referenceCoords?: { lat: number; lng: number } | null
 ): Promise<{ generationId: string; options: any[] }> {
   const generationId = generateGenerationId();
-  
+
   await storage.deleteTripItemOptions(tripItem.id);
-  
+
   // For checkout/departure items, reuse the locked accommodation from check-in
   if (isCheckoutItem(tripItem)) {
     const lockedAccommodation = await storage.getLockedAccommodationForTrip(tripItem.tripId);
@@ -256,6 +256,9 @@ export async function generateAndSaveOptions(
         image: lockedAccommodation.image,
         bookingUrl: lockedAccommodation.bookingUrl,
         address: lockedAccommodation.address,
+        locationLat: lockedAccommodation.locationLat ?? null,
+        locationLng: lockedAccommodation.locationLng ?? null,
+        googlePlaceId: lockedAccommodation.googlePlaceId ?? null,
         isLocked: false,
       };
       const savedOptions = await storage.createTripItemOptions([checkoutOption]);
@@ -265,9 +268,9 @@ export async function generateAndSaveOptions(
       };
     }
   }
-  
-  const searchResults = await searchBookingOptions(tripItem, destination, tripDates, regenerate);
-  
+
+  const searchResults = await searchBookingOptions(tripItem, destination, tripDates, regenerate, referenceCoords);
+
   const optionsToInsert: InsertTripItemOption[] = searchResults.map((result) => ({
     tripItemId: tripItem.id,
     generationId,
@@ -281,11 +284,14 @@ export async function generateAndSaveOptions(
     image: result.image,
     bookingUrl: result.bookingUrl,
     address: result.address,
+    locationLat: result.locationLat ?? null,
+    locationLng: result.locationLng ?? null,
+    googlePlaceId: result.placeId ?? null,
     isLocked: false,
   }));
 
   const savedOptions = await storage.createTripItemOptions(optionsToInsert);
-  
+
   return {
     generationId,
     options: savedOptions,

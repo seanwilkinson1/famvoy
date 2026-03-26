@@ -95,6 +95,12 @@ import {
   type InsertChatMessage,
   type ChatMessageReaction,
   type InsertChatMessageReaction,
+  type BoardCard,
+  type InsertBoardCard,
+  type Board,
+  type InsertBoard,
+  type BoardPin,
+  type InsertBoardPin,
   users,
   experiences,
   pods,
@@ -147,6 +153,9 @@ import {
   conversationMembers,
   chatMessages,
   chatMessageReactions,
+  boardCards,
+  boards,
+  boardPins,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ne, notInArray, ilike, isNotNull, isNull, inArray, sql, count } from "drizzle-orm";
@@ -270,6 +279,7 @@ export interface IStorage {
   updateTripItem(itemId: number, data: Partial<TripItem>): Promise<TripItem>;
   deleteTripItem(itemId: number): Promise<void>;
   bulkCreateTripItems(items: InsertTripItem[]): Promise<TripItem[]>;
+  batchReorderTripItems(items: Array<{ id: number; dayNumber: number; sortOrder: number }>): Promise<void>;
   clearTripItems(tripId: number): Promise<void>;
   
   getTripDestinations(tripId: number): Promise<TripDestination[]>;
@@ -315,8 +325,9 @@ export interface IStorage {
   createTripItemOptions(options: InsertTripItemOption[]): Promise<TripItemOption[]>;
   deleteTripItemOptions(tripItemId: number, generationId?: string): Promise<void>;
   lockTripItemOption(optionId: number): Promise<TripItemOption>;
+  lockOptionAndUpdateItem(optionId: number, itemId: number, sessionId: number | null): Promise<{ option: TripItemOption; item: TripItem }>;
   getLockedAccommodationForTrip(tripId: number): Promise<TripItemOption | null>;
-  
+
   updateTripStatus(tripId: number, status: TripStatus): Promise<PodTrip>;
   updateTripItemConfirmation(itemId: number, state: string, selectedOptionId?: number): Promise<TripItem>;
   getConfirmableItems(tripId: number): Promise<TripItem[]>;
@@ -403,6 +414,21 @@ export interface IStorage {
 
   // Copy trip
   copyTrip(tripId: number, userId: number): Promise<PodTrip>;
+
+  // Board cards
+  getBoardCards(tripId: number): Promise<BoardCard[]>;
+  createBoardCard(data: InsertBoardCard): Promise<BoardCard>;
+  updateBoardCard(id: number, data: Partial<InsertBoardCard>): Promise<BoardCard | undefined>;
+  deleteBoardCard(id: number): Promise<void>;
+
+  // Boards (Pinterest-style collections)
+  getUserBoards(userId: number): Promise<Array<Board & { pinCount: number; previewImages: string[] }>>;
+  createBoard(data: InsertBoard): Promise<Board>;
+  deleteBoard(id: number): Promise<void>;
+  getBoardPins(boardId: number): Promise<Experience[]>;
+  addBoardPin(data: InsertBoardPin): Promise<BoardPin>;
+  removeBoardPin(boardId: number, experienceId: number): Promise<void>;
+  removeExperienceFromAllBoards(userId: number, experienceId: number): Promise<void>;
 
   // Feed queries
   getTravelingNow(userId: number): Promise<any[]>;
@@ -1545,6 +1571,15 @@ export class DatabaseStorage implements IStorage {
     return db.insert(tripItems).values(items).returning();
   }
 
+  async batchReorderTripItems(items: Array<{ id: number; dayNumber: number; sortOrder: number }>): Promise<void> {
+    if (items.length === 0) return;
+    await Promise.all(items.map(item =>
+      db.update(tripItems)
+        .set({ dayNumber: item.dayNumber, sortOrder: item.sortOrder })
+        .where(eq(tripItems.id, item.id))
+    ));
+  }
+
   async clearTripItems(tripId: number): Promise<void> {
     await db.delete(tripItems).where(eq(tripItems.tripId, tripId));
   }
@@ -1806,6 +1841,41 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tripItemOptions.id, optionId))
       .returning();
     return option;
+  }
+
+  async lockOptionAndUpdateItem(optionId: number, itemId: number, sessionId: number | null): Promise<{ option: TripItemOption; item: TripItem }> {
+    return await db.transaction(async (tx) => {
+      // 1. Lock the option
+      const [option] = await tx.update(tripItemOptions)
+        .set({ isLocked: true })
+        .where(eq(tripItemOptions.id, optionId))
+        .returning();
+
+      // 2. Update the trip item with confirmation state + copy coordinates from option
+      const [item] = await tx.update(tripItems)
+        .set({
+          confirmationState: "locked",
+          selectedOptionId: optionId,
+          locationLat: option.locationLat,
+          locationLng: option.locationLng,
+          googlePlaceId: option.googlePlaceId,
+        })
+        .where(eq(tripItems.id, itemId))
+        .returning();
+
+      // 3. Advance the confirmation session if one exists
+      if (sessionId) {
+        const [session] = await tx.select().from(tripConfirmationSessions)
+          .where(eq(tripConfirmationSessions.id, sessionId));
+        if (session) {
+          await tx.update(tripConfirmationSessions)
+            .set({ currentItemIndex: session.currentItemIndex + 1 })
+            .where(eq(tripConfirmationSessions.id, sessionId));
+        }
+      }
+
+      return { option, item };
+    });
   }
 
   async getLockedAccommodationForTrip(tripId: number): Promise<TripItemOption | null> {
@@ -2938,6 +3008,115 @@ export class DatabaseStorage implements IStorage {
       ...r.trip,
       creator: r.creator,
     }));
+  }
+
+  // Board cards
+  async getBoardCards(tripId: number): Promise<BoardCard[]> {
+    return db.select().from(boardCards).where(eq(boardCards.tripId, tripId)).orderBy(boardCards.createdAt);
+  }
+
+  async createBoardCard(data: InsertBoardCard): Promise<BoardCard> {
+    const [card] = await db.insert(boardCards).values(data).returning();
+    return card;
+  }
+
+  async updateBoardCard(id: number, data: Partial<InsertBoardCard>): Promise<BoardCard | undefined> {
+    const [card] = await db.update(boardCards).set(data).where(eq(boardCards.id, id)).returning();
+    return card;
+  }
+
+  async deleteBoardCard(id: number): Promise<void> {
+    await db.delete(boardCards).where(eq(boardCards.id, id));
+  }
+
+  // Boards (Pinterest-style collections)
+  async getUserBoards(userId: number): Promise<Array<Board & { pinCount: number; previewImages: string[] }>> {
+    const userBoards = await db.select().from(boards).where(eq(boards.userId, userId)).orderBy(desc(boards.createdAt));
+
+    const result = await Promise.all(userBoards.map(async (board) => {
+      const pins = await db
+        .select({ image: experiences.image })
+        .from(boardPins)
+        .innerJoin(experiences, eq(boardPins.experienceId, experiences.id))
+        .where(eq(boardPins.boardId, board.id))
+        .orderBy(desc(boardPins.pinnedAt))
+        .limit(4);
+
+      const pinCountResult = await db
+        .select({ count: count() })
+        .from(boardPins)
+        .where(eq(boardPins.boardId, board.id));
+
+      return {
+        ...board,
+        pinCount: pinCountResult[0]?.count ?? 0,
+        previewImages: pins.map(p => p.image),
+      };
+    }));
+
+    return result;
+  }
+
+  async createBoard(data: InsertBoard): Promise<Board> {
+    const [board] = await db.insert(boards).values(data).returning();
+    return board;
+  }
+
+  async deleteBoard(id: number): Promise<void> {
+    await db.delete(boards).where(eq(boards.id, id));
+  }
+
+  async getBoardPins(boardId: number): Promise<Experience[]> {
+    const pins = await db
+      .select({ experience: experiences })
+      .from(boardPins)
+      .innerJoin(experiences, eq(boardPins.experienceId, experiences.id))
+      .where(eq(boardPins.boardId, boardId))
+      .orderBy(desc(boardPins.pinnedAt));
+    return pins.map(p => p.experience);
+  }
+
+  async addBoardPin(data: InsertBoardPin): Promise<BoardPin> {
+    // Check if already pinned
+    const existing = await db.select().from(boardPins).where(
+      and(eq(boardPins.boardId, data.boardId), eq(boardPins.experienceId, data.experienceId))
+    ).limit(1);
+    if (existing[0]) return existing[0];
+
+    const [pin] = await db.insert(boardPins).values(data).returning();
+    // Also ensure savedExperiences entry exists
+    const board = await db.select().from(boards).where(eq(boards.id, data.boardId)).limit(1);
+    if (board[0]) {
+      await db.insert(savedExperiences).values({
+        userId: board[0].userId,
+        experienceId: data.experienceId,
+      }).onConflictDoNothing();
+    }
+    return pin;
+  }
+
+  async removeBoardPin(boardId: number, experienceId: number): Promise<void> {
+    await db.delete(boardPins).where(
+      and(eq(boardPins.boardId, boardId), eq(boardPins.experienceId, experienceId))
+    );
+  }
+
+  async removeExperienceFromAllBoards(userId: number, experienceId: number): Promise<void> {
+    // Get all boards for this user
+    const userBoards = await db.select({ id: boards.id }).from(boards).where(eq(boards.userId, userId));
+    if (userBoards.length > 0) {
+      const boardIds = userBoards.map(b => b.id);
+      await db.delete(boardPins).where(
+        and(
+          inArray(boardPins.boardId, boardIds),
+          eq(boardPins.experienceId, experienceId)
+        )
+      );
+    }
+    // Also remove from savedExperiences
+    await db.delete(savedExperiences).where(
+      and(eq(savedExperiences.userId, userId), eq(savedExperiences.experienceId, experienceId))
+    );
   }
 }
 

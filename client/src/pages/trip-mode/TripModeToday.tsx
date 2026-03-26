@@ -1,11 +1,12 @@
 import { useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { CheckCircle, Circle, Clock, MapPin, ChevronRight, Sparkles, Plus } from "lucide-react";
+import { CheckCircle, Circle, Clock, MapPin, ChevronRight, Sparkles, Plus, Navigation } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { MemoryLogSheet } from "@/components/trip/MemoryLogSheet";
 import { AddStopSheet } from "@/components/trip/AddStopSheet";
 import TripModeLayout from "./TripModeLayout";
+import { calculateDistance, getNavigationUrl } from "@/lib/utils";
 
 const TYPE_COLORS: Record<string, string> = {
   activity: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -57,6 +58,18 @@ export default function TripModeToday() {
   const [addStopSheetOpen, setAddStopSheetOpen] = useState(false);
   const [selectedItemForMemory, setSelectedItemForMemory] = useState<any>(null);
   const currentItemRef = useRef<HTMLDivElement>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Get user's GPS position (low-accuracy, battery-friendly)
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {}, // silently ignore errors
+      { enableHighAccuracy: false, maximumAge: 10000, timeout: 5000 }
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
 
   const { data: liveState, isLoading } = useQuery({
     queryKey: ["tripLive", tripId],
@@ -151,6 +164,12 @@ export default function TripModeToday() {
                 <Clock className="w-4 h-4" />
                 {currentItem.time}
               </span>
+              {userLocation && currentItem.locationLat && currentItem.locationLng && (
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4" />
+                  {calculateDistance(userLocation.lat, userLocation.lng, currentItem.locationLat, currentItem.locationLng).toFixed(1)} mi away
+                </span>
+              )}
             </div>
 
             <div className="flex gap-3">
@@ -161,6 +180,16 @@ export default function TripModeToday() {
               >
                 {checkinMutation.isPending ? "Checking in..." : "Check In"}
               </button>
+              {currentItem.locationLat && currentItem.locationLng && (
+                <a
+                  href={getNavigationUrl(currentItem.locationLat, currentItem.locationLng)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-12 w-12 rounded-full border border-white/20 text-white flex items-center justify-center hover:bg-white/5 transition-colors"
+                >
+                  <Navigation className="w-5 h-5" />
+                </a>
+              )}
               <button
                 onClick={() => {
                   setSelectedItemForMemory(currentItem);
@@ -185,18 +214,29 @@ export default function TripModeToday() {
         )}
 
         {/* Up Next strip */}
-        {currentItemIndex >= 0 && currentItemIndex < todayItems.length - 1 && (
-          <div className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 px-4 py-3">
-            <ChevronRight className="w-4 h-4 text-white/40" />
-            <div className="flex-1 min-w-0">
-              <p className="text-white/40 text-xs font-medium uppercase tracking-wider">Up next</p>
-              <p className="text-white text-sm font-medium truncate">
-                {todayItems[currentItemIndex + 1].title}
-              </p>
+        {currentItemIndex >= 0 && currentItemIndex < todayItems.length - 1 && (() => {
+          const nextItem = todayItems[currentItemIndex + 1];
+          const distToNext = (userLocation && nextItem.locationLat && nextItem.locationLng)
+            ? calculateDistance(userLocation.lat, userLocation.lng, nextItem.locationLat, nextItem.locationLng)
+            : null;
+          return (
+            <div className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 px-4 py-3">
+              <ChevronRight className="w-4 h-4 text-white/40" />
+              <div className="flex-1 min-w-0">
+                <p className="text-white/40 text-xs font-medium uppercase tracking-wider">Up next</p>
+                <p className="text-white text-sm font-medium truncate">
+                  {nextItem.title}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="text-white/40 text-xs">{nextItem.time}</span>
+                {distToNext !== null && (
+                  <p className="text-white/30 text-[10px]">{distToNext.toFixed(1)} mi</p>
+                )}
+              </div>
             </div>
-            <span className="text-white/40 text-xs">{todayItems[currentItemIndex + 1].time}</span>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Day timeline */}
         <div className="space-y-1">

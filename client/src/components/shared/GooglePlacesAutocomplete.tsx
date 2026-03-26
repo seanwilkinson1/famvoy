@@ -9,6 +9,8 @@ interface PlaceResult {
   lat: number;
   lng: number;
   placeId: string;
+  types?: string[];
+  photoUrl?: string;
 }
 
 interface GooglePlacesAutocompleteProps {
@@ -108,7 +110,7 @@ export function GooglePlacesAutocomplete({
 
     const request: google.maps.places.PlaceDetailsRequest = {
       placeId: prediction.place_id,
-      fields: ["name", "formatted_address", "geometry"],
+      fields: ["name", "formatted_address", "geometry", "types", "photos"],
       sessionToken: sessionTokenRef.current!,
     };
 
@@ -118,13 +120,21 @@ export function GooglePlacesAutocomplete({
         const displayName = prediction.structured_formatting.main_text;
         const secondaryPart = prediction.structured_formatting.secondary_text?.split(",")[0]?.trim();
         const displayValue = secondaryPart ? `${displayName}, ${secondaryPart}` : displayName;
-        
+
+        let photoUrl: string | undefined;
+        if (place.photos && place.photos.length > 0) {
+          // Use getUrl() to get the Google-hosted photo URL directly
+          photoUrl = place.photos[0].getUrl({ maxWidth: 400 });
+        }
+
         const result: PlaceResult = {
           name: displayValue,
           address: formattedAddress,
           lat: place.geometry.location.lat(),
           lng: place.geometry.location.lng(),
           placeId: prediction.place_id,
+          types: place.types || [],
+          photoUrl,
         };
         
         onPlaceSelect(result);
